@@ -14,24 +14,21 @@
  * limitations under the License.
  */
 
-package com.soklet.example.model.db;
+package com.soklet.example.annotation;
 
 import com.soklet.example.model.db.Role.RoleId;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.time.ZoneId;
-import java.util.Locale;
-import java.util.UUID;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record Employee(
-		@Nonnull UUID employeeId,
-		@Nonnull RoleId roleId,
-		@Nonnull String name,
-		@Nullable String emailAddress,
-		@Nonnull ZoneId timeZone,
-		@Nonnull Locale locale
-) {}
+@Target({ElementType.METHOD, ElementType.FIELD})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface AuthorizationRequired {
+	@Nullable RoleId[] value() default {};
+}

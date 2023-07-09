@@ -129,13 +129,14 @@ public class AppModule extends AbstractModule {
 	public Database provideDatabase(@Nonnull Injector injector) {
 		requireNonNull(injector);
 
+		// Example in-memory datasource for HSQLDB
 		JDBCDataSource dataSource = new JDBCDataSource();
 		dataSource.setUrl("jdbc:hsqldb:mem:example");
 		dataSource.setUser("sa");
 		dataSource.setPassword("");
 
 		// Use Pyranid to simplify JDBC operations
-		Database database = Database.forDataSource(dataSource)
+		return Database.forDataSource(dataSource)
 				// Use Google Guice when Pyranid needs to vend instances
 				.instanceProvider(new DefaultInstanceProvider() {
 					@Override
@@ -150,19 +151,6 @@ public class AppModule extends AbstractModule {
 					System.out.println(statementLog);
 				})
 				.build();
-
-		// Create an example schema
-		database.execute("""
-				CREATE TABLE employee (
-					employee_id UUID PRIMARY KEY,
-					name VARCHAR(255) NOT NULL,
-					email_address VARCHAR(255),
-					time_zone VARCHAR(255) NOT NULL,
-					locale VARCHAR(255) NOT NULL
-					)
-					""");
-
-		return database;
 	}
 
 	@Nonnull

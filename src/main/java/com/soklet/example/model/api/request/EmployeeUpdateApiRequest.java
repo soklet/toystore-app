@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package com.soklet.example.model.db.api.request;
+package com.soklet.example.model.api.request;
+
+import com.soklet.example.model.db.Role.RoleId;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -24,8 +26,9 @@ import java.util.Locale;
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record EmployeeCreateApiRequest(
+public record EmployeeUpdateApiRequest(
 		@Nonnull String name,
+		@Nonnull RoleId roleId,
 		@Nullable String emailAddress,
 		@Nonnull ZoneId timeZone,
 		@Nonnull Locale locale

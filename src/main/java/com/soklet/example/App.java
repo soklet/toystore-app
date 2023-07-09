@@ -18,11 +18,17 @@ package com.soklet.example;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.pyranid.Database;
 import com.soklet.Soklet;
 import com.soklet.SokletConfiguration;
+import com.soklet.example.model.db.Role.RoleId;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
+import java.util.List;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
@@ -32,7 +38,10 @@ public class App {
 	public static void main(@Nullable String[] args) throws Exception {
 		Injector injector = Guice.createInjector(new AppModule());
 		Configuration configuration = injector.getInstance(Configuration.class);
+		Database database = injector.getInstance(Database.class);
 		SokletConfiguration sokletConfiguration = injector.getInstance(SokletConfiguration.class);
+
+		initializeDatabase(database);
 
 		try (Soklet soklet = new Soklet(sokletConfiguration)) {
 			soklet.start();
@@ -44,5 +53,33 @@ public class App {
 				Thread.currentThread().join();
 			}
 		}
+	}
+
+	private static void initializeDatabase(@Nonnull Database database) {
+		requireNonNull(database);
+
+		// Create an example schema and load up some data
+		database.execute("""
+				CREATE TABLE role (
+					role_id VARCHAR(255) PRIMARY KEY,
+					description VARCHAR(255) NOT NULL
+					)
+					""");
+
+		database.executeBatch("INSERT INTO role (role_id, description) VALUES (?,?)", List.of(
+				List.of(RoleId.ADMINISTRATOR, "Administrator"),
+				List.of(RoleId.RANK_AND_FILE, "Rank-and-file"))
+		);
+
+		database.execute("""
+				CREATE TABLE employee (
+					employee_id UUID PRIMARY KEY,
+					role_id VARCHAR(255) NOT NULL REFERENCES role(role_id),
+					name VARCHAR(255) NOT NULL,
+					email_address VARCHAR(255),
+					time_zone VARCHAR(255) NOT NULL,
+					locale VARCHAR(255) NOT NULL
+					)
+					""");
 	}
 }

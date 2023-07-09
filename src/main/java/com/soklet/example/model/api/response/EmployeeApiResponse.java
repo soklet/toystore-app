@@ -14,19 +14,17 @@
  * limitations under the License.
  */
 
-package com.soklet.example.model.db.api.request;
+package com.soklet.example.model.api.response;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.time.ZoneId;
-import java.util.Locale;
+import java.util.UUID;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record EmployeeUpdateApiRequest(
+public record EmployeeApiResponse(
+		@Nonnull UUID employeeId,
 		@Nonnull String name,
-		@Nullable String emailAddress,
-		@Nonnull ZoneId timeZone,
-		@Nonnull Locale locale
+		@Nullable String emailAddress
 ) {}

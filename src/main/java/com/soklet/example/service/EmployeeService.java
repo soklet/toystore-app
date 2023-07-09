@@ -18,9 +18,9 @@ package com.soklet.example.service;
 
 import com.google.inject.Inject;
 import com.pyranid.Database;
+import com.soklet.example.model.api.request.EmployeeCreateApiRequest;
+import com.soklet.example.model.api.request.EmployeeUpdateApiRequest;
 import com.soklet.example.model.db.Employee;
-import com.soklet.example.model.db.api.request.EmployeeCreateApiRequest;
-import com.soklet.example.model.db.api.request.EmployeeUpdateApiRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,12 +80,13 @@ public class EmployeeService {
 		getDatabase().execute("""
 				INSERT INTO employee (
 					employee_id,
+					role_id,
 					name,
 					email_address,
 					time_zone,
 					locale
-				) VALUES (?,?,?,?,?)
-				""", employeeId, request.name(), request.emailAddress(), request.timeZone(), request.locale());
+				) VALUES (?,?,?,?,?,?)
+				""", employeeId, request.roleId(), request.name(), request.emailAddress(), request.timeZone(), request.locale());
 
 		return employeeId;
 	}

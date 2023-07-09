@@ -25,8 +25,8 @@ import com.soklet.annotation.PathParameter;
 import com.soklet.annotation.RequestBody;
 import com.soklet.annotation.Resource;
 import com.soklet.example.model.db.Employee;
-import com.soklet.example.model.db.api.request.EmployeeCreateApiRequest;
-import com.soklet.example.model.db.api.request.EmployeeUpdateApiRequest;
+import com.soklet.example.model.api.request.EmployeeCreateApiRequest;
+import com.soklet.example.model.api.request.EmployeeUpdateApiRequest;
 import com.soklet.example.service.EmployeeService;
 import com.soklet.example.util.RequestBodyParser;
 

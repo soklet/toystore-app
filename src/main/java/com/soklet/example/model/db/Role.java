@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
-package com.soklet.example.model.db.api.response;
+package com.soklet.example.model.db;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.UUID;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record EmployeeApiResponse(
-		@Nonnull UUID employeeId,
-		@Nonnull String name,
-		@Nullable String emailAddress
-) {}
+public record Role(
+		@Nonnull RoleId roleId,
+		@Nonnull String description
+) {
+	public enum RoleId {
+		RANK_AND_FILE,
+		ADMINISTRATOR
+	}
+}
