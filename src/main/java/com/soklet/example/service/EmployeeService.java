@@ -17,9 +17,13 @@
 package com.soklet.example.service;
 
 import com.google.inject.Inject;
+import com.lokalized.Strings;
 import com.pyranid.Database;
+import com.soklet.example.exception.UserFacingException;
+import com.soklet.example.model.api.request.EmployeeAuthenticateApiRequest;
 import com.soklet.example.model.api.request.EmployeeCreateApiRequest;
 import com.soklet.example.model.api.request.EmployeeUpdateApiRequest;
+import com.soklet.example.model.auth.AuthenticationToken;
 import com.soklet.example.model.db.Employee;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +31,10 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -41,12 +48,18 @@ public class EmployeeService {
 	@Nonnull
 	private final Database database;
 	@Nonnull
+	private final Strings strings;
+	@Nonnull
 	private final Logger logger;
 
 	@Inject
-	public EmployeeService(@Nonnull Database database) {
+	public EmployeeService(@Nonnull Database database,
+												 @Nonnull Strings strings) {
 		requireNonNull(database);
+		requireNonNull(strings);
+
 		this.database = database;
+		this.strings = strings;
 		this.logger = LoggerFactory.getLogger(getClass());
 	}
 
@@ -111,8 +124,41 @@ public class EmployeeService {
 	}
 
 	@Nonnull
+	public AuthenticationToken authenticateEmployee(@Nonnull EmployeeAuthenticateApiRequest request) {
+		requireNonNull(request);
+
+		Employee employee = getDatabase().executeForObject("""
+				SELECT *
+				FROM employee
+				WHERE email_address=LOWER(?)
+				""", Employee.class, request.emailAddress().toLowerCase(Locale.US)).orElse(null);
+
+		if (employee == null)
+			throw new UserFacingException(getStrings().get("Sorry, we could not authenticate you."));
+
+		// TODO: encode authentication information in the token
+		String value = UUID.randomUUID().toString();
+		Instant expiration = Instant.now().plus(10, ChronoUnit.MINUTES);
+
+		return new AuthenticationToken(value, expiration);
+	}
+
+	@Nonnull
+	public Optional<Employee> findEmployeeByAuthenticationToken(@Nullable String authenticationToken) {
+		if (authenticationToken == null)
+			return Optional.empty();
+
+		throw new UnsupportedOperationException("TODO");
+	}
+
+	@Nonnull
 	protected Database getDatabase() {
 		return this.database;
+	}
+
+	@Nonnull
+	protected Strings getStrings() {
+		return this.strings;
 	}
 
 	@Nonnull

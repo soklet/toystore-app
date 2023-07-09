@@ -23,8 +23,12 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.lokalized.DefaultStrings;
+import com.lokalized.LocalizedStringLoader;
+import com.lokalized.Strings;
 import com.pyranid.Database;
 import com.pyranid.DefaultInstanceProvider;
 import com.pyranid.StatementContext;
@@ -38,6 +42,8 @@ import com.soklet.core.Server;
 import com.soklet.core.impl.DefaultResponseMarshaler;
 import com.soklet.core.impl.MicrohttpServer;
 import com.soklet.core.impl.WhitelistedOriginsCorsAuthorizer;
+import com.soklet.example.model.db.Employee;
+import com.soklet.example.service.EmployeeService;
 import org.hsqldb.jdbc.JDBCDataSource;
 
 import javax.annotation.Nonnull;
@@ -45,6 +51,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.ZoneId;
 import java.util.HashMap;
@@ -52,6 +59,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
@@ -65,24 +74,27 @@ public class AppModule extends AbstractModule {
 	@Singleton
 	public SokletConfiguration provideSokletConfiguration(@Nonnull Injector injector,
 																												@Nonnull Configuration configuration,
+																												@Nonnull EmployeeService employeeService,
 																												@Nonnull Gson gson) {
 		requireNonNull(injector);
+		requireNonNull(configuration);
+		requireNonNull(employeeService);
 		requireNonNull(gson);
 
 		return new SokletConfiguration.Builder(new MicrohttpServer.Builder(configuration.getPort()).host("0.0.0.0").build())
 				.lifecycleInterceptor(new LifecycleInterceptor() {
 					@Override
-					public void didStartRequestHandling(Request request,
-																							ResourceMethod resourceMethod) {
+					public void didStartRequestHandling(@Nonnull Request request,
+																							@Nullable ResourceMethod resourceMethod) {
 						System.out.printf("[%s] Received %s %s\n", request.getId(), request.getHttpMethod(), request.getUri());
 					}
 
 					@Override
-					public void didFinishRequestHandling(Request request,
-																							 ResourceMethod resourceMethod,
-																							 MarshaledResponse marshaledResponse,
-																							 Duration processingDuration,
-																							 List<Throwable> throwables) {
+					public void didFinishRequestHandling(@Nonnull Request request,
+																							 @Nullable ResourceMethod resourceMethod,
+																							 @Nonnull MarshaledResponse marshaledResponse,
+																							 @Nonnull Duration processingDuration,
+																							 @Nonnull List<Throwable> throwables) {
 						System.out.printf("[%s] Finished processing %s %s in %sms\n", request.getId(), request.getHttpMethod(), request.getUri(),
 								processingDuration.toNanos() / 1000000.0);
 					}
@@ -95,6 +107,33 @@ public class AppModule extends AbstractModule {
 					@Override
 					public void didStopServer(@Nonnull Server server) {
 						System.out.println("Server stopped.");
+					}
+
+
+					@Override
+					public void interceptRequest(@Nonnull Request request,
+																			 @Nullable ResourceMethod resourceMethod,
+																			 @Nonnull Function<Request, MarshaledResponse> requestHandler,
+																			 @Nonnull Consumer<MarshaledResponse> responseHandler) {
+						requireNonNull(request);
+						requireNonNull(requestHandler);
+						requireNonNull(responseHandler);
+
+						// In a real system, this might be a JWT
+						String authenticationToken = request.getHeaderValue("X-Authentication-Token").orElse(null);
+						Employee employee = null;
+
+						if (authenticationToken != null)
+							employee = employeeService.findEmployeeByAuthenticationToken(authenticationToken).orElse(null);
+
+						CurrentContext currentContext = CurrentContext.forRequest(request)
+								.employee(employee)
+								.build();
+
+						currentContext.run(() -> {
+							MarshaledResponse marshaledResponse = requestHandler.apply(request);
+							responseHandler.accept(marshaledResponse);
+						});
 					}
 				})
 				.responseMarshaler(new DefaultResponseMarshaler() {
@@ -125,6 +164,12 @@ public class AppModule extends AbstractModule {
 
 	@Nonnull
 	@Provides
+	public CurrentContext provideCurrentContext() {
+		return CurrentContext.get();
+	}
+
+	@Nonnull
+	@Provides
 	@Singleton
 	public Database provideDatabase(@Nonnull Injector injector) {
 		requireNonNull(injector);
@@ -150,6 +195,21 @@ public class AppModule extends AbstractModule {
 					// Dump out SQL to the console
 					System.out.println(statementLog);
 				})
+				.build();
+	}
+
+	@Nonnull
+	@Provides
+	@Singleton
+	public Strings provideStrings(@Nonnull Provider<CurrentContext> currentContextProvider) {
+		requireNonNull(currentContextProvider);
+
+		String fallbackLanguageCode = Configuration.getFallbackLocale().getLanguage();
+
+		return new DefaultStrings.Builder(fallbackLanguageCode,
+				() -> LocalizedStringLoader.loadFromFilesystem(Paths.get("src/main/resources/strings")))
+				// Rely on the current context's preferred locale to pick the appropriate localization file
+				.localeSupplier(() -> currentContextProvider.get().getPreferredLocale())
 				.build();
 	}
 

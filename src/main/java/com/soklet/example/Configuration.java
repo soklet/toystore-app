@@ -18,6 +18,8 @@ package com.soklet.example;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
+import java.time.ZoneId;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -25,6 +27,16 @@ import java.util.Set;
  */
 @ThreadSafe
 public class Configuration {
+	@Nonnull
+	private static final Locale FALLBACK_LOCALE;
+	@Nonnull
+	private static final ZoneId FALLBACK_TIME_ZONE;
+
+	static {
+		FALLBACK_LOCALE = Locale.US;
+		FALLBACK_TIME_ZONE = ZoneId.of("UTC");
+	}
+
 	@Nonnull
 	private final Boolean runningInDocker;
 	@Nonnull
@@ -40,6 +52,16 @@ public class Configuration {
 		this.stopOnKeypress = !this.runningInDocker;
 		this.port = 8080;
 		this.corsWhitelistedOrigins = Set.of();
+	}
+
+	@Nonnull
+	public static Locale getFallbackLocale() {
+		return FALLBACK_LOCALE;
+	}
+
+	@Nonnull
+	public static ZoneId getFallbackTimeZone() {
+		return FALLBACK_TIME_ZONE;
 	}
 
 	@Nonnull
