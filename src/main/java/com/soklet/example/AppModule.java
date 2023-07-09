@@ -42,6 +42,7 @@ import com.soklet.core.Server;
 import com.soklet.core.impl.DefaultResponseMarshaler;
 import com.soklet.core.impl.MicrohttpServer;
 import com.soklet.core.impl.WhitelistedOriginsCorsAuthorizer;
+import com.soklet.example.model.auth.AuthenticationToken;
 import com.soklet.example.model.db.Employee;
 import com.soklet.example.service.EmployeeService;
 import org.hsqldb.jdbc.JDBCDataSource;
@@ -120,11 +121,12 @@ public class AppModule extends AbstractModule {
 						requireNonNull(responseHandler);
 
 						// In a real system, this might be a JWT
-						String authenticationToken = request.getHeaderValue("X-Authentication-Token").orElse(null);
+						String authenticationTokenAsString = request.getHeaderValue("X-Authentication-Token").orElse(null);
 						Employee employee = null;
 
-						if (authenticationToken != null)
-							employee = employeeService.findEmployeeByAuthenticationToken(authenticationToken).orElse(null);
+						if (authenticationTokenAsString != null)
+							employee = employeeService.findEmployeeByAuthenticationToken(
+									AuthenticationToken.decodeFromString(authenticationTokenAsString)).orElse(null);
 
 						CurrentContext currentContext = CurrentContext.forRequest(request)
 								.employee(employee)
@@ -245,6 +247,20 @@ public class AppModule extends AbstractModule {
 					@Nullable
 					public ZoneId read(@Nonnull JsonReader jsonReader) throws IOException {
 						return ZoneId.of(jsonReader.nextString());
+					}
+				})
+				// Support our custom `AuthenticationToken` type
+				.registerTypeAdapter(AuthenticationToken.class, new TypeAdapter<AuthenticationToken>() {
+					@Override
+					public void write(@Nonnull JsonWriter jsonWriter,
+														@Nonnull AuthenticationToken authenticationToken) throws IOException {
+						jsonWriter.value(authenticationToken.encodeAsString());
+					}
+
+					@Override
+					@Nullable
+					public AuthenticationToken read(@Nonnull JsonReader jsonReader) throws IOException {
+						return AuthenticationToken.decodeFromString(jsonReader.nextString());
 					}
 				});
 		return gsonBuilder.create();

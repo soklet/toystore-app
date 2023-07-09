@@ -17,8 +17,10 @@
 package com.soklet.example.service;
 
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.lokalized.Strings;
 import com.pyranid.Database;
+import com.soklet.example.CurrentContext;
 import com.soklet.example.exception.UserFacingException;
 import com.soklet.example.model.api.request.EmployeeAuthenticateApiRequest;
 import com.soklet.example.model.api.request.EmployeeCreateApiRequest;
@@ -32,9 +34,12 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,6 +51,8 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class EmployeeService {
 	@Nonnull
+	private final Provider<CurrentContext> currentContextProvider;
+	@Nonnull
 	private final Database database;
 	@Nonnull
 	private final Strings strings;
@@ -53,11 +60,14 @@ public class EmployeeService {
 	private final Logger logger;
 
 	@Inject
-	public EmployeeService(@Nonnull Database database,
+	public EmployeeService(@Nonnull Provider<CurrentContext> currentContextProvider,
+												 @Nonnull Database database,
 												 @Nonnull Strings strings) {
+		requireNonNull(currentContextProvider);
 		requireNonNull(database);
 		requireNonNull(strings);
 
+		this.currentContextProvider = currentContextProvider;
 		this.database = database;
 		this.strings = strings;
 		this.logger = LoggerFactory.getLogger(getClass());
@@ -136,19 +146,38 @@ public class EmployeeService {
 		if (employee == null)
 			throw new UserFacingException(getStrings().get("Sorry, we could not authenticate you."));
 
-		// TODO: encode authentication information in the token
-		String value = UUID.randomUUID().toString();
+		UUID employeeId = employee.employeeId();
+		String assertion = UUID.randomUUID().toString();
 		Instant expiration = Instant.now().plus(10, ChronoUnit.MINUTES);
 
-		return new AuthenticationToken(value, expiration);
+		// A real system would cryptographically sign the assertion and embed a nonce to prevent replay attacks
+		return new AuthenticationToken(employeeId, assertion, expiration);
 	}
 
 	@Nonnull
-	public Optional<Employee> findEmployeeByAuthenticationToken(@Nullable String authenticationToken) {
+	public Optional<Employee> findEmployeeByAuthenticationToken(@Nullable AuthenticationToken authenticationToken) {
 		if (authenticationToken == null)
 			return Optional.empty();
 
-		throw new UnsupportedOperationException("TODO");
+		if (Instant.now().isAfter(authenticationToken.expiration())) {
+			String expirationDateTime = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+					.localizedBy(getCurrentContext().getPreferredLocale())
+					.withZone(getCurrentContext().getPreferredTimeZone())
+					.format(authenticationToken.expiration());
+
+			throw new UserFacingException(getStrings().get("Your authentication token expired on {{expirationDateTime}}, please re-authenticate.",
+					Map.of("expirationDateTime", expirationDateTime)));
+		}
+
+		// Note: A real system would perform a cryptographic check against the assertion and validate/track the nonce
+		// (in addition to any other checks...)
+
+		return findEmployeeById(authenticationToken.employeeId());
+	}
+
+	@Nonnull
+	protected CurrentContext getCurrentContext() {
+		return this.currentContextProvider.get();
 	}
 
 	@Nonnull

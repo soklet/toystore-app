@@ -18,11 +18,41 @@ package com.soklet.example.model.auth;
 
 import javax.annotation.Nonnull;
 import java.time.Instant;
+import java.util.UUID;
+
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 public record AuthenticationToken(
-		@Nonnull String value,
+		@Nonnull UUID employeeId,
+		@Nonnull String assertion,
 		@Nonnull Instant expiration
-) {}
+) {
+	@Nonnull
+	public String encodeAsString() {
+		return format("%s|%s|%s", employeeId(), assertion(), expiration().toEpochMilli());
+	}
+
+	@Nonnull
+	public static AuthenticationToken decodeFromString(@Nonnull String string) {
+		requireNonNull(string);
+
+		String[] components = string.split("\\|");
+
+		if (components.length != 3)
+			throw new IllegalArgumentException(format("Invalid authentication token structure for '%s'", string));
+
+		try {
+			UUID employeeId = UUID.fromString(components[0]);
+			String assertion = components[1];
+			Instant expiration = Instant.ofEpochMilli(Long.valueOf(components[2]));
+
+			return new AuthenticationToken(employeeId, assertion, expiration);
+		} catch (Exception e) {
+			throw new IllegalArgumentException(format("Invalid authentication token contents for '%s'", string), e);
+		}
+	}
+}

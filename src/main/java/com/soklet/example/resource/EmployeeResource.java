@@ -152,7 +152,7 @@ public class EmployeeResource {
 
 		EmployeeAuthenticateApiRequest request = getRequestBodyParser().parse(requestBody, EmployeeAuthenticateApiRequest.class);
 		AuthenticationToken authenticationToken = getEmployeeService().authenticateEmployee(request);
-		Employee employee = getEmployeeService().findEmployeeByAuthenticationToken(authenticationToken.value()).get();
+		Employee employee = getEmployeeService().findEmployeeByAuthenticationToken(authenticationToken).get();
 
 		return new EmployeeAuthenticateReponse(authenticationToken, employee);
 	}
