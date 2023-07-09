@@ -42,6 +42,7 @@ import com.soklet.core.Server;
 import com.soklet.core.impl.DefaultResponseMarshaler;
 import com.soklet.core.impl.MicrohttpServer;
 import com.soklet.core.impl.WhitelistedOriginsCorsAuthorizer;
+import com.soklet.example.exception.UserFacingException;
 import com.soklet.example.model.auth.AuthenticationToken;
 import com.soklet.example.model.db.Employee;
 import com.soklet.example.service.EmployeeService;
@@ -76,10 +77,12 @@ public class AppModule extends AbstractModule {
 	public SokletConfiguration provideSokletConfiguration(@Nonnull Injector injector,
 																												@Nonnull Configuration configuration,
 																												@Nonnull EmployeeService employeeService,
+																												@Nonnull Strings strings,
 																												@Nonnull Gson gson) {
 		requireNonNull(injector);
 		requireNonNull(configuration);
 		requireNonNull(employeeService);
+		requireNonNull(strings);
 		requireNonNull(gson);
 
 		return new SokletConfiguration.Builder(new MicrohttpServer.Builder(configuration.getPort()).host("0.0.0.0").build())
@@ -120,21 +123,25 @@ public class AppModule extends AbstractModule {
 						requireNonNull(requestHandler);
 						requireNonNull(responseHandler);
 
-						// In a real system, this might be a JWT
-						String authenticationTokenAsString = request.getHeaderValue("X-Authentication-Token").orElse(null);
-						Employee employee = null;
+						// Ensure a "current context" scope exists for all request-handling code
+						CurrentContext.forRequest(request).build().run(() -> {
+							// In a real system, this might be a JWT
+							String authenticationTokenAsString = request.getHeaderValue("X-Authentication-Token").orElse(null);
+							Employee employee = null;
 
-						if (authenticationTokenAsString != null)
-							employee = employeeService.findEmployeeByAuthenticationToken(
-									AuthenticationToken.decodeFromString(authenticationTokenAsString)).orElse(null);
+							if (authenticationTokenAsString != null)
+								employee = employeeService.findEmployeeByAuthenticationToken(
+										AuthenticationToken.decodeFromString(authenticationTokenAsString)).orElse(null);
 
-						CurrentContext currentContext = CurrentContext.forRequest(request)
-								.employee(employee)
-								.build();
+							// Create a new current context scope to take the authenticated employee into account
+							CurrentContext currentContext = CurrentContext.forRequest(request)
+									.employee(employee)
+									.build();
 
-						currentContext.run(() -> {
-							MarshaledResponse marshaledResponse = requestHandler.apply(request);
-							responseHandler.accept(marshaledResponse);
+							currentContext.run(() -> {
+								MarshaledResponse marshaledResponse = requestHandler.apply(request);
+								responseHandler.accept(marshaledResponse);
+							});
 						});
 					}
 				})
@@ -154,6 +161,31 @@ public class AppModule extends AbstractModule {
 						return new MarshaledResponse.Builder(response.getStatusCode())
 								.headers(headers)
 								.cookies(response.getCookies())
+								.body(body)
+								.build();
+					}
+
+					@Nonnull
+					@Override
+					public MarshaledResponse forException(@Nonnull Request request,
+																								@Nonnull Throwable throwable,
+																								@Nullable ResourceMethod resourceMethod) {
+						String message = strings.get("An unexpected error occurred.");
+						int statusCode = 500;
+
+						if (throwable instanceof UserFacingException userFacingException) {
+							message = userFacingException.getMessage();
+							statusCode = 422;
+						}
+
+						// Use Gson to turn response objects into JSON to go over the wire
+						byte[] body = gson.toJson(Map.of("message", message)).getBytes(StandardCharsets.UTF_8);
+
+						Map<String, Set<String>> headers = new HashMap<>();
+						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
+
+						return new MarshaledResponse.Builder(statusCode)
+								.headers(headers)
 								.body(body)
 								.build();
 					}

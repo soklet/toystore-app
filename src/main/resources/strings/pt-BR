@@ -1,4 +1,0 @@
-{
-  "Sorry, we could not authenticate you.": "Desculpe, não foi possível autenticá-lo.",
-  "Your authentication token expired on {{expirationDateTime}}, please re-authenticate.": "Seu token de autenticação expirou em {{expirationDateTime}}. Autentique-se novamente."
-}

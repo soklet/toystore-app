@@ -29,6 +29,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
@@ -96,6 +97,7 @@ public class CurrentContext {
 	}
 
 	public void run(@Nonnull Runnable runnable) {
+		requireNonNull(runnable);
 		ScopedValue.where(CURRENT_CONTEXT_SCOPED_VALUE, this).run(runnable);
 	}
 

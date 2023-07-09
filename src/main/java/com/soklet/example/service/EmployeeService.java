@@ -165,7 +165,7 @@ public class EmployeeService {
 					.withZone(getCurrentContext().getPreferredTimeZone())
 					.format(authenticationToken.expiration());
 
-			throw new UserFacingException(getStrings().get("Your authentication token expired on {{expirationDateTime}}, please re-authenticate.",
+			throw new UserFacingException(getStrings().get("Your authentication token expired on {{expirationDateTime}} - please re-authenticate.",
 					Map.of("expirationDateTime", expirationDateTime)));
 		}
 
