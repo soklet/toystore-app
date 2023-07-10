@@ -113,35 +113,44 @@ public class AppModule extends AbstractModule {
 						System.out.println("Server stopped.");
 					}
 
+					@Override
+					public void wrapRequest(@Nonnull Request request,
+																	@Nullable ResourceMethod resourceMethod,
+																	@Nonnull Runnable requestProcessor) {
+						requireNonNull(request);
+						requireNonNull(requestProcessor);
+
+						// Ensure a "current context" scope exists for all request-handling code
+						CurrentContext.forRequest(request).build().run(() -> {
+							requestProcessor.run();
+						});
+					}
 
 					@Override
 					public void interceptRequest(@Nonnull Request request,
 																			 @Nullable ResourceMethod resourceMethod,
-																			 @Nonnull Function<Request, MarshaledResponse> requestHandler,
-																			 @Nonnull Consumer<MarshaledResponse> responseHandler) {
+																			 @Nonnull Function<Request, MarshaledResponse> responseGenerator,
+																			 @Nonnull Consumer<MarshaledResponse> responseWriter) {
 						requireNonNull(request);
-						requireNonNull(requestHandler);
-						requireNonNull(responseHandler);
+						requireNonNull(responseGenerator);
+						requireNonNull(responseWriter);
 
-						// Ensure a "current context" scope exists for all request-handling code
-						CurrentContext.forRequest(request).build().run(() -> {
-							// In a real system, this might be a JWT
-							String authenticationTokenAsString = request.getHeaderValue("X-Authentication-Token").orElse(null);
-							Employee employee = null;
+						// In a real system, this might be a JWT
+						String authenticationTokenAsString = request.getHeaderValue("X-Authentication-Token").orElse(null);
+						Employee employee = null;
 
-							if (authenticationTokenAsString != null)
-								employee = employeeService.findEmployeeByAuthenticationToken(
-										AuthenticationToken.decodeFromString(authenticationTokenAsString)).orElse(null);
+						if (authenticationTokenAsString != null)
+							employee = employeeService.findEmployeeByAuthenticationToken(
+									AuthenticationToken.decodeFromString(authenticationTokenAsString)).orElse(null);
 
-							// Create a new current context scope to take the authenticated employee into account
-							CurrentContext currentContext = CurrentContext.forRequest(request)
-									.employee(employee)
-									.build();
+						// Create a new current context scope to take the authenticated employee into account (if present)
+						CurrentContext currentContext = CurrentContext.forRequest(request)
+								.employee(employee)
+								.build();
 
-							currentContext.run(() -> {
-								MarshaledResponse marshaledResponse = requestHandler.apply(request);
-								responseHandler.accept(marshaledResponse);
-							});
+						currentContext.run(() -> {
+							MarshaledResponse marshaledResponse = responseGenerator.apply(request);
+							responseWriter.accept(marshaledResponse);
 						});
 					}
 				})
