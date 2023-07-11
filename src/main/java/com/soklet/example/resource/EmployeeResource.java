@@ -80,15 +80,10 @@ public class EmployeeResource {
 	}
 
 	@Nonnull
-	@AuthorizationRequired
+	@AuthorizationRequired(RoleId.ADMINISTRATOR)
 	@POST("/employees")
 	public EmployeeReponse createEmployee(@Nonnull @RequestBody String requestBody) {
 		requireNonNull(requestBody);
-
-		Employee currentEmployee = getCurrentContext().getEmployee().get();
-
-		if (currentEmployee.roleId() != RoleId.ADMINISTRATOR)
-			throw new AuthorizationException();
 
 		EmployeeCreateApiRequest request = getRequestBodyParser().parse(requestBody, EmployeeCreateApiRequest.class);
 		UUID employeeId = getEmployeeService().createEmployee(request);
@@ -125,7 +120,7 @@ public class EmployeeResource {
 		return new EmployeeReponse(employee);
 	}
 
-	@AuthorizationRequired
+	@AuthorizationRequired(RoleId.ADMINISTRATOR)
 	@DELETE("/employees/{employeeId}")
 	public void deleteEmployee(@Nonnull @PathParameter UUID employeeId) {
 		requireNonNull(employeeId);
@@ -135,13 +130,6 @@ public class EmployeeResource {
 		if (employeeToDelete == null)
 			throw new NotFoundException();
 
-		Employee currentEmployee = getCurrentContext().getEmployee().get();
-
-		// Only administrators may delete employees
-		if (currentEmployee.roleId() != RoleId.ADMINISTRATOR)
-			throw new AuthorizationException();
-
-		requireNonNull(employeeId);
 		getEmployeeService().deleteEmployee(employeeId);
 	}
 

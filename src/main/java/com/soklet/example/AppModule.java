@@ -42,9 +42,14 @@ import com.soklet.core.Server;
 import com.soklet.core.impl.DefaultResponseMarshaler;
 import com.soklet.core.impl.MicrohttpServer;
 import com.soklet.core.impl.WhitelistedOriginsCorsAuthorizer;
+import com.soklet.example.annotation.AuthorizationRequired;
+import com.soklet.example.exception.AuthenticationException;
+import com.soklet.example.exception.AuthorizationException;
+import com.soklet.example.exception.NotFoundException;
 import com.soklet.example.exception.UserFacingException;
 import com.soklet.example.model.auth.AuthenticationToken;
 import com.soklet.example.model.db.Employee;
+import com.soklet.example.model.db.Role.RoleId;
 import com.soklet.example.service.EmployeeService;
 import org.hsqldb.jdbc.JDBCDataSource;
 
@@ -56,6 +61,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -63,6 +69,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
@@ -135,13 +142,31 @@ public class AppModule extends AbstractModule {
 						requireNonNull(responseGenerator);
 						requireNonNull(responseWriter);
 
+						// Look at request headers to see if there's a token that identifies an authenticated employee.
 						// In a real system, this might be a JWT
 						String authenticationTokenAsString = request.getHeaderValue("X-Authentication-Token").orElse(null);
 						Employee employee = null;
 
+						// If the token exists, look up the employee
 						if (authenticationTokenAsString != null)
 							employee = employeeService.findEmployeeByAuthenticationToken(
 									AuthenticationToken.decodeFromString(authenticationTokenAsString)).orElse(null);
+
+						if (resourceMethod != null) {
+							// See if the resource method has an @AuthorizationRequired annotation...
+							AuthorizationRequired authorizationRequired = resourceMethod.getMethod().getAnnotation(AuthorizationRequired.class);
+
+							if (authorizationRequired != null) {
+								if (employee == null)
+									throw new AuthenticationException();
+
+								Set<RoleId> requiredRoleIds = authorizationRequired.value() == null
+										? Set.of() : Arrays.stream(authorizationRequired.value()).collect(Collectors.toSet());
+
+								if (requiredRoleIds.size() > 0 && !requiredRoleIds.contains(employee.roleId()))
+									throw new AuthorizationException();
+							}
+						}
 
 						// Create a new current context scope to take the authenticated employee into account (if present)
 						CurrentContext currentContext = CurrentContext.forRequest(request)
@@ -176,15 +201,48 @@ public class AppModule extends AbstractModule {
 
 					@Nonnull
 					@Override
+					public MarshaledResponse forNotFound(@Nonnull Request request) {
+						// Use Gson to turn response objects into JSON to go over the wire
+						byte[] body = gson.toJson(Map.of("message", strings.get("The resource you requested was not found."))).getBytes(StandardCharsets.UTF_8);
+
+						Map<String, Set<String>> headers = new HashMap<>();
+						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
+
+						return new MarshaledResponse.Builder(404)
+								.headers(headers)
+								.body(body)
+								.build();
+					}
+
+					@Nonnull
+					@Override
 					public MarshaledResponse forException(@Nonnull Request request,
 																								@Nonnull Throwable throwable,
 																								@Nullable ResourceMethod resourceMethod) {
-						String message = strings.get("An unexpected error occurred.");
-						int statusCode = 500;
+						String message;
+						int statusCode;
 
-						if (throwable instanceof UserFacingException userFacingException) {
-							message = userFacingException.getMessage();
-							statusCode = 422;
+						switch (throwable) {
+							case UserFacingException userFacingException -> {
+								message = userFacingException.getMessage();
+								statusCode = 422;
+							}
+							case AuthenticationException ignored -> {
+								message = strings.get("You must be authenticated to perform this action.");
+								statusCode = 401;
+							}
+							case AuthorizationException ignored -> {
+								message = strings.get("You are not authorized to perform this action.");
+								statusCode = 403;
+							}
+							case NotFoundException ignored -> {
+								message = strings.get("The resource you requested was not found.");
+								statusCode = 404;
+							}
+							default -> {
+								message = strings.get("An unexpected error occurred.");
+								statusCode = 500;
+							}
 						}
 
 						// Use Gson to turn response objects into JSON to go over the wire

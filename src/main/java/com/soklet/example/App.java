@@ -26,7 +26,10 @@ import com.soklet.example.model.db.Role.RoleId;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
 
@@ -81,5 +84,18 @@ public class App {
 					locale VARCHAR(255) NOT NULL
 					)
 					""");
+
+		// Create a single administrator
+		database.execute("""
+						INSERT INTO employee (
+							employee_id,
+							role_id,
+							name,
+							email_address,
+							time_zone,
+							locale
+						) VALUES (?,?,?,?,?,?)				 
+						""", UUID.fromString("08d0ba3e-b19c-4317-a146-583860fcb5fd"), RoleId.ADMINISTRATOR,
+				"Example Administrator", "admin@soklet.com", ZoneId.of("America/New_York"), Locale.forLanguageTag("en-US"));
 	}
 }

@@ -1,5 +1,8 @@
 {
   "Sorry, we could not authenticate you.": "Desculpe, não foi possível autenticá-lo.",
   "Your authentication token expired on {{expirationDateTime}} - please re-authenticate.": "Seu token de autenticação expirou em {{expirationDateTime}}. Autentique-se novamente.",
+  "You must be authenticated to perform this action.": "Você deve estar autenticado para executar esta ação.",
+  "You are not authorized to perform this action.": "Você não está autorizado a executar esta ação.",
+  "The resource you requested was not found.": "O recurso solicitado não foi encontrado.",
   "An unexpected error occurred.": "Um erro inesperado ocorreu."
 }
