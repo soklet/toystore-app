@@ -130,7 +130,7 @@ public class CurrentContext {
 		String requestDescription = request == null ? "background thread" : request.getId().toString();
 		String employeeDescription = employee == null ? "unauthenticated" : employee.name();
 
-		return format("%s, %s", requestDescription, employeeDescription);
+		return format("%s (%s)", requestDescription, employeeDescription);
 	}
 
 	@Nonnull

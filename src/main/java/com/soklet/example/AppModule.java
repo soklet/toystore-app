@@ -70,6 +70,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -87,11 +88,13 @@ public class AppModule extends AbstractModule {
 	@Singleton
 	public SokletConfiguration provideSokletConfiguration(@Nonnull Injector injector,
 																												@Nonnull Configuration configuration,
+																												@Nonnull Database database,
 																												@Nonnull EmployeeService employeeService,
 																												@Nonnull Strings strings,
 																												@Nonnull Gson gson) {
 		requireNonNull(injector);
 		requireNonNull(configuration);
+		requireNonNull(database);
 		requireNonNull(employeeService);
 		requireNonNull(strings);
 		requireNonNull(gson);
@@ -181,7 +184,13 @@ public class AppModule extends AbstractModule {
 								.build();
 
 						currentContext.run(() -> {
-							MarshaledResponse marshaledResponse = responseGenerator.apply(request);
+							// Wrap the resource method execution (not including the writing of bytes over the wire) in a database transaction.
+							// If an exception occurs during this process, the transaction will roll back.
+							// This is the behavior you normally want.
+							MarshaledResponse marshaledResponse = database.transaction(() ->
+									Optional.of(responseGenerator.apply(request))
+							).get();
+
 							responseWriter.accept(marshaledResponse);
 						});
 					}
@@ -305,7 +314,7 @@ public class AppModule extends AbstractModule {
 
 					@Override
 					public void log(@Nonnull StatementLog statementLog) {
-						logger.debug("SQL took {}ms:\n{}\nParameters: {}", statementLog.getTotalDuration().toNanos() / 1000000.0,
+						logger.trace("SQL took {}ms:\n{}\nParameters: {}", statementLog.getTotalDuration().toNanos() / 1000000.0,
 								statementLog.getStatementContext().getStatement().getSql().stripIndent().trim(),
 								statementLog.getStatementContext().getParameters());
 					}
