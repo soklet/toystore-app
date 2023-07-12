@@ -22,6 +22,8 @@ import com.pyranid.Database;
 import com.soklet.Soklet;
 import com.soklet.SokletConfiguration;
 import com.soklet.example.model.db.Role.RoleId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -39,18 +41,22 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class App {
 	public static void main(@Nullable String[] args) throws Exception {
+		System.setProperty("logback.configurationFile", "logback.xml");
+
+		Logger logger = LoggerFactory.getLogger(App.class);
 		Injector injector = Guice.createInjector(new AppModule());
 		Configuration configuration = injector.getInstance(Configuration.class);
 		Database database = injector.getInstance(Database.class);
 		SokletConfiguration sokletConfiguration = injector.getInstance(SokletConfiguration.class);
 
+		// Load up an example schema and data
 		initializeDatabase(database);
 
 		try (Soklet soklet = new Soklet(sokletConfiguration)) {
 			soklet.start();
 
 			if (configuration.getStopOnKeypress()) {
-				System.out.println("Press [enter] to exit");
+				logger.debug("Press [enter] to exit");
 				System.in.read();
 			} else {
 				Thread.currentThread().join();
@@ -60,8 +66,7 @@ public class App {
 
 	private static void initializeDatabase(@Nonnull Database database) {
 		requireNonNull(database);
-
-		// Create an example schema and load up some data
+		
 		database.execute("""
 				CREATE TABLE role (
 					role_id VARCHAR(255) PRIMARY KEY,

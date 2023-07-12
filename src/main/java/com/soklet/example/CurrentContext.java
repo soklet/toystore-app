@@ -19,12 +19,15 @@ package com.soklet.example;
 import com.soklet.core.Request;
 import com.soklet.example.model.db.Employee;
 import jdk.incubator.concurrent.ScopedValue;
+import org.slf4j.MDC;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.annotation.concurrent.ThreadSafe;
 import java.time.ZoneId;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -37,23 +40,23 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class CurrentContext {
 	@Nonnull
-	private static final ScopedValue<CurrentContext> CURRENT_CONTEXT_SCOPED_VALUE;
+	private static final ScopedValue<Deque<CurrentContext>> CURRENT_CONTEXT_STACK_SCOPED_VALUE;
+
+	static {
+		CURRENT_CONTEXT_STACK_SCOPED_VALUE = ScopedValue.newInstance();
+	}
 
 	@Nullable
 	private Request request;
 	@Nullable
 	private Employee employee;
 
-	static {
-		CURRENT_CONTEXT_SCOPED_VALUE = ScopedValue.newInstance();
-	}
-
 	@Nonnull
 	public static CurrentContext get() {
-		if (!CURRENT_CONTEXT_SCOPED_VALUE.isBound())
+		if (!CURRENT_CONTEXT_STACK_SCOPED_VALUE.isBound())
 			throw new IllegalStateException(format("No %s is bound to the current thread", CurrentContext.class.getSimpleName()));
 
-		return CURRENT_CONTEXT_SCOPED_VALUE.get();
+		return CURRENT_CONTEXT_STACK_SCOPED_VALUE.get().peek();
 	}
 
 	@NotThreadSafe
@@ -98,7 +101,36 @@ public class CurrentContext {
 
 	public void run(@Nonnull Runnable runnable) {
 		requireNonNull(runnable);
-		ScopedValue.where(CURRENT_CONTEXT_SCOPED_VALUE, this).run(runnable);
+
+		// Maintain a stack of scoped current contexts so we can set logging context
+		// and clear it out after the topmost context has been unwound
+		Deque<CurrentContext> currentContextStack = CURRENT_CONTEXT_STACK_SCOPED_VALUE.orElse(new ArrayDeque<>());
+
+		ScopedValue.where(CURRENT_CONTEXT_STACK_SCOPED_VALUE, currentContextStack).run(() -> {
+			currentContextStack.push(this);
+			MDC.put("CURRENT_CONTEXT", getLoggingDescription());
+
+			try {
+				runnable.run();
+			} finally {
+				currentContextStack.pop();
+
+				if (currentContextStack.size() == 0)
+					MDC.remove("CURRENT_CONTEXT");
+			}
+		});
+	}
+
+	@Nonnull
+	protected String getLoggingDescription() {
+		CurrentContext currentContext = get();
+		Request request = currentContext.getRequest().orElse(null);
+		Employee employee = currentContext.getEmployee().orElse(null);
+
+		String requestDescription = request == null ? "background thread" : request.getId().toString();
+		String employeeDescription = employee == null ? "unauthenticated" : employee.name();
+
+		return format("%s, %s", requestDescription, employeeDescription);
 	}
 
 	@Nonnull

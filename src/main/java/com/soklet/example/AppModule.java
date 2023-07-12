@@ -31,7 +31,9 @@ import com.lokalized.LocalizedStringLoader;
 import com.lokalized.Strings;
 import com.pyranid.Database;
 import com.pyranid.DefaultInstanceProvider;
+import com.pyranid.DefaultStatementLogger;
 import com.pyranid.StatementContext;
+import com.pyranid.StatementLog;
 import com.soklet.SokletConfiguration;
 import com.soklet.core.LifecycleInterceptor;
 import com.soklet.core.MarshaledResponse;
@@ -52,6 +54,8 @@ import com.soklet.example.model.db.Employee;
 import com.soklet.example.model.db.Role.RoleId;
 import com.soklet.example.service.EmployeeService;
 import org.hsqldb.jdbc.JDBCDataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -94,10 +98,13 @@ public class AppModule extends AbstractModule {
 
 		return new SokletConfiguration.Builder(new MicrohttpServer.Builder(configuration.getPort()).host("0.0.0.0").build())
 				.lifecycleInterceptor(new LifecycleInterceptor() {
+					@Nonnull
+					private final Logger logger = LoggerFactory.getLogger("com.soklet.example.LifecycleInterceptor");
+
 					@Override
 					public void didStartRequestHandling(@Nonnull Request request,
 																							@Nullable ResourceMethod resourceMethod) {
-						System.out.printf("[%s] Received %s %s\n", request.getId(), request.getHttpMethod(), request.getUri());
+						logger.debug("Received {} {}", request.getHttpMethod(), request.getUri());
 					}
 
 					@Override
@@ -106,18 +113,18 @@ public class AppModule extends AbstractModule {
 																							 @Nonnull MarshaledResponse marshaledResponse,
 																							 @Nonnull Duration processingDuration,
 																							 @Nonnull List<Throwable> throwables) {
-						System.out.printf("[%s] Finished processing %s %s in %sms\n", request.getId(), request.getHttpMethod(), request.getUri(),
-								processingDuration.toNanos() / 1000000.0);
+						logger.debug("Finished processing {} {} in {}ms", request.getHttpMethod(),
+								request.getUri(), processingDuration.toNanos() / 1000000.0);
 					}
 
 					@Override
 					public void didStartServer(@Nonnull Server server) {
-						System.out.printf("Server started on port %d\n", configuration.getPort());
+						logger.debug("Server started on port {}", configuration.getPort());
 					}
 
 					@Override
 					public void didStopServer(@Nonnull Server server) {
-						System.out.println("Server stopped.");
+						logger.debug("Server stopped.");
 					}
 
 					@Override
@@ -292,9 +299,16 @@ public class AppModule extends AbstractModule {
 						return injector.getInstance(instanceType);
 					}
 				})
-				.statementLogger((statementLog) -> {
-					// Dump out SQL to the console
-					System.out.println(statementLog);
+				.statementLogger(new DefaultStatementLogger() {
+					@Nonnull
+					private final Logger logger = LoggerFactory.getLogger("com.soklet.example.StatementLogger");
+
+					@Override
+					public void log(@Nonnull StatementLog statementLog) {
+						logger.debug("SQL took {}ms:\n{}\nParameters: {}", statementLog.getTotalDuration().toNanos() / 1000000.0,
+								statementLog.getStatementContext().getStatement().getSql().stripIndent().trim(),
+								statementLog.getStatementContext().getParameters());
+					}
 				})
 				.build();
 	}
