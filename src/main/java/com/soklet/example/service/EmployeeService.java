@@ -137,6 +137,8 @@ public class EmployeeService {
 	public AuthenticationToken authenticateEmployee(@Nonnull EmployeeAuthenticateApiRequest request) {
 		requireNonNull(request);
 
+		// TODO: validation/normalization
+
 		Employee employee = getDatabase().executeForObject("""
 				SELECT *
 				FROM employee

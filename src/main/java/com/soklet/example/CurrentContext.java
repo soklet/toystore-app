@@ -93,6 +93,11 @@ public class CurrentContext {
 	}
 
 	@Nonnull
+	public static CurrentContext empty() {
+		return new CurrentContext.Builder().build();
+	}
+
+	@Nonnull
 	public static CurrentContext.Builder forRequest(@Nullable Request request) {
 		return new CurrentContext.Builder().request(request);
 	}

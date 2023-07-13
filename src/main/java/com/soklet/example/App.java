@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
+import java.io.IOException;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
@@ -42,21 +43,35 @@ import static java.util.Objects.requireNonNull;
 public class App {
 	public static void main(@Nullable String[] args) throws Exception {
 		System.setProperty("logback.configurationFile", "logback.xml");
+		new App(new Configuration()).startServer();
+	}
 
-		Logger logger = LoggerFactory.getLogger(App.class);
-		Injector injector = Guice.createInjector(new AppModule());
-		Configuration configuration = injector.getInstance(Configuration.class);
-		Database database = injector.getInstance(Database.class);
-		SokletConfiguration sokletConfiguration = injector.getInstance(SokletConfiguration.class);
+	@Nonnull
+	private final Configuration configuration;
+	@Nonnull
+	private final Injector injector;
+	@Nonnull
+	private final Logger logger;
+
+	public App(@Nonnull Configuration configuration) {
+		requireNonNull(configuration);
+
+		this.configuration = configuration;
+		this.injector = Guice.createInjector(new AppModule());
+		this.logger = LoggerFactory.getLogger(App.class);
 
 		// Load up an example schema and data
-		initializeDatabase(database);
+		initializeDatabase();
+	}
+
+	public void startServer() throws IOException, InterruptedException {
+		SokletConfiguration sokletConfiguration = getInjector().getInstance(SokletConfiguration.class);
 
 		try (Soklet soklet = new Soklet(sokletConfiguration)) {
 			soklet.start();
 
-			if (configuration.getStopOnKeypress()) {
-				logger.debug("Press [enter] to exit");
+			if (getConfiguration().getStopOnKeypress()) {
+				getLogger().debug("Press [enter] to exit");
 				System.in.read();
 			} else {
 				Thread.currentThread().join();
@@ -64,8 +79,8 @@ public class App {
 		}
 	}
 
-	private static void initializeDatabase(@Nonnull Database database) {
-		requireNonNull(database);
+	protected void initializeDatabase() {
+		Database database = getInjector().getInstance(Database.class);
 
 		database.execute("""
 				CREATE TABLE role (
@@ -103,5 +118,20 @@ public class App {
 						) VALUES (?,?,?,?,?,?)				 
 						""", UUID.fromString("08d0ba3e-b19c-4317-a146-583860fcb5fd"), RoleId.ADMINISTRATOR,
 				"Example Administrator", "admin@soklet.com", ZoneId.of("America/New_York"), Locale.forLanguageTag("en-US"));
+	}
+
+	@Nonnull
+	public Configuration getConfiguration() {
+		return this.configuration;
+	}
+
+	@Nonnull
+	public Injector getInjector() {
+		return this.injector;
+	}
+
+	@Nonnull
+	protected Logger getLogger() {
+		return this.logger;
 	}
 }
