@@ -54,9 +54,17 @@ public class CurrentContext {
 	@Nonnull
 	public static CurrentContext get() {
 		if (!CURRENT_CONTEXT_STACK_SCOPED_VALUE.isBound())
-			throw new IllegalStateException(format("No %s is bound to the current thread", CurrentContext.class.getSimpleName()));
+			throw new IllegalStateException(format("No %s is bound to the current scope",
+					CurrentContext.class.getSimpleName()));
 
-		return CURRENT_CONTEXT_STACK_SCOPED_VALUE.get().peek();
+		CurrentContext currentContext = CURRENT_CONTEXT_STACK_SCOPED_VALUE.get().peek();
+
+		// Indicates programmer error
+		if (currentContext == null)
+			throw new IllegalStateException(format("The %s stack bound to the current scope is empty",
+					CurrentContext.class.getSimpleName()));
+
+		return currentContext;
 	}
 
 	@NotThreadSafe
