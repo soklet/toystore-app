@@ -20,6 +20,7 @@ import com.soklet.example.model.db.Role.RoleId;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Locale;
 import java.util.UUID;
@@ -33,5 +34,6 @@ public record Employee(
 		@Nonnull String name,
 		@Nullable String emailAddress,
 		@Nonnull ZoneId timeZone,
-		@Nonnull Locale locale
+		@Nonnull Locale locale,
+		@Nonnull Instant createdAt
 ) {}

@@ -66,7 +66,7 @@ public class App {
 
 	private static void initializeDatabase(@Nonnull Database database) {
 		requireNonNull(database);
-		
+
 		database.execute("""
 				CREATE TABLE role (
 					role_id VARCHAR(255) PRIMARY KEY,
@@ -86,7 +86,8 @@ public class App {
 					name VARCHAR(255) NOT NULL,
 					email_address VARCHAR(255),
 					time_zone VARCHAR(255) NOT NULL,
-					locale VARCHAR(255) NOT NULL
+					locale VARCHAR(255) NOT NULL,
+					created_at TIMESTAMP DEFAULT NOW() NOT NULL
 					)
 					""");
 

@@ -16,15 +16,31 @@
 
 package com.soklet.example.exception;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
+import java.util.Optional;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @NotThreadSafe
 public class UserFacingException extends RuntimeException {
+	@Nullable
+	private final Integer statusCode;
+
 	public UserFacingException(@Nullable String message) {
+		this(null, message);
+	}
+
+	public UserFacingException(@Nullable Integer statusCode,
+														 @Nullable String message) {
 		super(message);
+		this.statusCode = statusCode;
+	}
+
+	@Nonnull
+	public Optional<Integer> getStatusCode() {
+		return Optional.ofNullable(this.statusCode);
 	}
 }

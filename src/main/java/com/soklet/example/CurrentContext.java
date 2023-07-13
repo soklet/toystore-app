@@ -153,29 +153,40 @@ public class CurrentContext {
 
 	@Nonnull
 	public Locale getPreferredLocale() {
+		Request request = getRequest().orElse(null);
+
+		// If this is in the context of a web request, allow clients to specify a special header which indicates preferred locale
+		if (request != null) {
+			String localeHeader = request.getHeaderValue("X-Locale").orElse(null);
+
+			if (localeHeader != null) {
+				try {
+					return Locale.forLanguageTag(localeHeader);
+				} catch (Exception ignored) {
+					// Illegal locale specified, we'll just try one of our fallbacks
+				}
+			}
+		}
+
+		// Next, if there's a signed-in employee, use their configured locale
 		Employee employee = getEmployee().orElse(null);
 
 		if (employee != null)
 			return employee.locale();
 
-		Request request = getRequest().orElse(null);
-
+		// If that didn't work, and we're in the context of a web request, try its Accept-Language header
 		if (request != null && request.getLocales().size() > 0)
 			return request.getLocales().get(0);
 
+		// Still not sure?  Fall back to a safe default
 		return Configuration.getFallbackLocale();
 	}
 
 	@Nonnull
 	public ZoneId getPreferredTimeZone() {
-		Employee employee = getEmployee().orElse(null);
-
-		if (employee != null)
-			return employee.timeZone();
-
 		Request request = getRequest().orElse(null);
 
-		// Allow clients to specify a special header which indicates preferred timezone
+		// If this is in the context of a web request, allow clients to specify a special header which indicates preferred timezone
 		if (request != null) {
 			String timeZoneHeader = request.getHeaderValue("X-Time-Zone").orElse(null);
 
@@ -183,11 +194,18 @@ public class CurrentContext {
 				try {
 					return ZoneId.of(timeZoneHeader);
 				} catch (Exception ignored) {
-					// Illegal timezone specified, we'll just use the fallback
+					// Illegal timezone specified, we'll just try one of our fallbacks
 				}
 			}
 		}
 
+		// Next, if there's a signed-in employee, use their configured timezone
+		Employee employee = getEmployee().orElse(null);
+
+		if (employee != null)
+			return employee.timeZone();
+
+		// Still not sure?  Fall back to a safe default
 		return Configuration.getFallbackTimeZone();
 	}
 }

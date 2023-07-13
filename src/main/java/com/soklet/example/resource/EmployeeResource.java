@@ -32,6 +32,8 @@ import com.soklet.example.exception.NotFoundException;
 import com.soklet.example.model.api.request.EmployeeAuthenticateApiRequest;
 import com.soklet.example.model.api.request.EmployeeCreateApiRequest;
 import com.soklet.example.model.api.request.EmployeeUpdateApiRequest;
+import com.soklet.example.model.api.response.EmployeeApiResponse;
+import com.soklet.example.model.api.response.EmployeeApiResponse.EmployeeApiResponseFactory;
 import com.soklet.example.model.auth.AuthenticationToken;
 import com.soklet.example.model.db.Employee;
 import com.soklet.example.model.db.Role.RoleId;
@@ -42,6 +44,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
@@ -56,18 +59,23 @@ public class EmployeeResource {
 	@Nonnull
 	private final RequestBodyParser requestBodyParser;
 	@Nonnull
+	private final EmployeeApiResponseFactory employeeApiResponseFactory;
+	@Nonnull
 	private final Provider<CurrentContext> currentContextProvider;
 
 	@Inject
 	public EmployeeResource(@Nonnull EmployeeService employeeService,
 													@Nonnull RequestBodyParser requestBodyParser,
+													@Nonnull EmployeeApiResponseFactory employeeApiResponseFactory,
 													@Nonnull Provider<CurrentContext> currentContextProvider) {
 		requireNonNull(employeeService);
 		requireNonNull(requestBodyParser);
+		requireNonNull(employeeApiResponseFactory);
 		requireNonNull(currentContextProvider);
 
 		this.employeeService = employeeService;
 		this.requestBodyParser = requestBodyParser;
+		this.employeeApiResponseFactory = employeeApiResponseFactory;
 		this.currentContextProvider = currentContextProvider;
 	}
 
@@ -75,7 +83,10 @@ public class EmployeeResource {
 	@AuthorizationRequired
 	@GET("/employees")
 	public EmployeesReponse findEmployees() {
-		List<Employee> employees = getEmployeeService().findEmployees();
+		List<EmployeeApiResponse> employees = getEmployeeService().findEmployees().stream()
+				.map(employee -> getEmployeeApiResponseFactory().create(employee))
+				.collect(Collectors.toList());
+
 		return new EmployeesReponse(employees);
 	}
 
@@ -89,7 +100,7 @@ public class EmployeeResource {
 		UUID employeeId = getEmployeeService().createEmployee(request);
 		Employee employee = getEmployeeService().findEmployeeById(employeeId).get();
 
-		return new EmployeeReponse(employee);
+		return new EmployeeReponse(getEmployeeApiResponseFactory().create(employee));
 	}
 
 	@Nonnull
@@ -117,7 +128,7 @@ public class EmployeeResource {
 		getEmployeeService().updateEmployee(employeeId, request);
 		Employee employee = getEmployeeService().findEmployeeById(employeeId).get();
 
-		return new EmployeeReponse(employee);
+		return new EmployeeReponse(getEmployeeApiResponseFactory().create(employee));
 	}
 
 	@AuthorizationRequired(RoleId.ADMINISTRATOR)
@@ -142,11 +153,11 @@ public class EmployeeResource {
 		AuthenticationToken authenticationToken = getEmployeeService().authenticateEmployee(request);
 		Employee employee = getEmployeeService().findEmployeeByAuthenticationToken(authenticationToken).get();
 
-		return new EmployeeAuthenticateReponse(authenticationToken, employee);
+		return new EmployeeAuthenticateReponse(authenticationToken, getEmployeeApiResponseFactory().create(employee));
 	}
 
 	public record EmployeesReponse(
-			@Nonnull List<Employee> employees
+			@Nonnull List<EmployeeApiResponse> employees
 	) {
 		public EmployeesReponse {
 			requireNonNull(employees);
@@ -154,7 +165,7 @@ public class EmployeeResource {
 	}
 
 	public record EmployeeReponse(
-			@Nonnull Employee employee
+			@Nonnull EmployeeApiResponse employee
 	) {
 		public EmployeeReponse {
 			requireNonNull(employee);
@@ -163,7 +174,7 @@ public class EmployeeResource {
 
 	public record EmployeeAuthenticateReponse(
 			@Nonnull AuthenticationToken authenticationToken,
-			@Nonnull Employee employee
+			@Nonnull EmployeeApiResponse employee
 	) {
 		public EmployeeAuthenticateReponse {
 			requireNonNull(authenticationToken);
@@ -179,6 +190,11 @@ public class EmployeeResource {
 	@Nonnull
 	protected RequestBodyParser getRequestBodyParser() {
 		return this.requestBodyParser;
+	}
+
+	@Nonnull
+	protected EmployeeApiResponseFactory getEmployeeApiResponseFactory() {
+		return this.employeeApiResponseFactory;
 	}
 
 	@Nonnull

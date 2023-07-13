@@ -66,6 +66,11 @@
             <artifactId>guice</artifactId>
             <version>7.0.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.google.inject.extensions</groupId>
+            <artifactId>guice-assistedinject</artifactId>
+            <version>7.0.0</version>
+        </dependency>
 
         <!-- GSON for JSON generation -->
         <dependency>

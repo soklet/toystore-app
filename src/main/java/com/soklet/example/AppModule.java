@@ -26,6 +26,7 @@ import com.google.inject.Injector;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.lokalized.DefaultStrings;
 import com.lokalized.LocalizedStringLoader;
 import com.lokalized.Strings;
@@ -49,6 +50,7 @@ import com.soklet.example.exception.AuthenticationException;
 import com.soklet.example.exception.AuthorizationException;
 import com.soklet.example.exception.NotFoundException;
 import com.soklet.example.exception.UserFacingException;
+import com.soklet.example.model.api.response.EmployeeApiResponse.EmployeeApiResponseFactory;
 import com.soklet.example.model.auth.AuthenticationToken;
 import com.soklet.example.model.db.Employee;
 import com.soklet.example.model.db.Role.RoleId;
@@ -64,6 +66,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -241,7 +244,7 @@ public class AppModule extends AbstractModule {
 						switch (throwable) {
 							case UserFacingException userFacingException -> {
 								message = userFacingException.getMessage();
-								statusCode = 422;
+								statusCode = userFacingException.getStatusCode().orElse(422);
 							}
 							case AuthenticationException ignored -> {
 								message = strings.get("You must be authenticated to perform this action.");
@@ -371,6 +374,20 @@ public class AppModule extends AbstractModule {
 						return ZoneId.of(jsonReader.nextString());
 					}
 				})
+				// Use ISO formatting for Instants
+				.registerTypeAdapter(Instant.class, new TypeAdapter<Instant>() {
+					@Override
+					public void write(@Nonnull JsonWriter jsonWriter,
+														@Nonnull Instant instant) throws IOException {
+						jsonWriter.value(instant.toString());
+					}
+
+					@Override
+					@Nullable
+					public Instant read(@Nonnull JsonReader jsonReader) throws IOException {
+						return Instant.parse(jsonReader.nextString());
+					}
+				})
 				// Support our custom `AuthenticationToken` type
 				.registerTypeAdapter(AuthenticationToken.class, new TypeAdapter<AuthenticationToken>() {
 					@Override
@@ -386,5 +403,11 @@ public class AppModule extends AbstractModule {
 					}
 				});
 		return gsonBuilder.create();
+	}
+
+	@Override
+	protected void configure() {
+		// Lets Guice know to set up our factory builder
+		install(new FactoryModuleBuilder().build(EmployeeApiResponseFactory.class));
 	}
 }

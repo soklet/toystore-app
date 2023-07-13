@@ -144,7 +144,7 @@ public class EmployeeService {
 				""", Employee.class, request.emailAddress().toLowerCase(Locale.US)).orElse(null);
 
 		if (employee == null)
-			throw new UserFacingException(getStrings().get("Sorry, we could not authenticate you."));
+			throw new UserFacingException(401, getStrings().get("Sorry, we could not authenticate you."));
 
 		UUID employeeId = employee.employeeId();
 		String assertion = UUID.randomUUID().toString();
@@ -165,7 +165,7 @@ public class EmployeeService {
 					.withZone(getCurrentContext().getPreferredTimeZone())
 					.format(authenticationToken.expiration());
 
-			throw new UserFacingException(getStrings().get("Your authentication token expired on {{expirationDateTime}} - please re-authenticate.",
+			throw new UserFacingException(401, getStrings().get("Your authentication token expired on {{expirationDateTime}} - please re-authenticate.",
 					Map.of("expirationDateTime", expirationDateTime)));
 		}
 
