@@ -18,7 +18,6 @@ package com.soklet.example;
 
 import com.soklet.core.Request;
 import com.soklet.example.model.db.Employee;
-import jdk.incubator.concurrent.ScopedValue;
 import org.slf4j.MDC;
 
 import javax.annotation.Nonnull;

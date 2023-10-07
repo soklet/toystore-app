@@ -37,13 +37,10 @@ public class EmployeeResourceTests {
 		App app = new App(new Configuration());
 
 		CurrentContext.empty().run(() -> {
-			String requestBody = """
-					{
-						"emailAddress": "admin@soklet.com"
-					}
-					""";
-
 			EmployeeResource employeeResource = app.getInjector().getInstance(EmployeeResource.class);
+
+			// Call the resource method
+			String requestBody = "{ \"emailAddress\": \"admin@soklet.com\" }";
 			EmployeeAuthenticateReponse response = employeeResource.authenticateEmployee(requestBody);
 
 			Assert.assertEquals("Email doesn't match", "admin@soklet.com", response.employee().getEmailAddress().get());

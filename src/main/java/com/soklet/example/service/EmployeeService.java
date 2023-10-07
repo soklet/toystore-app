@@ -87,7 +87,7 @@ public class EmployeeService {
 		if (employeeId == null)
 			return Optional.empty();
 
-		return getDatabase().executeForObject("""
+		return getDatabase().queryForObject("""
 				SELECT *
 				FROM employee
 				WHERE employee_id=?
