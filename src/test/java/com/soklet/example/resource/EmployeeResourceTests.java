@@ -20,6 +20,7 @@ import com.soklet.annotation.Resource;
 import com.soklet.example.App;
 import com.soklet.example.Configuration;
 import com.soklet.example.CurrentContext;
+import com.soklet.example.model.api.request.EmployeeAuthenticateApiRequest;
 import com.soklet.example.resource.EmployeeResource.EmployeeAuthenticateReponse;
 import org.junit.Assert;
 import org.junit.Test;
@@ -40,8 +41,8 @@ public class EmployeeResourceTests {
 			EmployeeResource employeeResource = app.getInjector().getInstance(EmployeeResource.class);
 
 			// Call the resource method
-			String requestBody = "{ \"emailAddress\": \"admin@soklet.com\" }";
-			EmployeeAuthenticateReponse response = employeeResource.authenticateEmployee(requestBody);
+			EmployeeAuthenticateApiRequest request = new EmployeeAuthenticateApiRequest("admin@soklet.com", "fake-password");
+			EmployeeAuthenticateReponse response = employeeResource.authenticateEmployee(request);
 
 			Assert.assertEquals("Email doesn't match", "admin@soklet.com", response.employee().getEmailAddress().get());
 		});

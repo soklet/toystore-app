@@ -38,7 +38,6 @@ import com.soklet.example.model.auth.AuthenticationToken;
 import com.soklet.example.model.db.Employee;
 import com.soklet.example.model.db.Role.RoleId;
 import com.soklet.example.service.EmployeeService;
-import com.soklet.example.util.RequestBodyParser;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -57,24 +56,19 @@ public class EmployeeResource {
 	@Nonnull
 	private final EmployeeService employeeService;
 	@Nonnull
-	private final RequestBodyParser requestBodyParser;
-	@Nonnull
 	private final EmployeeApiResponseFactory employeeApiResponseFactory;
 	@Nonnull
 	private final Provider<CurrentContext> currentContextProvider;
 
 	@Inject
 	public EmployeeResource(@Nonnull EmployeeService employeeService,
-													@Nonnull RequestBodyParser requestBodyParser,
 													@Nonnull EmployeeApiResponseFactory employeeApiResponseFactory,
 													@Nonnull Provider<CurrentContext> currentContextProvider) {
 		requireNonNull(employeeService);
-		requireNonNull(requestBodyParser);
 		requireNonNull(employeeApiResponseFactory);
 		requireNonNull(currentContextProvider);
 
 		this.employeeService = employeeService;
-		this.requestBodyParser = requestBodyParser;
 		this.employeeApiResponseFactory = employeeApiResponseFactory;
 		this.currentContextProvider = currentContextProvider;
 	}
@@ -93,10 +87,9 @@ public class EmployeeResource {
 	@Nonnull
 	@AuthorizationRequired(RoleId.ADMINISTRATOR)
 	@POST("/employees")
-	public EmployeeReponse createEmployee(@Nonnull @RequestBody String requestBody) {
-		requireNonNull(requestBody);
+	public EmployeeReponse createEmployee(@Nonnull @RequestBody EmployeeCreateApiRequest request) {
+		requireNonNull(request);
 
-		EmployeeCreateApiRequest request = getRequestBodyParser().parse(requestBody, EmployeeCreateApiRequest.class);
 		UUID employeeId = getEmployeeService().createEmployee(request);
 		Employee employee = getEmployeeService().findEmployeeById(employeeId).get();
 
@@ -107,9 +100,9 @@ public class EmployeeResource {
 	@AuthorizationRequired
 	@PUT("/employees/{employeeId}")
 	public EmployeeReponse updateEmployee(@Nonnull @PathParameter UUID employeeId,
-																				@Nonnull @RequestBody String requestBody) {
+																				@Nonnull @RequestBody EmployeeUpdateApiRequest request) {
 		requireNonNull(employeeId);
-		requireNonNull(requestBody);
+		requireNonNull(request);
 
 		Employee employeeToUpdate = getEmployeeService().findEmployeeById(employeeId).orElse(null);
 
@@ -124,7 +117,6 @@ public class EmployeeResource {
 				|| !currentEmployee.employeeId().equals(employeeToUpdate.employeeId()))
 			throw new AuthorizationException();
 
-		EmployeeUpdateApiRequest request = getRequestBodyParser().parse(requestBody, EmployeeUpdateApiRequest.class);
 		getEmployeeService().updateEmployee(employeeId, request);
 		Employee employee = getEmployeeService().findEmployeeById(employeeId).get();
 
@@ -146,10 +138,9 @@ public class EmployeeResource {
 
 	@Nonnull
 	@POST("/employees/authenticate")
-	public EmployeeAuthenticateReponse authenticateEmployee(@Nonnull @RequestBody String requestBody) {
-		requireNonNull(requestBody);
+	public EmployeeAuthenticateReponse authenticateEmployee(@Nonnull @RequestBody EmployeeAuthenticateApiRequest request) {
+		requireNonNull(request);
 
-		EmployeeAuthenticateApiRequest request = getRequestBodyParser().parse(requestBody, EmployeeAuthenticateApiRequest.class);
 		AuthenticationToken authenticationToken = getEmployeeService().authenticateEmployee(request);
 		Employee employee = getEmployeeService().findEmployeeByAuthenticationToken(authenticationToken).get();
 
@@ -185,11 +176,6 @@ public class EmployeeResource {
 	@Nonnull
 	protected EmployeeService getEmployeeService() {
 		return this.employeeService;
-	}
-
-	@Nonnull
-	protected RequestBodyParser getRequestBodyParser() {
-		return this.requestBodyParser;
 	}
 
 	@Nonnull

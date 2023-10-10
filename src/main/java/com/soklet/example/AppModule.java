@@ -39,6 +39,7 @@ import com.soklet.SokletConfiguration;
 import com.soklet.core.LifecycleInterceptor;
 import com.soklet.core.MarshaledResponse;
 import com.soklet.core.Request;
+import com.soklet.core.RequestBodyMarshaler;
 import com.soklet.core.ResourceMethod;
 import com.soklet.core.Response;
 import com.soklet.core.Server;
@@ -55,6 +56,7 @@ import com.soklet.example.model.auth.AuthenticationToken;
 import com.soklet.example.model.db.Employee;
 import com.soklet.example.model.db.Role.RoleId;
 import com.soklet.example.service.EmployeeService;
+import com.soklet.exception.BadRequestException;
 import org.hsqldb.jdbc.JDBCDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,6 +65,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -198,6 +201,23 @@ public class AppModule extends AbstractModule {
 						});
 					}
 				})
+				.requestBodyMarshaler(new RequestBodyMarshaler() {
+					@Nullable
+					@Override
+					public <T> T marshalRequestBody(@Nonnull Request request,
+																					@Nonnull Type requestBodyType) {
+						requireNonNull(request);
+						requireNonNull(requestBodyType);
+
+						String requestBodyAsString = request.getBodyAsString().orElse(null);
+
+						if (requestBodyAsString == null)
+							return null;
+
+						// Use Gson to turn the request body JSON into a Java type
+						return gson.fromJson(requestBodyAsString, requestBodyType);
+					}
+				})
 				.responseMarshaler(new DefaultResponseMarshaler() {
 					@Nonnull
 					@Override
@@ -245,6 +265,10 @@ public class AppModule extends AbstractModule {
 							case UserFacingException userFacingException -> {
 								message = userFacingException.getMessage();
 								statusCode = userFacingException.getStatusCode().orElse(422);
+							}
+							case BadRequestException ignored -> {
+								message = strings.get("Your request was improperly formatted.");
+								statusCode = 400;
 							}
 							case AuthenticationException ignored -> {
 								message = strings.get("You must be authenticated to perform this action.");
