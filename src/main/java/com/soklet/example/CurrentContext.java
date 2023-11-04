@@ -161,7 +161,7 @@ public class CurrentContext {
 
 		// If this is in the context of a web request, allow clients to specify a special header which indicates preferred locale
 		if (request != null) {
-			String localeHeader = request.getHeaderValue("X-Locale").orElse(null);
+			String localeHeader = request.getHeader("X-Locale").orElse(null);
 
 			if (localeHeader != null) {
 				try {
@@ -192,7 +192,7 @@ public class CurrentContext {
 
 		// If this is in the context of a web request, allow clients to specify a special header which indicates preferred timezone
 		if (request != null) {
-			String timeZoneHeader = request.getHeaderValue("X-Time-Zone").orElse(null);
+			String timeZoneHeader = request.getHeader("X-Time-Zone").orElse(null);
 
 			if (timeZoneHeader != null) {
 				try {

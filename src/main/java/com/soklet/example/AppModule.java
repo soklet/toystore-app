@@ -160,7 +160,7 @@ public class AppModule extends AbstractModule {
 
 						// Look at request headers to see if there's a token that identifies an authenticated employee.
 						// In a real system, this might be a JWT
-						String authenticationTokenAsString = request.getHeaderValue("X-Authentication-Token").orElse(null);
+						String authenticationTokenAsString = request.getHeader("X-Authentication-Token").orElse(null);
 						Employee employee = null;
 
 						// If the token exists, look up the employee
