@@ -65,6 +65,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
+import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
@@ -204,8 +205,10 @@ public class AppModule extends AbstractModule {
 				.requestBodyMarshaler(new RequestBodyMarshaler() {
 					@Nullable
 					@Override
-					public <T> T marshalRequestBody(@Nonnull Request request,
-																					@Nonnull Type requestBodyType) {
+					public Object marshalRequestBody(@Nonnull Request request,
+																					 @Nonnull ResourceMethod resourceMethod,
+																					 @Nonnull Parameter parameter,
+																					 @Nonnull Type requestBodyType) {
 						requireNonNull(request);
 						requireNonNull(requestBodyType);
 
