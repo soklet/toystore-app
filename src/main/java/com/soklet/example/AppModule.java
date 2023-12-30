@@ -44,7 +44,7 @@ import com.soklet.core.ResourceMethod;
 import com.soklet.core.Response;
 import com.soklet.core.Server;
 import com.soklet.core.impl.DefaultResponseMarshaler;
-import com.soklet.core.impl.MicrohttpServer;
+import com.soklet.core.impl.DefaultServer;
 import com.soklet.core.impl.WhitelistedOriginsCorsAuthorizer;
 import com.soklet.example.annotation.AuthorizationRequired;
 import com.soklet.example.exception.AuthenticationException;
@@ -57,6 +57,7 @@ import com.soklet.example.model.db.Employee;
 import com.soklet.example.model.db.Role.RoleId;
 import com.soklet.example.service.EmployeeService;
 import com.soklet.exception.BadRequestException;
+import com.soklet.exception.IllegalQueryParameterException;
 import org.hsqldb.jdbc.JDBCDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,7 +107,7 @@ public class AppModule extends AbstractModule {
 		requireNonNull(strings);
 		requireNonNull(gson);
 
-		return new SokletConfiguration.Builder(new MicrohttpServer.Builder(configuration.getPort()).host("0.0.0.0").build())
+		return new SokletConfiguration.Builder(new DefaultServer.Builder(configuration.getPort()).host("0.0.0.0").build())
 				.lifecycleInterceptor(new LifecycleInterceptor() {
 					@Nonnull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.example.LifecycleInterceptor");
@@ -268,6 +269,12 @@ public class AppModule extends AbstractModule {
 							case UserFacingException userFacingException -> {
 								message = userFacingException.getMessage();
 								statusCode = userFacingException.getStatusCode().orElse(422);
+							}
+							case IllegalQueryParameterException ex -> {
+								message = String.format("Illegal value '%s' for query parameter '%s'",
+										ex.getQueryParameterValue().orElse("[not provided]"),
+										ex.getQueryParameterName());
+								statusCode = 400;
 							}
 							case BadRequestException ignored -> {
 								message = strings.get("Your request was improperly formatted.");
