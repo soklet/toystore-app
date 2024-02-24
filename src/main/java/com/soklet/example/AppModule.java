@@ -141,13 +141,13 @@ public class AppModule extends AbstractModule {
 					@Override
 					public void wrapRequest(@Nonnull Request request,
 																	@Nullable ResourceMethod resourceMethod,
-																	@Nonnull Runnable requestProcessor) {
+																	@Nonnull Consumer<Request> requestProcessor) {
 						requireNonNull(request);
 						requireNonNull(requestProcessor);
 
 						// Ensure a "current context" scope exists for all request-handling code
 						CurrentContext.forRequest(request).build().run(() -> {
-							requestProcessor.run();
+							requestProcessor.accept(request);
 						});
 					}
 
