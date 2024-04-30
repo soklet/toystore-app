@@ -52,7 +52,7 @@ import com.soklet.example.exception.AuthorizationException;
 import com.soklet.example.exception.NotFoundException;
 import com.soklet.example.exception.UserFacingException;
 import com.soklet.example.model.api.response.EmployeeApiResponse.EmployeeApiResponseFactory;
-import com.soklet.example.model.auth.AuthenticationToken;
+import com.soklet.example.model.auth.Jwt;
 import com.soklet.example.model.db.Employee;
 import com.soklet.example.model.db.Role.RoleId;
 import com.soklet.example.service.EmployeeService;
@@ -80,6 +80,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -107,7 +108,7 @@ public class AppModule extends AbstractModule {
 		requireNonNull(strings);
 		requireNonNull(gson);
 
-		return new SokletConfiguration.Builder(new DefaultServer.Builder(configuration.getPort()).host("0.0.0.0").build())
+		return SokletConfiguration.withServer(DefaultServer.withPort(configuration.getPort()).host("0.0.0.0").build())
 				.lifecycleInterceptor(new LifecycleInterceptor() {
 					@Nonnull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.example.LifecycleInterceptor");
@@ -168,7 +169,7 @@ public class AppModule extends AbstractModule {
 						// If the token exists, look up the employee
 						if (authenticationTokenAsString != null)
 							employee = employeeService.findEmployeeByAuthenticationToken(
-									AuthenticationToken.decodeFromString(authenticationTokenAsString)).orElse(null);
+									/*Jwt.decodeFromString(authenticationTokenAsString)*/ new Jwt(UUID.randomUUID(), Instant.now())).orElse(null);
 
 						if (resourceMethod != null) {
 							// See if the resource method has an @AuthorizationRequired annotation...
@@ -204,6 +205,9 @@ public class AppModule extends AbstractModule {
 					}
 				})
 				.requestBodyMarshaler(new RequestBodyMarshaler() {
+					@Nonnull
+					private final Logger logger = LoggerFactory.getLogger("com.soklet.example.RequestBodyMarshaler");
+
 					@Nullable
 					@Override
 					public Object marshalRequestBody(@Nonnull Request request,
@@ -217,6 +221,8 @@ public class AppModule extends AbstractModule {
 
 						if (requestBodyAsString == null)
 							return null;
+
+						logger.debug("Request body:\n{}", requestBodyAsString);
 
 						// Use Gson to turn the request body JSON into a Java type
 						return gson.fromJson(requestBodyAsString, requestBodyType);
@@ -235,7 +241,7 @@ public class AppModule extends AbstractModule {
 						Map<String, Set<String>> headers = new HashMap<>(response.getHeaders());
 						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
 
-						return new MarshaledResponse.Builder(response.getStatusCode())
+						return MarshaledResponse.withStatusCode(response.getStatusCode())
 								.headers(headers)
 								.cookies(response.getCookies())
 								.body(body)
@@ -251,7 +257,7 @@ public class AppModule extends AbstractModule {
 						Map<String, Set<String>> headers = new HashMap<>();
 						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
 
-						return new MarshaledResponse.Builder(404)
+						return MarshaledResponse.withStatusCode(404)
 								.headers(headers)
 								.body(body)
 								.build();
@@ -259,7 +265,7 @@ public class AppModule extends AbstractModule {
 
 					@Nonnull
 					@Override
-					public MarshaledResponse forException(@Nonnull Request request,
+					public MarshaledResponse forThrowable(@Nonnull Request request,
 																								@Nonnull Throwable throwable,
 																								@Nullable ResourceMethod resourceMethod) {
 						String message;
@@ -304,7 +310,7 @@ public class AppModule extends AbstractModule {
 						Map<String, Set<String>> headers = new HashMap<>();
 						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
 
-						return new MarshaledResponse.Builder(statusCode)
+						return MarshaledResponse.withStatusCode(statusCode)
 								.headers(headers)
 								.body(body)
 								.build();
@@ -422,18 +428,20 @@ public class AppModule extends AbstractModule {
 						return Instant.parse(jsonReader.nextString());
 					}
 				})
-				// Support our custom `AuthenticationToken` type
-				.registerTypeAdapter(AuthenticationToken.class, new TypeAdapter<AuthenticationToken>() {
+				// Support our custom `Jwt` type
+				.registerTypeAdapter(Jwt.class, new TypeAdapter<Jwt>() {
 					@Override
 					public void write(@Nonnull JsonWriter jsonWriter,
-														@Nonnull AuthenticationToken authenticationToken) throws IOException {
-						jsonWriter.value(authenticationToken.encodeAsString());
+														@Nonnull Jwt authenticationToken) throws IOException {
+						//jsonWriter.value(authenticationToken.encodeAsString());
+						throw new IllegalStateException();
 					}
 
 					@Override
 					@Nullable
-					public AuthenticationToken read(@Nonnull JsonReader jsonReader) throws IOException {
-						return AuthenticationToken.decodeFromString(jsonReader.nextString());
+					public Jwt read(@Nonnull JsonReader jsonReader) throws IOException {
+						//	return Jwt.decodeFromString(jsonReader.nextString());
+						throw new IllegalStateException();
 					}
 				});
 		return gsonBuilder.create();

@@ -29,12 +29,12 @@ import com.soklet.example.CurrentContext;
 import com.soklet.example.annotation.AuthorizationRequired;
 import com.soklet.example.exception.AuthorizationException;
 import com.soklet.example.exception.NotFoundException;
-import com.soklet.example.model.api.request.EmployeeAuthenticateApiRequest;
-import com.soklet.example.model.api.request.EmployeeCreateApiRequest;
-import com.soklet.example.model.api.request.EmployeeUpdateApiRequest;
+import com.soklet.example.model.api.request.EmployeeAuthenticateRequest;
+import com.soklet.example.model.api.request.EmployeeCreateRequest;
+import com.soklet.example.model.api.request.EmployeeUpdateRequest;
 import com.soklet.example.model.api.response.EmployeeApiResponse;
 import com.soklet.example.model.api.response.EmployeeApiResponse.EmployeeApiResponseFactory;
-import com.soklet.example.model.auth.AuthenticationToken;
+import com.soklet.example.model.auth.Jwt;
 import com.soklet.example.model.db.Employee;
 import com.soklet.example.model.db.Role.RoleId;
 import com.soklet.example.service.EmployeeService;
@@ -87,7 +87,7 @@ public class EmployeeResource {
 	@Nonnull
 	@AuthorizationRequired(RoleId.ADMINISTRATOR)
 	@POST("/employees")
-	public EmployeeReponse createEmployee(@Nonnull @RequestBody EmployeeCreateApiRequest request) {
+	public EmployeeReponse createEmployee(@Nonnull @RequestBody EmployeeCreateRequest request) {
 		requireNonNull(request);
 
 		UUID employeeId = getEmployeeService().createEmployee(request);
@@ -100,7 +100,7 @@ public class EmployeeResource {
 	@AuthorizationRequired
 	@PUT("/employees/{employeeId}")
 	public EmployeeReponse updateEmployee(@Nonnull @PathParameter UUID employeeId,
-																				@Nonnull @RequestBody EmployeeUpdateApiRequest request) {
+																				@Nonnull @RequestBody EmployeeUpdateRequest request) {
 		requireNonNull(employeeId);
 		requireNonNull(request);
 
@@ -138,10 +138,10 @@ public class EmployeeResource {
 
 	@Nonnull
 	@POST("/employees/authenticate")
-	public EmployeeAuthenticateReponse authenticateEmployee(@Nonnull @RequestBody EmployeeAuthenticateApiRequest request) {
+	public EmployeeAuthenticateReponse authenticateEmployee(@Nonnull @RequestBody EmployeeAuthenticateRequest request) {
 		requireNonNull(request);
 
-		AuthenticationToken authenticationToken = getEmployeeService().authenticateEmployee(request);
+		Jwt authenticationToken = getEmployeeService().authenticateEmployee(request);
 		Employee employee = getEmployeeService().findEmployeeByAuthenticationToken(authenticationToken).get();
 
 		return new EmployeeAuthenticateReponse(authenticationToken, getEmployeeApiResponseFactory().create(employee));
@@ -164,7 +164,7 @@ public class EmployeeResource {
 	}
 
 	public record EmployeeAuthenticateReponse(
-			@Nonnull AuthenticationToken authenticationToken,
+			@Nonnull Jwt authenticationToken,
 			@Nonnull EmployeeApiResponse employee
 	) {
 		public EmployeeAuthenticateReponse {

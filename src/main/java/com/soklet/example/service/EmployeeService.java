@@ -22,10 +22,10 @@ import com.lokalized.Strings;
 import com.pyranid.Database;
 import com.soklet.example.CurrentContext;
 import com.soklet.example.exception.UserFacingException;
-import com.soklet.example.model.api.request.EmployeeAuthenticateApiRequest;
-import com.soklet.example.model.api.request.EmployeeCreateApiRequest;
-import com.soklet.example.model.api.request.EmployeeUpdateApiRequest;
-import com.soklet.example.model.auth.AuthenticationToken;
+import com.soklet.example.model.api.request.EmployeeAuthenticateRequest;
+import com.soklet.example.model.api.request.EmployeeCreateRequest;
+import com.soklet.example.model.api.request.EmployeeUpdateRequest;
+import com.soklet.example.model.auth.Jwt;
 import com.soklet.example.model.db.Employee;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,7 +95,7 @@ public class EmployeeService {
 	}
 
 	@Nonnull
-	public UUID createEmployee(@Nonnull EmployeeCreateApiRequest request) {
+	public UUID createEmployee(@Nonnull EmployeeCreateRequest request) {
 		requireNonNull(request);
 
 		UUID employeeId = UUID.randomUUID();
@@ -116,7 +116,7 @@ public class EmployeeService {
 
 	@Nonnull
 	public Boolean updateEmployee(@Nonnull UUID employeeId,
-																@Nonnull EmployeeUpdateApiRequest request) {
+																@Nonnull EmployeeUpdateRequest request) {
 		requireNonNull(employeeId);
 		requireNonNull(request);
 
@@ -134,7 +134,7 @@ public class EmployeeService {
 	}
 
 	@Nonnull
-	public AuthenticationToken authenticateEmployee(@Nonnull EmployeeAuthenticateApiRequest request) {
+	public Jwt authenticateEmployee(@Nonnull EmployeeAuthenticateRequest request) {
 		requireNonNull(request);
 
 		// TODO: validation/normalization
@@ -153,11 +153,12 @@ public class EmployeeService {
 		Instant expiration = Instant.now().plus(10, ChronoUnit.MINUTES);
 
 		// A real system would cryptographically sign the assertion and embed a nonce to prevent replay attacks
-		return new AuthenticationToken(employeeId, assertion, expiration);
+		//return new Jwt(employeeId, assertion, expiration);
+		throw new IllegalStateException("fake");
 	}
 
 	@Nonnull
-	public Optional<Employee> findEmployeeByAuthenticationToken(@Nullable AuthenticationToken authenticationToken) {
+	public Optional<Employee> findEmployeeByAuthenticationToken(@Nullable Jwt authenticationToken) {
 		if (authenticationToken == null)
 			return Optional.empty();
 

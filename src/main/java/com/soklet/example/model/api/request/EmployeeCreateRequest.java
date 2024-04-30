@@ -26,7 +26,7 @@ import java.util.Locale;
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record EmployeeUpdateApiRequest(
+public record EmployeeCreateRequest(
 		@Nonnull String name,
 		@Nonnull RoleId roleId,
 		@Nullable String emailAddress,

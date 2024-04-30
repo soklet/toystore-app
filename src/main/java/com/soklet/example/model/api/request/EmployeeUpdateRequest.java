@@ -16,13 +16,20 @@
 
 package com.soklet.example.model.api.request;
 
+import com.soklet.example.model.db.Role.RoleId;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.time.ZoneId;
+import java.util.Locale;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record EmployeeAuthenticateApiRequest(
-		@Nonnull String emailAddress,
-		@Nullable String password
+public record EmployeeUpdateRequest(
+		@Nonnull String name,
+		@Nonnull RoleId roleId,
+		@Nullable String emailAddress,
+		@Nonnull ZoneId timeZone,
+		@Nonnull Locale locale
 ) {}

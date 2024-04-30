@@ -16,16 +16,22 @@
 
 package com.soklet.example.resource;
 
+import com.google.gson.Gson;
+import com.soklet.Soklet;
+import com.soklet.SokletConfiguration;
 import com.soklet.annotation.Resource;
+import com.soklet.core.HttpMethod;
+import com.soklet.core.MarshaledResponse;
+import com.soklet.core.Request;
 import com.soklet.example.App;
 import com.soklet.example.Configuration;
-import com.soklet.example.CurrentContext;
-import com.soklet.example.model.api.request.EmployeeAuthenticateApiRequest;
 import com.soklet.example.resource.EmployeeResource.EmployeeAuthenticateReponse;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.concurrent.ThreadSafe;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
@@ -36,15 +42,39 @@ public class EmployeeResourceTests {
 	@Test
 	public void testAuthenticate() {
 		App app = new App(new Configuration());
+		Gson gson = app.getInjector().getInstance(Gson.class);
+		SokletConfiguration config = app.getInjector().getInstance(SokletConfiguration.class);
 
-		CurrentContext.empty().run(() -> {
-			EmployeeResource employeeResource = app.getInjector().getInstance(EmployeeResource.class);
+		Soklet.runSimulator(config, (simulator -> {
+			String requestBodyJson = gson.toJson(Map.of(
+					"emailAddress", "admin@soklet.com",
+					"password", "fake-password"
+			));
 
-			// Call the resource method
-			EmployeeAuthenticateApiRequest request = new EmployeeAuthenticateApiRequest("admin@soklet.com", "fake-password");
-			EmployeeAuthenticateReponse response = employeeResource.authenticateEmployee(request);
+			Request request = Request.with(HttpMethod.POST, "/employees/authenticate")
+					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
+					.build();
 
+			MarshaledResponse marshaledResponse = simulator.performRequest(request);
+
+			String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+			EmployeeAuthenticateReponse response = gson.fromJson(responseBody, EmployeeAuthenticateReponse.class);
+
+			Assert.assertEquals("Bad status code", 200, (long) marshaledResponse.getStatusCode());
 			Assert.assertEquals("Email doesn't match", "admin@soklet.com", response.employee().getEmailAddress().get());
-		});
+
+			requestBodyJson = gson.toJson(Map.of(
+					"emailAddress", "fake@soklet.com",
+					"password", "fake-password"
+			));
+
+			request = Request.with(HttpMethod.POST, "/employees/authenticate")
+					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
+					.build();
+
+			marshaledResponse = simulator.performRequest(request);
+
+			Assert.assertEquals("Bad status code", 401, (long) marshaledResponse.getStatusCode());
+		}));
 	}
 }
