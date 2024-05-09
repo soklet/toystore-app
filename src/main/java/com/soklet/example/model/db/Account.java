@@ -19,7 +19,6 @@ package com.soklet.example.model.db;
 import com.soklet.example.model.db.Role.RoleId;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Locale;
@@ -28,11 +27,11 @@ import java.util.UUID;
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record Employee(
-		@Nonnull UUID employeeId,
+public record Account(
+		@Nonnull UUID accountId,
 		@Nonnull RoleId roleId,
 		@Nonnull String name,
-		@Nullable String emailAddress,
+		@Nonnull String emailAddress,
 		@Nonnull ZoneId timeZone,
 		@Nonnull Locale locale,
 		@Nonnull Instant createdAt

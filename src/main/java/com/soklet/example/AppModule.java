@@ -51,11 +51,12 @@ import com.soklet.example.exception.AuthenticationException;
 import com.soklet.example.exception.AuthorizationException;
 import com.soklet.example.exception.NotFoundException;
 import com.soklet.example.exception.UserFacingException;
-import com.soklet.example.model.api.response.EmployeeApiResponse.EmployeeApiResponseFactory;
-import com.soklet.example.model.auth.Jwt;
-import com.soklet.example.model.db.Employee;
+import com.soklet.example.model.api.response.AccountResponse.AccountResponseFactory;
+import com.soklet.example.model.api.response.ToyResponse.ToyResponseFactory;
+import com.soklet.example.model.auth.AccountJwt;
+import com.soklet.example.model.db.Account;
 import com.soklet.example.model.db.Role.RoleId;
-import com.soklet.example.service.EmployeeService;
+import com.soklet.example.service.AccountService;
 import com.soklet.exception.BadRequestException;
 import com.soklet.exception.IllegalQueryParameterException;
 import org.hsqldb.jdbc.JDBCDataSource;
@@ -80,7 +81,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -98,13 +98,13 @@ public class AppModule extends AbstractModule {
 	public SokletConfiguration provideSokletConfiguration(@Nonnull Injector injector,
 																												@Nonnull Configuration configuration,
 																												@Nonnull Database database,
-																												@Nonnull EmployeeService employeeService,
+																												@Nonnull AccountService accountService,
 																												@Nonnull Strings strings,
 																												@Nonnull Gson gson) {
 		requireNonNull(injector);
 		requireNonNull(configuration);
 		requireNonNull(database);
-		requireNonNull(employeeService);
+		requireNonNull(accountService);
 		requireNonNull(strings);
 		requireNonNull(gson);
 
@@ -164,32 +164,34 @@ public class AppModule extends AbstractModule {
 						// Look at request headers to see if there's a token that identifies an authenticated employee.
 						// In a real system, this might be a JWT
 						String authenticationTokenAsString = request.getHeader("X-Authentication-Token").orElse(null);
-						Employee employee = null;
+						Account account = null;
 
-						// If the token exists, look up the employee
-						if (authenticationTokenAsString != null)
-							employee = employeeService.findEmployeeByAuthenticationToken(
-									/*Jwt.decodeFromString(authenticationTokenAsString)*/ new Jwt(UUID.randomUUID(), Instant.now())).orElse(null);
+						// If the token exists, look up the account
+						if (authenticationTokenAsString != null) {
+							AccountJwt accountJwt = AccountJwt.fromStringRepresentation(authenticationTokenAsString, configuration.getKeyPair().getPrivate()).orElse(null);
+							// TODO: don't want to 401 here - need to modify findAccountByJwt
+							account = accountService.findAccountByJwt(accountJwt).orElse(null);
+						}
 
 						if (resourceMethod != null) {
 							// See if the resource method has an @AuthorizationRequired annotation...
 							AuthorizationRequired authorizationRequired = resourceMethod.getMethod().getAnnotation(AuthorizationRequired.class);
 
 							if (authorizationRequired != null) {
-								if (employee == null)
+								if (account == null)
 									throw new AuthenticationException();
 
 								Set<RoleId> requiredRoleIds = authorizationRequired.value() == null
 										? Set.of() : Arrays.stream(authorizationRequired.value()).collect(Collectors.toSet());
 
-								if (requiredRoleIds.size() > 0 && !requiredRoleIds.contains(employee.roleId()))
+								if (requiredRoleIds.size() > 0 && !requiredRoleIds.contains(account.roleId()))
 									throw new AuthorizationException();
 							}
 						}
 
-						// Create a new current context scope to take the authenticated employee into account (if present)
+						// Create a new current context scope to apply the authenticated account (if present)
 						CurrentContext currentContext = CurrentContext.forRequest(request)
-								.employee(employee)
+								.account(account)
 								.build();
 
 						currentContext.run(() -> {
@@ -428,19 +430,19 @@ public class AppModule extends AbstractModule {
 						return Instant.parse(jsonReader.nextString());
 					}
 				})
-				// Support our custom `Jwt` type
-				.registerTypeAdapter(Jwt.class, new TypeAdapter<Jwt>() {
+				// Support our custom `AccountJwt` type
+				.registerTypeAdapter(AccountJwt.class, new TypeAdapter<AccountJwt>() {
 					@Override
 					public void write(@Nonnull JsonWriter jsonWriter,
-														@Nonnull Jwt authenticationToken) throws IOException {
+														@Nonnull AccountJwt authenticationToken) throws IOException {
 						//jsonWriter.value(authenticationToken.encodeAsString());
 						throw new IllegalStateException();
 					}
 
 					@Override
 					@Nullable
-					public Jwt read(@Nonnull JsonReader jsonReader) throws IOException {
-						//	return Jwt.decodeFromString(jsonReader.nextString());
+					public AccountJwt read(@Nonnull JsonReader jsonReader) throws IOException {
+						//	return AccountJwt.decodeFromString(jsonReader.nextString());
 						throw new IllegalStateException();
 					}
 				});
@@ -449,7 +451,8 @@ public class AppModule extends AbstractModule {
 
 	@Override
 	protected void configure() {
-		// Lets Guice know to set up our factory builder
-		install(new FactoryModuleBuilder().build(EmployeeApiResponseFactory.class));
+		// Lets Guice know to set up our factory builders
+		install(new FactoryModuleBuilder().build(AccountResponseFactory.class));
+		install(new FactoryModuleBuilder().build(ToyResponseFactory.class));
 	}
 }

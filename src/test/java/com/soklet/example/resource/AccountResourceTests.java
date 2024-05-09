@@ -25,7 +25,7 @@ import com.soklet.core.MarshaledResponse;
 import com.soklet.core.Request;
 import com.soklet.example.App;
 import com.soklet.example.Configuration;
-import com.soklet.example.resource.EmployeeResource.EmployeeAuthenticateReponse;
+import com.soklet.example.resource.AccountResource.AccountAuthenticateReponse;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,7 +38,7 @@ import java.util.Map;
  */
 @Resource
 @ThreadSafe
-public class EmployeeResourceTests {
+public class AccountResourceTests {
 	@Test
 	public void testAuthenticate() {
 		App app = new App(new Configuration());
@@ -58,7 +58,7 @@ public class EmployeeResourceTests {
 			MarshaledResponse marshaledResponse = simulator.performRequest(request);
 
 			String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
-			EmployeeAuthenticateReponse response = gson.fromJson(responseBody, EmployeeAuthenticateReponse.class);
+			AccountAuthenticateReponse response = gson.fromJson(responseBody, AccountAuthenticateReponse.class);
 
 			Assert.assertEquals("Bad status code", 200, (long) marshaledResponse.getStatusCode());
 			Assert.assertEquals("Email doesn't match", "admin@soklet.com", response.employee().getEmailAddress().get());

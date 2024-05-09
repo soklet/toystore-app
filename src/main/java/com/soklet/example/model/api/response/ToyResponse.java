@@ -20,19 +20,18 @@ import com.google.inject.Provider;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 import com.soklet.example.CurrentContext;
-import com.soklet.example.model.db.Employee;
-import com.soklet.example.model.db.Role.RoleId;
+import com.soklet.example.model.db.Toy;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
+import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
-import java.time.format.TextStyle;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
@@ -41,68 +40,63 @@ import static java.util.Objects.requireNonNull;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe
-public class EmployeeApiResponse {
+public class ToyResponse {
 	@Nonnull
-	private final UUID employeeId;
-	@Nonnull
-	private final RoleId roleId;
+	private final UUID toyId;
 	@Nonnull
 	private final String name;
 	@Nullable
-	private final String emailAddress;
+	private final BigDecimal price;
 	@Nonnull
-	private final ZoneId timeZone;
+	private final String priceDescription;
 	@Nonnull
-	private final String timeZoneDescription;
+	private final String currencyCode;
 	@Nonnull
-	private final Locale locale;
+	private final String currencySymbol;
 	@Nonnull
-	private final String localeDescription;
+	private final String currencyDescription;
 	@Nonnull
 	private final Instant createdAt;
 	@Nonnull
 	private final String createdAtDescription;
 
 	@ThreadSafe
-	public interface EmployeeApiResponseFactory {
+	public interface ToyResponseFactory {
 		@Nonnull
-		EmployeeApiResponse create(@Nonnull Employee employee);
+		ToyResponse create(@Nonnull Toy toy);
 	}
 
 	@AssistedInject
-	public EmployeeApiResponse(@Nonnull Provider<CurrentContext> currentContextProvider,
-														 @Assisted @Nonnull Employee employee) {
+	public ToyResponse(@Nonnull Provider<CurrentContext> currentContextProvider,
+										 @Assisted @Nonnull Toy toy) {
 		requireNonNull(currentContextProvider);
-		requireNonNull(employee);
+		requireNonNull(toy);
 
-		// We can tailor our response based on current context
+		// Tailor our response based on current context
 		CurrentContext currentContext = currentContextProvider.get();
 		Locale currentLocale = currentContext.getPreferredLocale();
 		ZoneId currentTimeZone = currentContext.getPreferredTimeZone();
 
-		this.employeeId = employee.employeeId();
-		this.roleId = employee.roleId();
-		this.name = employee.name();
-		this.emailAddress = employee.emailAddress();
-		this.locale = employee.locale();
-		this.localeDescription = this.locale.getDisplayName(currentLocale);
-		this.timeZone = employee.timeZone();
-		this.timeZoneDescription = this.timeZone.getDisplayName(TextStyle.FULL, currentLocale);
-		this.createdAt = employee.createdAt();
+		// A real application should cache this formatter in a threadsafe way, e.g. ThreadLocal or Scope<T>
+		NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(currentLocale);
+
+		this.toyId = toy.toyId();
+		this.name = toy.name();
+		this.price = toy.price();
+		this.priceDescription = currencyFormatter.format(toy.price());
+		this.currencyCode = toy.currency().getCurrencyCode();
+		this.currencySymbol = toy.currency().getSymbol(currentLocale);
+		this.currencyDescription = toy.currency().getDisplayName(currentLocale);
+		this.createdAt = toy.createdAt();
 		this.createdAtDescription = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
 				.localizedBy(currentLocale)
 				.withZone(currentTimeZone)
-				.format(employee.createdAt());
+				.format(toy.createdAt());
 	}
 
 	@Nonnull
-	public UUID getEmployeeId() {
-		return this.employeeId;
-	}
-
-	@Nonnull
-	public RoleId getRoleId() {
-		return this.roleId;
+	public UUID getToyId() {
+		return this.toyId;
 	}
 
 	@Nonnull
@@ -111,28 +105,28 @@ public class EmployeeApiResponse {
 	}
 
 	@Nonnull
-	public Optional<String> getEmailAddress() {
-		return Optional.ofNullable(this.emailAddress);
+	public BigDecimal getPrice() {
+		return this.price;
 	}
 
 	@Nonnull
-	public ZoneId getTimeZone() {
-		return this.timeZone;
+	public String getPriceDescription() {
+		return this.priceDescription;
 	}
 
 	@Nonnull
-	public String getTimeZoneDescription() {
-		return this.timeZoneDescription;
+	public String getCurrencyCode() {
+		return this.currencyCode;
 	}
 
 	@Nonnull
-	public Locale getLocale() {
-		return this.locale;
+	public String getCurrencySymbol() {
+		return this.currencySymbol;
 	}
 
 	@Nonnull
-	public String getLocaleDescription() {
-		return this.localeDescription;
+	public String getCurrencyDescription() {
+		return this.currencyDescription;
 	}
 
 	@Nonnull

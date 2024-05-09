@@ -17,12 +17,23 @@
 package com.soklet.example.model.api.request;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import java.math.BigDecimal;
+import java.util.Currency;
+import java.util.UUID;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record EmployeeAuthenticateRequest(
-		@Nonnull String emailAddress,
-		@Nullable String password
-) {}
+public record ToyUpdateRequest(
+		@Nonnull UUID toyId,
+		@Nonnull String name,
+		@Nonnull BigDecimal price,
+		@Nonnull Currency currency
+) {
+	public ToyUpdateRequest withToyId(@Nonnull UUID toyId) {
+		requireNonNull(toyId);
+		return new ToyUpdateRequest(toyId, name, price, currency);
+	}
+}

@@ -86,38 +86,51 @@ public class App {
 				CREATE TABLE role (
 					role_id VARCHAR(255) PRIMARY KEY,
 					description VARCHAR(255) NOT NULL
-					)
+				)
 					""");
 
 		database.executeBatch("INSERT INTO role (role_id, description) VALUES (?,?)", List.of(
-				List.of(RoleId.ADMINISTRATOR, "Administrator"),
-				List.of(RoleId.RANK_AND_FILE, "Rank-and-file"))
+				List.of(RoleId.CUSTOMER, "Customer"),
+				List.of(RoleId.EMPLOYEE, "Employee"),
+				List.of(RoleId.ADMINISTRATOR, "Administrator"))
 		);
 
 		database.execute("""
-				CREATE TABLE employee (
-					employee_id UUID PRIMARY KEY,
+				CREATE TABLE account (
+					account_id UUID PRIMARY KEY,
 					role_id VARCHAR(255) NOT NULL REFERENCES role(role_id),
 					name VARCHAR(255) NOT NULL,
 					email_address VARCHAR(255),
+					password VARCHAR(255),
 					time_zone VARCHAR(255) NOT NULL,
 					locale VARCHAR(255) NOT NULL,
 					created_at TIMESTAMP DEFAULT NOW() NOT NULL
-					)
+				)
 					""");
 
 		// Create a single administrator
 		database.execute("""
-						INSERT INTO employee (
-							employee_id,
+						INSERT INTO account (
+							account_id,
 							role_id,
 							name,
 							email_address,
 							time_zone,
 							locale
-						) VALUES (?,?,?,?,?,?)				 
+						) VALUES (?,?,?,?,?,?)
 						""", UUID.fromString("08d0ba3e-b19c-4317-a146-583860fcb5fd"), RoleId.ADMINISTRATOR,
 				"Example Administrator", "admin@soklet.com", ZoneId.of("America/New_York"), Locale.forLanguageTag("en-US"));
+
+
+		database.execute("""
+				CREATE TABLE toy (
+					toy_id UUID PRIMARY KEY,
+					name VARCHAR(255) NOT NULL,
+					price DECIMAL NOT NULL,
+					currency VARCHAR(8) NOT NULL,
+					created_at TIMESTAMP DEFAULT NOW() NOT NULL
+				)
+					""");
 	}
 
 	@Nonnull

@@ -17,7 +17,7 @@
 package com.soklet.example;
 
 import com.soklet.core.Request;
-import com.soklet.example.model.db.Employee;
+import com.soklet.example.model.db.Account;
 import org.slf4j.MDC;
 
 import javax.annotation.Nonnull;
@@ -48,7 +48,7 @@ public class CurrentContext {
 	@Nullable
 	private Request request;
 	@Nullable
-	private Employee employee;
+	private Account account;
 
 	@Nonnull
 	public static CurrentContext get() {
@@ -71,7 +71,7 @@ public class CurrentContext {
 		@Nullable
 		private Request request;
 		@Nullable
-		private Employee employee;
+		private Account account;
 
 		@Nonnull
 		public Builder request(@Nullable Request request) {
@@ -80,8 +80,8 @@ public class CurrentContext {
 		}
 
 		@Nonnull
-		public Builder employee(@Nullable Employee employee) {
-			this.employee = employee;
+		public Builder account(@Nullable Account account) {
+			this.account = account;
 			return this;
 		}
 
@@ -102,13 +102,13 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	public static CurrentContext.Builder forEmployee(@Nullable Employee employee) {
-		return new CurrentContext.Builder().employee(employee);
+	public static CurrentContext.Builder forAccount(@Nullable Account account) {
+		return new CurrentContext.Builder().account(account);
 	}
 
 	private CurrentContext(@Nonnull Builder builder) {
 		this.request = builder.request;
-		this.employee = builder.employee;
+		this.account = builder.account;
 	}
 
 	public void run(@Nonnull Runnable runnable) {
@@ -137,12 +137,12 @@ public class CurrentContext {
 	protected String getLoggingDescription() {
 		CurrentContext currentContext = get();
 		Request request = currentContext.getRequest().orElse(null);
-		Employee employee = currentContext.getEmployee().orElse(null);
+		Account account = currentContext.getAccount().orElse(null);
 
 		String requestDescription = request == null ? "background thread" : request.getId().toString();
-		String employeeDescription = employee == null ? "unauthenticated" : employee.name();
+		String accountDescription = account == null ? "unauthenticated" : account.name();
 
-		return format("%s (%s)", requestDescription, employeeDescription);
+		return format("%s (%s)", requestDescription, accountDescription);
 	}
 
 	@Nonnull
@@ -151,8 +151,8 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	public Optional<Employee> getEmployee() {
-		return Optional.ofNullable(this.employee);
+	public Optional<Account> getAccount() {
+		return Optional.ofNullable(this.account);
 	}
 
 	@Nonnull
@@ -172,11 +172,11 @@ public class CurrentContext {
 			}
 		}
 
-		// Next, if there's a signed-in employee, use their configured locale
-		Employee employee = getEmployee().orElse(null);
+		// Next, if there's a signed-in account, use their configured locale
+		Account account = getAccount().orElse(null);
 
-		if (employee != null)
-			return employee.locale();
+		if (account != null)
+			return account.locale();
 
 		// If that didn't work, and we're in the context of a web request, try its Accept-Language header
 		if (request != null && request.getLocales().size() > 0)
@@ -203,11 +203,11 @@ public class CurrentContext {
 			}
 		}
 
-		// Next, if there's a signed-in employee, use their configured timezone
-		Employee employee = getEmployee().orElse(null);
+		// Next, if there's a signed-in account, use their configured timezone
+		Account account = getAccount().orElse(null);
 
-		if (employee != null)
-			return employee.timeZone();
+		if (account != null)
+			return account.timeZone();
 
 		// Still not sure?  Fall back to a safe default
 		return Configuration.getFallbackTimeZone();

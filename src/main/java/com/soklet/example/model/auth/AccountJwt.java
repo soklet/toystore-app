@@ -39,8 +39,8 @@ import static java.util.Objects.requireNonNull;
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record Jwt(
-		@Nonnull UUID employeeId,
+public record AccountJwt(
+		@Nonnull UUID accountId,
 		@Nonnull Instant expiration
 ) {
 	@Nonnull
@@ -53,12 +53,12 @@ public record Jwt(
 	@Nonnull
 	public String toStringRepresentation(@Nonnull PrivateKey privateKey) {
 		requireNonNull(privateKey);
-		return Jwt.toStringRepresentation(employeeId(), expiration(), privateKey);
+		return AccountJwt.toStringRepresentation(accountId(), expiration(), privateKey);
 	}
 
 	@Nonnull
-	public static Optional<Jwt> fromStringRepresentation(@Nonnull String string,
-																											 @Nonnull PrivateKey privateKey) {
+	public static Optional<AccountJwt> fromStringRepresentation(@Nonnull String string,
+																															@Nonnull PrivateKey privateKey) {
 		requireNonNull(string);
 		requireNonNull(privateKey);
 
@@ -95,14 +95,14 @@ public record Jwt(
 		UUID sub = UUID.fromString(subAsString);
 		Instant iat = Instant.ofEpochMilli(iatAsNumber.longValue());
 
-		return Optional.of(new Jwt(sub, iat));
+		return Optional.of(new AccountJwt(sub, iat));
 	}
 
 	@Nonnull
-	public static String toStringRepresentation(@Nonnull UUID employeeId,
+	public static String toStringRepresentation(@Nonnull UUID accountId,
 																							@Nonnull Instant expiration,
 																							@Nonnull PrivateKey privateKey) {
-		requireNonNull(employeeId);
+		requireNonNull(accountId);
 		requireNonNull(expiration);
 		requireNonNull(privateKey);
 
@@ -112,7 +112,7 @@ public record Jwt(
 		));
 
 		String payload = GSON.toJson(Map.of(
-				"sub", employeeId,
+				"sub", accountId,
 				"iat", expiration.toEpochMilli()
 		));
 

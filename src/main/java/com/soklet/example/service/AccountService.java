@@ -22,11 +22,9 @@ import com.lokalized.Strings;
 import com.pyranid.Database;
 import com.soklet.example.CurrentContext;
 import com.soklet.example.exception.UserFacingException;
-import com.soklet.example.model.api.request.EmployeeAuthenticateRequest;
-import com.soklet.example.model.api.request.EmployeeCreateRequest;
-import com.soklet.example.model.api.request.EmployeeUpdateRequest;
-import com.soklet.example.model.auth.Jwt;
-import com.soklet.example.model.db.Employee;
+import com.soklet.example.model.api.request.AccountAuthenticateRequest;
+import com.soklet.example.model.auth.AccountJwt;
+import com.soklet.example.model.db.Account;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +35,6 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -49,7 +46,7 @@ import static java.util.Objects.requireNonNull;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe
-public class EmployeeService {
+public class AccountService {
 	@Nonnull
 	private final Provider<CurrentContext> currentContextProvider;
 	@Nonnull
@@ -60,9 +57,9 @@ public class EmployeeService {
 	private final Logger logger;
 
 	@Inject
-	public EmployeeService(@Nonnull Provider<CurrentContext> currentContextProvider,
-												 @Nonnull Database database,
-												 @Nonnull Strings strings) {
+	public AccountService(@Nonnull Provider<CurrentContext> currentContextProvider,
+												@Nonnull Database database,
+												@Nonnull Strings strings) {
 		requireNonNull(currentContextProvider);
 		requireNonNull(database);
 		requireNonNull(strings);
@@ -74,108 +71,54 @@ public class EmployeeService {
 	}
 
 	@Nonnull
-	public List<Employee> findEmployees() {
-		return getDatabase().queryForList("""
-				  SELECT *
-				  FROM employee
-				  ORDER BY name
-				""", Employee.class);
-	}
-
-	@Nonnull
-	public Optional<Employee> findEmployeeById(@Nullable UUID employeeId) {
-		if (employeeId == null)
+	public Optional<Account> findAccountById(@Nullable UUID accountId) {
+		if (accountId == null)
 			return Optional.empty();
 
 		return getDatabase().queryForObject("""
 				SELECT *
-				FROM employee
-				WHERE employee_id=?
-				""", Employee.class, employeeId);
+				FROM account
+				WHERE account_id=?
+				""", Account.class, accountId);
 	}
 
 	@Nonnull
-	public UUID createEmployee(@Nonnull EmployeeCreateRequest request) {
-		requireNonNull(request);
-
-		UUID employeeId = UUID.randomUUID();
-
-		getDatabase().execute("""
-				INSERT INTO employee (
-					employee_id,
-					role_id,
-					name,
-					email_address,
-					time_zone,
-					locale
-				) VALUES (?,?,?,?,?,?)
-				""", employeeId, request.roleId(), request.name(), request.emailAddress(), request.timeZone(), request.locale());
-
-		return employeeId;
-	}
-
-	@Nonnull
-	public Boolean updateEmployee(@Nonnull UUID employeeId,
-																@Nonnull EmployeeUpdateRequest request) {
-		requireNonNull(employeeId);
-		requireNonNull(request);
-
-		return getDatabase().execute("""
-				UPDATE employee
-				SET name=?, email_address=?, time_zone=?, locale=?
-				WHERE employee_id=?
-				""", request.name(), request.emailAddress(), request.timeZone(), request.locale(), employeeId) > 0;
-	}
-
-	@Nonnull
-	public Boolean deleteEmployee(@Nonnull UUID employeeId) {
-		requireNonNull(employeeId);
-		return getDatabase().execute("DELETE FROM employee WHERE employee_id=?", employeeId) > 0;
-	}
-
-	@Nonnull
-	public Jwt authenticateEmployee(@Nonnull EmployeeAuthenticateRequest request) {
+	public AccountJwt authenticateAccount(@Nonnull AccountAuthenticateRequest request) {
 		requireNonNull(request);
 
 		// TODO: validation/normalization
 
-		Employee employee = getDatabase().executeForObject("""
+		Account account = getDatabase().executeForObject("""
 				SELECT *
-				FROM employee
+				FROM account
 				WHERE email_address=LOWER(?)
-				""", Employee.class, request.emailAddress().toLowerCase(Locale.US)).orElse(null);
+				""", Account.class, request.emailAddress().toLowerCase(Locale.US)).orElse(null);
 
-		if (employee == null)
+		if (account == null)
 			throw new UserFacingException(401, getStrings().get("Sorry, we could not authenticate you."));
 
-		UUID employeeId = employee.employeeId();
-		String assertion = UUID.randomUUID().toString();
 		Instant expiration = Instant.now().plus(10, ChronoUnit.MINUTES);
 
-		// A real system would cryptographically sign the assertion and embed a nonce to prevent replay attacks
-		//return new Jwt(employeeId, assertion, expiration);
-		throw new IllegalStateException("fake");
+		return new AccountJwt(account.accountId(), expiration);
 	}
 
 	@Nonnull
-	public Optional<Employee> findEmployeeByAuthenticationToken(@Nullable Jwt authenticationToken) {
-		if (authenticationToken == null)
+	public Optional<Account> findAccountByJwt(@Nullable AccountJwt accountJwt) {
+		if (accountJwt == null)
 			return Optional.empty();
 
-		if (Instant.now().isAfter(authenticationToken.expiration())) {
+		// Validate JWT
+		if (Instant.now().isAfter(accountJwt.expiration())) {
 			String expirationDateTime = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
 					.localizedBy(getCurrentContext().getPreferredLocale())
 					.withZone(getCurrentContext().getPreferredTimeZone())
-					.format(authenticationToken.expiration());
+					.format(accountJwt.expiration());
 
 			throw new UserFacingException(401, getStrings().get("Your authentication token expired on {{expirationDateTime}} - please re-authenticate.",
 					Map.of("expirationDateTime", expirationDateTime)));
 		}
 
-		// Note: A real system would perform a cryptographic check against the assertion and validate/track the nonce
-		// (in addition to any other checks...)
-
-		return findEmployeeById(authenticationToken.employeeId());
+		return findAccountById(accountJwt.accountId());
 	}
 
 	@Nonnull
