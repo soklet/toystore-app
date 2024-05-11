@@ -25,6 +25,7 @@ import com.soklet.example.exception.ApplicationException;
 import com.soklet.example.model.api.request.AccountAuthenticateRequest;
 import com.soklet.example.model.auth.AccountJwt;
 import com.soklet.example.model.db.Account;
+import com.soklet.example.util.PasswordManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +52,8 @@ public class AccountService {
 	@Nonnull
 	private final Provider<CurrentContext> currentContextProvider;
 	@Nonnull
+	private final PasswordManager passwordManager;
+	@Nonnull
 	private final Database database;
 	@Nonnull
 	private final Strings strings;
@@ -59,13 +62,16 @@ public class AccountService {
 
 	@Inject
 	public AccountService(@Nonnull Provider<CurrentContext> currentContextProvider,
+												@Nonnull PasswordManager passwordManager,
 												@Nonnull Database database,
 												@Nonnull Strings strings) {
 		requireNonNull(currentContextProvider);
+		requireNonNull(passwordManager);
 		requireNonNull(database);
 		requireNonNull(strings);
 
 		this.currentContextProvider = currentContextProvider;
+		this.passwordManager = passwordManager;
 		this.database = database;
 		this.strings = strings;
 		this.logger = LoggerFactory.getLogger(getClass());
@@ -88,10 +94,14 @@ public class AccountService {
 		requireNonNull(request);
 
 		String emailAddress = request.emailAddress() == null ? "" : request.emailAddress().trim();
+		String password = request.password() == null ? "" : request.password().trim();
 		Map<String, String> fieldErrors = new LinkedHashMap<>();
 
 		if (emailAddress.length() == 0)
 			fieldErrors.put("emailAddress", getStrings().get("Email address is required."));
+
+		if (password.length() == 0)
+			fieldErrors.put("password", getStrings().get("Password is required."));
 
 		if (fieldErrors.size() > 0)
 			throw ApplicationException.withStatusCode(422)
@@ -104,13 +114,14 @@ public class AccountService {
 				WHERE email_address=LOWER(?)
 				""", Account.class, emailAddress.toLowerCase(Locale.US)).orElse(null);
 
-		if (account == null)
+		// Reject if no account, or account's hashed password does not match
+		if (account == null || !getPasswordManager().verifyPassword(password, account.password()))
 			throw ApplicationException.withStatusCode(401)
 					.error(getStrings().get("Sorry, we could not authenticate you."))
 					.build();
 
+		// Generate a JWT
 		Instant expiration = Instant.now().plus(10, ChronoUnit.MINUTES);
-
 		return new AccountJwt(account.accountId(), expiration);
 	}
 
@@ -144,6 +155,11 @@ public class AccountService {
 	@Nonnull
 	protected CurrentContext getCurrentContext() {
 		return this.currentContextProvider.get();
+	}
+
+	@Nonnull
+	protected PasswordManager getPasswordManager() {
+		return this.passwordManager;
 	}
 
 	@Nonnull

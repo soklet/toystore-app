@@ -57,6 +57,7 @@ import com.soklet.example.model.auth.AccountJwt;
 import com.soklet.example.model.db.Account;
 import com.soklet.example.model.db.Role.RoleId;
 import com.soklet.example.service.AccountService;
+import com.soklet.example.util.PasswordManager;
 import com.soklet.exception.BadRequestException;
 import com.soklet.exception.IllegalQueryParameterException;
 import org.hsqldb.jdbc.JDBCDataSource;
@@ -399,6 +400,13 @@ public class AppModule extends AbstractModule {
 				// Rely on the current context's preferred locale to pick the appropriate localization file
 				.localeSupplier(() -> currentContextProvider.get().getPreferredLocale())
 				.build();
+	}
+
+	@Nonnull
+	@Provides
+	@Singleton
+	public PasswordManager providePasswordManager() {
+		return PasswordManager.sharedInstance();
 	}
 
 	@Nonnull

@@ -22,6 +22,7 @@ import com.pyranid.Database;
 import com.soklet.Soklet;
 import com.soklet.SokletConfiguration;
 import com.soklet.example.model.db.Role.RoleId;
+import com.soklet.example.util.PasswordManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -115,12 +116,19 @@ public class App {
 							role_id,
 							name,
 							email_address,
+							password,
 							time_zone,
 							locale
-						) VALUES (?,?,?,?,?,?)
-						""", UUID.fromString("08d0ba3e-b19c-4317-a146-583860fcb5fd"), RoleId.ADMINISTRATOR,
-				"Example Administrator", "admin@soklet.com", ZoneId.of("America/New_York"), Locale.forLanguageTag("en-US"));
-
+						) VALUES (?,?,?,?,?,?,?)
+						""",
+				UUID.fromString("08d0ba3e-b19c-4317-a146-583860fcb5fd"),
+				RoleId.ADMINISTRATOR,
+				"Example Administrator",
+				"admin@soklet.com",
+				PasswordManager.sharedInstance().hashPassword("test123"),
+				ZoneId.of("America/New_York"),
+				Locale.forLanguageTag("en-US")
+		);
 
 		database.execute("""
 				CREATE TABLE toy (
