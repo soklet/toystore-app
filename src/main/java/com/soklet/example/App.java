@@ -87,7 +87,7 @@ public class App {
 					role_id VARCHAR(255) PRIMARY KEY,
 					description VARCHAR(255) NOT NULL
 				)
-					""");
+				""");
 
 		database.executeBatch("INSERT INTO role (role_id, description) VALUES (?,?)", List.of(
 				List.of(RoleId.CUSTOMER, "Customer"),
@@ -102,11 +102,11 @@ public class App {
 					name VARCHAR(255) NOT NULL,
 					email_address VARCHAR(255),
 					password VARCHAR(255),
-					time_zone VARCHAR(255) NOT NULL,
-					locale VARCHAR(255) NOT NULL,
+					time_zone VARCHAR(255) NOT NULL, -- e.g. 'America/New_York'
+					locale VARCHAR(255) NOT NULL, -- e.g. 'pt-BR'
 					created_at TIMESTAMP DEFAULT NOW() NOT NULL
 				)
-					""");
+				""");
 
 		// Create a single administrator
 		database.execute("""
@@ -126,11 +126,11 @@ public class App {
 				CREATE TABLE toy (
 					toy_id UUID PRIMARY KEY,
 					name VARCHAR(255) NOT NULL,
-					price DECIMAL NOT NULL,
+					price DECIMAL(10,2) NOT NULL,
 					currency VARCHAR(8) NOT NULL,
 					created_at TIMESTAMP DEFAULT NOW() NOT NULL
 				)
-					""");
+				""");
 	}
 
 	@Nonnull

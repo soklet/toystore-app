@@ -51,7 +51,7 @@ public class AccountResourceTests {
 					"password", "fake-password"
 			));
 
-			Request request = Request.with(HttpMethod.POST, "/employees/authenticate")
+			Request request = Request.with(HttpMethod.POST, "/accounts/authenticate")
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -61,14 +61,14 @@ public class AccountResourceTests {
 			AccountAuthenticateReponse response = gson.fromJson(responseBody, AccountAuthenticateReponse.class);
 
 			Assert.assertEquals("Bad status code", 200, (long) marshaledResponse.getStatusCode());
-			Assert.assertEquals("Email doesn't match", "admin@soklet.com", response.employee().getEmailAddress().get());
+			Assert.assertEquals("Email doesn't match", "admin@soklet.com", response.account().getEmailAddress().get());
 
 			requestBodyJson = gson.toJson(Map.of(
 					"emailAddress", "fake@soklet.com",
 					"password", "fake-password"
 			));
 
-			request = Request.with(HttpMethod.POST, "/employees/authenticate")
+			request = Request.with(HttpMethod.POST, "/accounts/authenticate")
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 

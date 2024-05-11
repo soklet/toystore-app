@@ -123,7 +123,7 @@ public class ToyService {
 		requireNonNull(toyId);
 		return getDatabase().execute("DELETE FROM toy WHERE toy_id=?", toyId) > 0;
 	}
-	
+
 	@Nonnull
 	protected CurrentContext getCurrentContext() {
 		return this.currentContextProvider.get();

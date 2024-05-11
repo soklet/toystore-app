@@ -77,8 +77,9 @@ public class ToyResponse {
 		Locale currentLocale = currentContext.getPreferredLocale();
 		ZoneId currentTimeZone = currentContext.getPreferredTimeZone();
 
-		// A real application should cache this formatter in a threadsafe way, e.g. ThreadLocal or Scope<T>
+		// A real application would cache this formatter in a threadsafe way, e.g. ThreadLocal<T> or Scope<T>
 		NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(currentLocale);
+		currencyFormatter.setCurrency(toy.currency());
 
 		this.toyId = toy.toyId();
 		this.name = toy.name();
