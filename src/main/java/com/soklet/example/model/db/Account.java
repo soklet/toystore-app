@@ -32,6 +32,7 @@ public record Account(
 		@Nonnull RoleId roleId,
 		@Nonnull String name,
 		@Nonnull String emailAddress,
+		@Nonnull String password,
 		@Nonnull ZoneId timeZone,
 		@Nonnull Locale locale,
 		@Nonnull Instant createdAt

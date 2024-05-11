@@ -47,10 +47,10 @@ import com.soklet.core.impl.DefaultResponseMarshaler;
 import com.soklet.core.impl.DefaultServer;
 import com.soklet.core.impl.WhitelistedOriginsCorsAuthorizer;
 import com.soklet.example.annotation.AuthorizationRequired;
+import com.soklet.example.exception.ApplicationException;
 import com.soklet.example.exception.AuthenticationException;
 import com.soklet.example.exception.AuthorizationException;
 import com.soklet.example.exception.NotFoundException;
-import com.soklet.example.exception.UserFacingException;
 import com.soklet.example.model.api.response.AccountResponse.AccountResponseFactory;
 import com.soklet.example.model.api.response.ToyResponse.ToyResponseFactory;
 import com.soklet.example.model.auth.AccountJwt;
@@ -74,8 +74,10 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -270,44 +272,61 @@ public class AppModule extends AbstractModule {
 					public MarshaledResponse forThrowable(@Nonnull Request request,
 																								@Nonnull Throwable throwable,
 																								@Nullable ResourceMethod resourceMethod) {
-						String message;
+						// Collect error information for display to client
 						int statusCode;
+						List<String> errors = new ArrayList<>();
+						Map<String, String> fieldErrors = new LinkedHashMap<>();
+						Map<String, Object> metadata = new LinkedHashMap<>();
 
 						switch (throwable) {
-							case UserFacingException userFacingException -> {
-								message = userFacingException.getMessage();
-								statusCode = userFacingException.getStatusCode().orElse(422);
-							}
 							case IllegalQueryParameterException ex -> {
-								message = String.format("Illegal value '%s' for query parameter '%s'",
-										ex.getQueryParameterValue().orElse("[not provided]"),
-										ex.getQueryParameterName());
 								statusCode = 400;
+								errors.add(strings.get("Illegal value '{{parameterValue}}' for query parameter '{{parameterName}}'",
+										Map.of(
+												"parameterValue", ex.getQueryParameterValue().orElse("[not provided]"),
+												"parameterName", ex.getQueryParameterName()
+										)
+								));
 							}
 							case BadRequestException ignored -> {
-								message = strings.get("Your request was improperly formatted.");
 								statusCode = 400;
+								errors.add(strings.get("Your request was improperly formatted."));
 							}
 							case AuthenticationException ignored -> {
-								message = strings.get("You must be authenticated to perform this action.");
 								statusCode = 401;
+								errors.add(strings.get("You must be authenticated to perform this action."));
 							}
 							case AuthorizationException ignored -> {
-								message = strings.get("You are not authorized to perform this action.");
 								statusCode = 403;
+								errors.add(strings.get("You are not authorized to perform this action."));
 							}
 							case NotFoundException ignored -> {
-								message = strings.get("The resource you requested was not found.");
 								statusCode = 404;
+								errors.add(strings.get("The resource you requested was not found."));
+							}
+							case ApplicationException applicationException -> {
+								statusCode = applicationException.getStatusCode();
+								errors.addAll(applicationException.getErrors());
+								fieldErrors.putAll(applicationException.getFieldErrors());
+								metadata.putAll(applicationException.getMetadata());
 							}
 							default -> {
-								message = strings.get("An unexpected error occurred.");
 								statusCode = 500;
+								errors.add(strings.get("An unexpected error occurred."));
 							}
 						}
 
 						// Use Gson to turn response objects into JSON to go over the wire
-						byte[] body = gson.toJson(Map.of("message", message)).getBytes(StandardCharsets.UTF_8);
+						Map<String, Object> bodyObject = new HashMap<>();
+
+						if (errors.size() > 0)
+							bodyObject.put("errors", errors);
+						if (fieldErrors.size() > 0)
+							bodyObject.put("fieldErrors", fieldErrors);
+						if (metadata.size() > 0)
+							bodyObject.put("metadata", metadata);
+
+						byte[] body = gson.toJson(bodyObject).getBytes(StandardCharsets.UTF_8);
 
 						Map<String, Set<String>> headers = new HashMap<>();
 						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
@@ -429,29 +448,14 @@ public class AppModule extends AbstractModule {
 					public Instant read(@Nonnull JsonReader jsonReader) throws IOException {
 						return Instant.parse(jsonReader.nextString());
 					}
-				})
-				// Support our custom `AccountJwt` type
-				.registerTypeAdapter(AccountJwt.class, new TypeAdapter<AccountJwt>() {
-					@Override
-					public void write(@Nonnull JsonWriter jsonWriter,
-														@Nonnull AccountJwt authenticationToken) throws IOException {
-						//jsonWriter.value(authenticationToken.encodeAsString());
-						throw new IllegalStateException();
-					}
-
-					@Override
-					@Nullable
-					public AccountJwt read(@Nonnull JsonReader jsonReader) throws IOException {
-						//	return AccountJwt.decodeFromString(jsonReader.nextString());
-						throw new IllegalStateException();
-					}
 				});
 		return gsonBuilder.create();
 	}
 
 	@Override
 	protected void configure() {
-		// Lets Guice know to set up our factory builders
+		// Tells Guice to set up assisted injection
+		// See https://github.com/google/guice/wiki/AssistedInject
 		install(new FactoryModuleBuilder().build(AccountResponseFactory.class));
 		install(new FactoryModuleBuilder().build(ToyResponseFactory.class));
 	}

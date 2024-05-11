@@ -21,7 +21,7 @@ import com.google.inject.Provider;
 import com.lokalized.Strings;
 import com.pyranid.Database;
 import com.soklet.example.CurrentContext;
-import com.soklet.example.exception.UserFacingException;
+import com.soklet.example.exception.ApplicationException;
 import com.soklet.example.model.api.request.AccountAuthenticateRequest;
 import com.soklet.example.model.auth.AccountJwt;
 import com.soklet.example.model.db.Account;
@@ -35,6 +35,7 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -86,16 +87,27 @@ public class AccountService {
 	public AccountJwt authenticateAccount(@Nonnull AccountAuthenticateRequest request) {
 		requireNonNull(request);
 
-		// TODO: validation/normalization
+		String emailAddress = request.emailAddress() == null ? "" : request.emailAddress().trim();
+		Map<String, String> fieldErrors = new LinkedHashMap<>();
+
+		if (emailAddress.length() == 0)
+			fieldErrors.put("emailAddress", getStrings().get("Email address is required."));
+
+		if (fieldErrors.size() > 0)
+			throw ApplicationException.withStatusCode(422)
+					.fieldErrors(fieldErrors)
+					.build();
 
 		Account account = getDatabase().executeForObject("""
 				SELECT *
 				FROM account
 				WHERE email_address=LOWER(?)
-				""", Account.class, request.emailAddress().toLowerCase(Locale.US)).orElse(null);
+				""", Account.class, emailAddress.toLowerCase(Locale.US)).orElse(null);
 
 		if (account == null)
-			throw new UserFacingException(401, getStrings().get("Sorry, we could not authenticate you."));
+			throw ApplicationException.withStatusCode(401)
+					.error(getStrings().get("Sorry, we could not authenticate you."))
+					.build();
 
 		Instant expiration = Instant.now().plus(10, ChronoUnit.MINUTES);
 
@@ -114,8 +126,16 @@ public class AccountService {
 					.withZone(getCurrentContext().getPreferredTimeZone())
 					.format(accountJwt.expiration());
 
-			throw new UserFacingException(401, getStrings().get("Your authentication token expired on {{expirationDateTime}} - please re-authenticate.",
-					Map.of("expirationDateTime", expirationDateTime)));
+			String error = getStrings().get("Your authentication token expired on {{expirationDateTime}} - please re-authenticate.",
+					Map.of("expirationDateTime", expirationDateTime));
+
+			throw ApplicationException.withStatusCode(401)
+					.error(error)
+					.metadata(Map.of(
+							"reasonCode", "AUTHENTICATION_TOKEN_EXPIRED",
+							"expirationDateTime", expirationDateTime
+					))
+					.build();
 		}
 
 		return findAccountById(accountJwt.accountId());
