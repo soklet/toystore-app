@@ -136,7 +136,8 @@ public class App {
 					name VARCHAR(255) NOT NULL,
 					price DECIMAL(10,2) NOT NULL,
 					currency VARCHAR(8) NOT NULL,
-					created_at TIMESTAMP DEFAULT NOW() NOT NULL
+					created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+					CONSTRAINT toy_name_unique_idx UNIQUE(name)
 				)
 				""");
 	}

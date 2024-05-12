@@ -20,6 +20,8 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.lokalized.Strings;
 import com.pyranid.Database;
+import com.pyranid.DatabaseException;
+import com.pyranid.Transaction;
 import com.soklet.example.CurrentContext;
 import com.soklet.example.exception.ApplicationException;
 import com.soklet.example.model.api.request.ToyCreateRequest;
@@ -32,6 +34,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
+import java.sql.Savepoint;
 import java.util.Currency;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -116,14 +119,32 @@ public class ToyService {
 					.fieldErrors(fieldErrors)
 					.build();
 
-		getDatabase().execute("""
-				INSERT INTO toy (
-					toy_id,
-					name,
-					price,
-					currency
-				) VALUES (?,?,?,?)
-				""", toyId, request.name(), request.price(), request.currency());
+		// Make a savepoint in case there is a unique constraint violation (duplicate name)
+		Transaction transaction = getDatabase().currentTransaction().get();
+		Savepoint savepoint = transaction.createSavepoint();
+
+		try {
+			getDatabase().execute("""
+					INSERT INTO toy (
+						toy_id,
+						name,
+						price,
+						currency
+					) VALUES (?,?,?,?)
+					""", toyId, request.name(), request.price(), request.currency());
+		} catch (DatabaseException e) {
+			// If this is a unique constraint violation on the 'name' field, handle it specially:
+			// roll the transaction back to a known-good state and expose some details to the caller
+			if (e.getMessage().contains("TOY_NAME_UNIQUE_IDX")) {
+				getDatabase().currentTransaction().get().rollback(savepoint);
+				throw ApplicationException.withStatusCode(422)
+						.fieldErrors(Map.of("name", getStrings().get("Name '{{name}}' is already in use.", Map.of("name", name))))
+						.build();
+			} else {
+				// Some other problem; just bubble out
+				throw e;
+			}
+		}
 
 		return toyId;
 	}
