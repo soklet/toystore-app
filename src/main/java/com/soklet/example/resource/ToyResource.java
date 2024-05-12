@@ -23,6 +23,7 @@ import com.soklet.annotation.GET;
 import com.soklet.annotation.POST;
 import com.soklet.annotation.PUT;
 import com.soklet.annotation.PathParameter;
+import com.soklet.annotation.QueryParameter;
 import com.soklet.annotation.RequestBody;
 import com.soklet.annotation.Resource;
 import com.soklet.example.CurrentContext;
@@ -37,6 +38,7 @@ import com.soklet.example.model.db.Toy;
 import com.soklet.example.service.ToyService;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.List;
 import java.util.UUID;
@@ -73,12 +75,12 @@ public class ToyResource {
 	@Nonnull
 	@AuthorizationRequired
 	@GET("/toys")
-	public ToysResponse findToys() {
-		List<ToyResponse> toys = getToyService().findToys().stream()
-				.map(toy -> getToyResponseFactory().create(toy))
-				.collect(Collectors.toList());
+	public ToysResponse findToys(@Nullable @QueryParameter(optional = true) String query) {
+		List<Toy> toys = query == null ? getToyService().findToys() : getToyService().searchToys(query);
 
-		return new ToysResponse(toys);
+		return new ToysResponse(toys.stream()
+				.map(toy -> getToyResponseFactory().create(toy))
+				.collect(Collectors.toList()));
 	}
 
 	public record ToysResponse(

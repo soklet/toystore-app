@@ -35,6 +35,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
 import java.sql.Savepoint;
+import java.text.NumberFormat;
 import java.util.Currency;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -82,6 +83,22 @@ public class ToyService {
 	}
 
 	@Nonnull
+	public List<Toy> searchToys(@Nullable String query) {
+		query = query == null ? "" : query.trim();
+
+		if (query.length() == 0)
+			return findToys();
+
+		// Naïve "LIKE" search
+		return getDatabase().queryForList("""
+				  SELECT *
+				  FROM toy
+				  WHERE LOWER(name) LIKE CONCAT(LOWER(?), '%')
+				  ORDER BY name
+				""", Toy.class, query);
+	}
+
+	@Nonnull
 	public Optional<Toy> findToyById(@Nullable UUID toyId) {
 		if (toyId == null)
 			return Optional.empty();
@@ -118,6 +135,12 @@ public class ToyService {
 			throw ApplicationException.withStatusCode(422)
 					.fieldErrors(fieldErrors)
 					.build();
+
+		if (getLogger().isInfoEnabled()) {
+			NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(getCurrentContext().getPreferredLocale());
+			currencyFormatter.setCurrency(currency);
+			getLogger().info("Creating toy '{}', which costs {}", name, currencyFormatter.format(price));
+		}
 
 		// Make a savepoint in case there is a unique constraint violation (duplicate name)
 		Transaction transaction = getDatabase().currentTransaction().get();
