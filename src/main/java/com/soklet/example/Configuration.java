@@ -16,6 +16,8 @@
 
 package com.soklet.example;
 
+import com.google.inject.Singleton;
+
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.security.KeyPair;
@@ -32,6 +34,7 @@ import static java.util.Objects.requireNonNull;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe
+@Singleton
 public class Configuration {
 	@Nonnull
 	private static final Locale FALLBACK_LOCALE;

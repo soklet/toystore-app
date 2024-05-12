@@ -150,7 +150,7 @@ public class AppModule extends AbstractModule {
 						requireNonNull(requestProcessor);
 
 						// Ensure a "current context" scope exists for all request-handling code
-						CurrentContext.forRequest(request).build().run(() -> {
+						CurrentContext.withRequest(request).build().run(() -> {
 							requestProcessor.accept(request);
 						});
 					}
@@ -193,7 +193,7 @@ public class AppModule extends AbstractModule {
 						}
 
 						// Create a new current context scope to apply the authenticated account (if present)
-						CurrentContext currentContext = CurrentContext.forRequest(request)
+						CurrentContext currentContext = CurrentContext.withRequest(request)
 								.account(account)
 								.build();
 

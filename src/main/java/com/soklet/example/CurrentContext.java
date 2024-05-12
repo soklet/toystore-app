@@ -97,13 +97,13 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	public static CurrentContext.Builder forRequest(@Nullable Request request) {
-		return new CurrentContext.Builder().request(request);
+	public static Builder withRequest(@Nullable Request request) {
+		return new Builder().request(request);
 	}
 
 	@Nonnull
-	public static CurrentContext.Builder forAccount(@Nullable Account account) {
-		return new CurrentContext.Builder().account(account);
+	public static Builder withAccount(@Nullable Account account) {
+		return new Builder().account(account);
 	}
 
 	private CurrentContext(@Nonnull Builder builder) {
