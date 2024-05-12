@@ -183,7 +183,7 @@ public class CurrentContext {
 			return request.getLocales().get(0);
 
 		// Still not sure?  Fall back to a safe default
-		return Configuration.getFallbackLocale();
+		return Configuration.getDefaultLocale();
 	}
 
 	@Nonnull
@@ -210,6 +210,6 @@ public class CurrentContext {
 			return account.timeZone();
 
 		// Still not sure?  Fall back to a safe default
-		return Configuration.getFallbackTimeZone();
+		return Configuration.getDefaultTimeZone();
 	}
 }

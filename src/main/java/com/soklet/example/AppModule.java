@@ -393,9 +393,9 @@ public class AppModule extends AbstractModule {
 	public Strings provideStrings(@Nonnull Provider<CurrentContext> currentContextProvider) {
 		requireNonNull(currentContextProvider);
 
-		String fallbackLanguageCode = Configuration.getFallbackLocale().getLanguage();
+		String defaultLanguageCode = Configuration.getDefaultLocale().getLanguage();
 
-		return new DefaultStrings.Builder(fallbackLanguageCode,
+		return new DefaultStrings.Builder(defaultLanguageCode,
 				() -> LocalizedStringLoader.loadFromFilesystem(Paths.get("src/main/resources/strings")))
 				// Rely on the current context's preferred locale to pick the appropriate localization file
 				.localeSupplier(() -> currentContextProvider.get().getPreferredLocale())

@@ -41,13 +41,13 @@ import java.util.Set;
 @ThreadSafe
 public class Configuration {
 	@Nonnull
-	private static final Locale FALLBACK_LOCALE;
+	private static final Locale DEFAULT_LOCALE;
 	@Nonnull
-	private static final ZoneId FALLBACK_TIME_ZONE;
+	private static final ZoneId DEFAULT_TIME_ZONE;
 
 	static {
-		FALLBACK_LOCALE = Locale.US;
-		FALLBACK_TIME_ZONE = ZoneId.of("UTC");
+		DEFAULT_LOCALE = Locale.US;
+		DEFAULT_TIME_ZONE = ZoneId.of("UTC");
 	}
 
 	@Nonnull
@@ -91,13 +91,13 @@ public class Configuration {
 	}
 
 	@Nonnull
-	public static Locale getFallbackLocale() {
-		return FALLBACK_LOCALE;
+	public static Locale getDefaultLocale() {
+		return DEFAULT_LOCALE;
 	}
 
 	@Nonnull
-	public static ZoneId getFallbackTimeZone() {
-		return FALLBACK_TIME_ZONE;
+	public static ZoneId getDefaultTimeZone() {
+		return DEFAULT_TIME_ZONE;
 	}
 
 	@Nonnull
