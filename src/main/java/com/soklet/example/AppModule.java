@@ -412,7 +412,9 @@ public class AppModule extends AbstractModule {
 	@Nonnull
 	@Provides
 	@Singleton
-	public Gson provideGson() {
+	public Gson provideGson(@Nonnull Configuration configuration) {
+		requireNonNull(configuration);
+
 		GsonBuilder gsonBuilder = new GsonBuilder()
 				.setPrettyPrinting()
 				.disableHtmlEscaping()
@@ -455,6 +457,20 @@ public class AppModule extends AbstractModule {
 					@Nullable
 					public Instant read(@Nonnull JsonReader jsonReader) throws IOException {
 						return Instant.parse(jsonReader.nextString());
+					}
+				})
+				// Convert our custom AccountJwt to and from a JSON string
+				.registerTypeAdapter(AccountJwt.class, new TypeAdapter<AccountJwt>() {
+					@Override
+					public void write(@Nonnull JsonWriter jsonWriter,
+														@Nonnull AccountJwt accountJwt) throws IOException {
+						jsonWriter.value(accountJwt.toStringRepresentation(configuration.getKeyPair().getPrivate()));
+					}
+
+					@Override
+					@Nullable
+					public AccountJwt read(@Nonnull JsonReader jsonReader) throws IOException {
+						return AccountJwt.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPrivate()).orElse(null);
 					}
 				});
 		return gsonBuilder.create();

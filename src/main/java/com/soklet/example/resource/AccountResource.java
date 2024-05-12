@@ -74,17 +74,15 @@ public class AccountResource {
 		AccountJwt accountJwt = getAccountService().authenticateAccount(request);
 		Account account = getAccountService().findAccountByJwt(accountJwt).get();
 
-		// Turn JWT into its string representation before returning to clients
-		String jwt = accountJwt.toStringRepresentation(getConfiguration().getKeyPair().getPrivate());
-		return new AccountAuthenticateReponse(jwt, getAccountResponseFactory().create(account));
+		return new AccountAuthenticateReponse(accountJwt, getAccountResponseFactory().create(account));
 	}
 
 	public record AccountAuthenticateReponse(
-			@Nonnull String jwt,
+			@Nonnull AccountJwt authenticationToken,
 			@Nonnull AccountResponse account
 	) {
 		public AccountAuthenticateReponse {
-			requireNonNull(jwt);
+			requireNonNull(authenticationToken);
 			requireNonNull(account);
 		}
 	}
