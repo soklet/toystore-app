@@ -51,6 +51,11 @@ public record AccountJwt(
 	}
 
 	@Nonnull
+	public Boolean isExpired() {
+		return Instant.now().isAfter(expiration());
+	}
+
+	@Nonnull
 	public String toStringRepresentation(@Nonnull PrivateKey privateKey) {
 		requireNonNull(privateKey);
 		return AccountJwt.toStringRepresentation(accountId(), expiration(), privateKey);

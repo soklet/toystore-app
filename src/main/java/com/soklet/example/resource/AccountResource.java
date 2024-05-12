@@ -17,12 +17,9 @@
 package com.soklet.example.resource;
 
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import com.soklet.annotation.POST;
 import com.soklet.annotation.RequestBody;
 import com.soklet.annotation.Resource;
-import com.soklet.example.Configuration;
-import com.soklet.example.CurrentContext;
 import com.soklet.example.model.api.request.AccountAuthenticateRequest;
 import com.soklet.example.model.api.response.AccountResponse;
 import com.soklet.example.model.api.response.AccountResponse.AccountResponseFactory;
@@ -42,28 +39,18 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class AccountResource {
 	@Nonnull
-	private final Configuration configuration;
-	@Nonnull
 	private final AccountService accountService;
 	@Nonnull
 	private final AccountResponseFactory accountResponseFactory;
-	@Nonnull
-	private final Provider<CurrentContext> currentContextProvider;
 
 	@Inject
-	public AccountResource(@Nonnull Configuration configuration,
-												 @Nonnull AccountService accountService,
-												 @Nonnull AccountResponseFactory accountResponseFactory,
-												 @Nonnull Provider<CurrentContext> currentContextProvider) {
-		requireNonNull(configuration);
+	public AccountResource(@Nonnull AccountService accountService,
+												 @Nonnull AccountResponseFactory accountResponseFactory) {
 		requireNonNull(accountService);
 		requireNonNull(accountResponseFactory);
-		requireNonNull(currentContextProvider);
 
-		this.configuration = configuration;
 		this.accountService = accountService;
 		this.accountResponseFactory = accountResponseFactory;
-		this.currentContextProvider = currentContextProvider;
 	}
 
 	@Nonnull
@@ -71,9 +58,11 @@ public class AccountResource {
 	public AccountAuthenticateReponse authenticate(@Nonnull @RequestBody AccountAuthenticateRequest request) {
 		requireNonNull(request);
 
+		// Authenticate the email/password, and pull the account information from the JWT assertion
 		AccountJwt accountJwt = getAccountService().authenticateAccount(request);
-		Account account = getAccountService().findAccountByJwt(accountJwt).get();
+		Account account = getAccountService().findAccountById(accountJwt.accountId()).get();
 
+		// Return both account data and a JWT that authenticates it to the client
 		return new AccountAuthenticateReponse(accountJwt, getAccountResponseFactory().create(account));
 	}
 
@@ -88,11 +77,6 @@ public class AccountResource {
 	}
 
 	@Nonnull
-	protected Configuration getConfiguration() {
-		return this.configuration;
-	}
-
-	@Nonnull
 	protected AccountService getAccountService() {
 		return this.accountService;
 	}
@@ -100,10 +84,5 @@ public class AccountResource {
 	@Nonnull
 	protected AccountResponseFactory getAccountResponseFactory() {
 		return this.accountResponseFactory;
-	}
-
-	@Nonnull
-	protected CurrentContext getCurrentContext() {
-		return this.currentContextProvider.get();
 	}
 }

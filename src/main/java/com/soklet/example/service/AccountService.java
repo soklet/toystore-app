@@ -17,10 +17,8 @@
 package com.soklet.example.service;
 
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import com.lokalized.Strings;
 import com.pyranid.Database;
-import com.soklet.example.CurrentContext;
 import com.soklet.example.exception.ApplicationException;
 import com.soklet.example.model.api.request.AccountAuthenticateRequest;
 import com.soklet.example.model.auth.AccountJwt;
@@ -33,8 +31,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.time.Instant;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -50,8 +46,6 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class AccountService {
 	@Nonnull
-	private final Provider<CurrentContext> currentContextProvider;
-	@Nonnull
 	private final PasswordManager passwordManager;
 	@Nonnull
 	private final Database database;
@@ -61,16 +55,13 @@ public class AccountService {
 	private final Logger logger;
 
 	@Inject
-	public AccountService(@Nonnull Provider<CurrentContext> currentContextProvider,
-												@Nonnull PasswordManager passwordManager,
+	public AccountService(@Nonnull PasswordManager passwordManager,
 												@Nonnull Database database,
 												@Nonnull Strings strings) {
-		requireNonNull(currentContextProvider);
 		requireNonNull(passwordManager);
 		requireNonNull(database);
 		requireNonNull(strings);
 
-		this.currentContextProvider = currentContextProvider;
 		this.passwordManager = passwordManager;
 		this.database = database;
 		this.strings = strings;
@@ -121,40 +112,8 @@ public class AccountService {
 					.build();
 
 		// Generate a JWT
-		Instant expiration = Instant.now().plus(10, ChronoUnit.MINUTES);
+		Instant expiration = Instant.now().plus(60, ChronoUnit.MINUTES);
 		return new AccountJwt(account.accountId(), expiration);
-	}
-
-	@Nonnull
-	public Optional<Account> findAccountByJwt(@Nullable AccountJwt accountJwt) {
-		if (accountJwt == null)
-			return Optional.empty();
-
-		// Validate JWT
-		if (Instant.now().isAfter(accountJwt.expiration())) {
-			String expirationDateTime = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-					.localizedBy(getCurrentContext().getPreferredLocale())
-					.withZone(getCurrentContext().getPreferredTimeZone())
-					.format(accountJwt.expiration());
-
-			String error = getStrings().get("Your authentication token expired on {{expirationDateTime}} - please re-authenticate.",
-					Map.of("expirationDateTime", expirationDateTime));
-
-			throw ApplicationException.withStatusCode(401)
-					.error(error)
-					.metadata(Map.of(
-							"reasonCode", "AUTHENTICATION_TOKEN_EXPIRED",
-							"expirationDateTime", expirationDateTime
-					))
-					.build();
-		}
-
-		return findAccountById(accountJwt.accountId());
-	}
-
-	@Nonnull
-	protected CurrentContext getCurrentContext() {
-		return this.currentContextProvider.get();
 	}
 
 	@Nonnull

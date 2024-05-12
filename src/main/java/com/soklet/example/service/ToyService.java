@@ -21,6 +21,7 @@ import com.google.inject.Provider;
 import com.lokalized.Strings;
 import com.pyranid.Database;
 import com.soklet.example.CurrentContext;
+import com.soklet.example.exception.ApplicationException;
 import com.soklet.example.model.api.request.ToyCreateRequest;
 import com.soklet.example.model.api.request.ToyUpdateRequest;
 import com.soklet.example.model.db.Toy;
@@ -30,7 +31,11 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
+import java.math.BigDecimal;
+import java.util.Currency;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -90,8 +95,26 @@ public class ToyService {
 		requireNonNull(request);
 
 		UUID toyId = UUID.randomUUID();
+		String name = request.name() == null ? "" : request.name().trim();
+		BigDecimal price = request.price();
+		Currency currency = request.currency();
+		Map<String, String> fieldErrors = new LinkedHashMap<>();
 
-		// TODO: validation
+		if (name.length() == 0)
+			fieldErrors.put("name", getStrings().get("Name is required."));
+
+		if (price == null)
+			fieldErrors.put("price", getStrings().get("Price is required."));
+		else if (price.compareTo(BigDecimal.ZERO) < 0)
+			fieldErrors.put("price", getStrings().get("Price cannot be negative."));
+
+		if (currency == null)
+			fieldErrors.put("currency", getStrings().get("Currency is required."));
+
+		if (fieldErrors.size() > 0)
+			throw ApplicationException.withStatusCode(422)
+					.fieldErrors(fieldErrors)
+					.build();
 
 		getDatabase().execute("""
 				INSERT INTO toy (

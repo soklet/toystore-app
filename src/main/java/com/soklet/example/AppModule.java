@@ -88,6 +88,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -164,16 +165,17 @@ public class AppModule extends AbstractModule {
 						requireNonNull(responseGenerator);
 						requireNonNull(responseWriter);
 
-						// Look at request headers to see if there's a token that identifies an authenticated employee.
-						// In a real system, this might be a JWT
-						String authenticationTokenAsString = request.getHeader("X-Authentication-Token").orElse(null);
 						Account account = null;
 
-						// If the token exists, look up the account
+						// Try to pull authentication token from request headers...
+						String authenticationTokenAsString = request.getHeader("X-Authentication-Token").orElse(null);
+
+						// ...and if it exists, see if we can pull an account from it.
 						if (authenticationTokenAsString != null) {
 							AccountJwt accountJwt = AccountJwt.fromStringRepresentation(authenticationTokenAsString, configuration.getKeyPair().getPrivate()).orElse(null);
-							// TODO: don't want to 401 here - need to modify findAccountByJwt
-							account = accountService.findAccountByJwt(accountJwt).orElse(null);
+
+							if (accountJwt != null && !accountJwt.isExpired())
+								account = accountService.findAccountById(accountJwt.accountId()).orElse(null);
 						}
 
 						if (resourceMethod != null) {
@@ -181,6 +183,7 @@ public class AppModule extends AbstractModule {
 							AuthorizationRequired authorizationRequired = resourceMethod.getMethod().getAnnotation(AuthorizationRequired.class);
 
 							if (authorizationRequired != null) {
+								// Ensure an account was found for the authentication token
 								if (account == null)
 									throw new AuthenticationException();
 
@@ -318,7 +321,16 @@ public class AppModule extends AbstractModule {
 						}
 
 						// Use Gson to turn response objects into JSON to go over the wire
-						Map<String, Object> bodyObject = new HashMap<>();
+						Map<String, Object> bodyObject = new LinkedHashMap<>();
+
+						// Combine all the messages into one field for easy access by clients
+						String error = format("%s %s",
+								errors.stream().collect(Collectors.joining(" ")),
+								fieldErrors.values().stream().collect(Collectors.joining(" "))
+						).trim();
+
+						if (error.length() > 0)
+							bodyObject.put("error", error);
 
 						if (errors.size() > 0)
 							bodyObject.put("errors", errors);
