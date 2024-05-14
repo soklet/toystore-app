@@ -30,6 +30,7 @@ import com.soklet.example.CurrentContext;
 import com.soklet.example.annotation.AuthorizationRequired;
 import com.soklet.example.exception.NotFoundException;
 import com.soklet.example.model.api.request.ToyCreateRequest;
+import com.soklet.example.model.api.request.ToyPurchaseRequest;
 import com.soklet.example.model.api.request.ToyUpdateRequest;
 import com.soklet.example.model.api.response.ToyResponse;
 import com.soklet.example.model.api.response.ToyResponse.ToyResponseFactory;
@@ -75,18 +76,18 @@ public class ToyResource {
 	@Nonnull
 	@AuthorizationRequired
 	@GET("/toys")
-	public ToysResponse findToys(@Nullable @QueryParameter(optional = true) String query) {
+	public ToysResponseHolder findToys(@Nullable @QueryParameter(optional = true) String query) {
 		List<Toy> toys = query == null ? getToyService().findToys() : getToyService().searchToys(query);
 
-		return new ToysResponse(toys.stream()
+		return new ToysResponseHolder(toys.stream()
 				.map(toy -> getToyResponseFactory().create(toy))
 				.collect(Collectors.toList()));
 	}
 
-	public record ToysResponse(
+	public record ToysResponseHolder(
 			@Nonnull List<ToyResponse> toys
 	) {
-		public ToysResponse {
+		public ToysResponseHolder {
 			requireNonNull(toys);
 		}
 	}
@@ -94,35 +95,43 @@ public class ToyResource {
 	@Nonnull
 	@AuthorizationRequired({RoleId.EMPLOYEE, RoleId.ADMINISTRATOR})
 	@POST("/toys")
-	public ToyResponse createToy(@Nonnull @RequestBody ToyCreateRequest request) {
+	public ToyResponseHolder createToy(@Nonnull @RequestBody ToyCreateRequest request) {
 		requireNonNull(request);
 
 		UUID toyId = getToyService().createToy(request);
 		Toy toy = getToyService().findToyById(toyId).get();
 
-		return getToyResponseFactory().create(toy);
+		return new ToyResponseHolder(getToyResponseFactory().create(toy));
+	}
+
+	public record ToyResponseHolder(
+			@Nonnull ToyResponse toy
+	) {
+		public ToyResponseHolder {
+			requireNonNull(toy);
+		}
 	}
 
 	@Nonnull
 	@AuthorizationRequired
 	@PUT("/toys/{toyId}")
-	public ToyResponse updateToy(@Nonnull @PathParameter UUID toyId,
-															 @Nonnull @RequestBody ToyUpdateRequest request) {
+	public ToyResponseHolder updateToy(@Nonnull @PathParameter UUID toyId,
+																		 @Nonnull @RequestBody ToyUpdateRequest request) {
 		requireNonNull(toyId);
 		requireNonNull(request);
 
-		Toy toyToUpdate = getToyService().findToyById(toyId).orElse(null);
+		Toy toy = getToyService().findToyById(toyId).orElse(null);
 
-		if (toyToUpdate == null)
+		if (toy == null)
 			throw new NotFoundException();
 
 		// Apply the path parameter to the record
 		request = request.withToyId(toyId);
 
 		getToyService().updateToy(request);
-		Toy toy = getToyService().findToyById(toyId).get();
+		Toy updatedToy = getToyService().findToyById(toyId).get();
 
-		return getToyResponseFactory().create(toy);
+		return new ToyResponseHolder(getToyResponseFactory().create(updatedToy));
 	}
 
 	@AuthorizationRequired(RoleId.ADMINISTRATOR)
@@ -130,12 +139,33 @@ public class ToyResource {
 	public void deleteToy(@Nonnull @PathParameter UUID toyId) {
 		requireNonNull(toyId);
 
-		Toy toyToDelete = getToyService().findToyById(toyId).orElse(null);
+		Toy toy = getToyService().findToyById(toyId).orElse(null);
 
-		if (toyToDelete == null)
+		if (toy == null)
 			throw new NotFoundException();
 
 		getToyService().deleteToy(toyId);
+	}
+
+	@Nonnull
+	@AuthorizationRequired
+	@POST("/toys/{toyId}/purchase")
+	public void purchaseToy(@Nonnull @PathParameter UUID toyId,
+													@Nonnull @RequestBody ToyPurchaseRequest request) {
+		requireNonNull(toyId);
+		requireNonNull(request);
+
+		Toy toy = getToyService().findToyById(toyId).orElse(null);
+
+		if (toy == null)
+			throw new NotFoundException();
+
+		// Apply the path parameter to the record
+		request = request.withToyId(toyId);
+
+		getToyService().purchaseToy(request);
+
+		throw new UnsupportedOperationException();
 	}
 
 	@Nonnull

@@ -17,8 +17,7 @@
 package com.soklet.example.model.api.request;
 
 import javax.annotation.Nonnull;
-import java.math.BigDecimal;
-import java.util.Currency;
+import java.time.YearMonth;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
@@ -26,15 +25,15 @@ import static java.util.Objects.requireNonNull;
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record ToyUpdateRequest(
+public record ToyPurchaseRequest(
 		@Nonnull UUID toyId,
-		@Nonnull String name,
-		@Nonnull BigDecimal price,
-		@Nonnull Currency currency
+		@Nonnull UUID accountId,
+		@Nonnull String creditCardNumber,
+		@Nonnull YearMonth creditCardExpiration
 ) {
 	@Nonnull
-	public ToyUpdateRequest withToyId(@Nonnull UUID toyId) {
+	public ToyPurchaseRequest withToyId(@Nonnull UUID toyId) {
 		requireNonNull(toyId);
-		return new ToyUpdateRequest(toyId, name, price, currency);
+		return new ToyPurchaseRequest(toyId, accountId, creditCardNumber, creditCardExpiration);
 	}
 }

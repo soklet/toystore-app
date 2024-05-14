@@ -25,7 +25,7 @@ import com.soklet.core.MarshaledResponse;
 import com.soklet.core.Request;
 import com.soklet.example.App;
 import com.soklet.example.Configuration;
-import com.soklet.example.resource.AccountResource.AccountAuthenticateReponse;
+import com.soklet.example.resource.AccountResource.AccountAuthenticateReponseHolder;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -46,9 +46,10 @@ public class AccountResourceTests {
 		SokletConfiguration config = app.getInjector().getInstance(SokletConfiguration.class);
 
 		Soklet.runSimulator(config, (simulator -> {
+			// Correct email/password
 			String requestBodyJson = gson.toJson(Map.of(
 					"emailAddress", "admin@soklet.com",
-					"password", "fake-password"
+					"password", "test123"
 			));
 
 			Request request = Request.with(HttpMethod.POST, "/accounts/authenticate")
@@ -58,11 +59,12 @@ public class AccountResourceTests {
 			MarshaledResponse marshaledResponse = simulator.performRequest(request);
 
 			String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
-			AccountAuthenticateReponse response = gson.fromJson(responseBody, AccountAuthenticateReponse.class);
+			AccountAuthenticateReponseHolder response = gson.fromJson(responseBody, AccountAuthenticateReponseHolder.class);
 
-			Assert.assertEquals("Bad status code", 200, (long) marshaledResponse.getStatusCode());
+			Assert.assertEquals("Bad status code", 200, marshaledResponse.getStatusCode().intValue());
 			Assert.assertEquals("Email doesn't match", "admin@soklet.com", response.account().getEmailAddress().get());
 
+			// Incorrect email/password
 			requestBodyJson = gson.toJson(Map.of(
 					"emailAddress", "fake@soklet.com",
 					"password", "fake-password"
@@ -74,7 +76,7 @@ public class AccountResourceTests {
 
 			marshaledResponse = simulator.performRequest(request);
 
-			Assert.assertEquals("Bad status code", 401, (long) marshaledResponse.getStatusCode());
+			Assert.assertEquals("Bad status code", 401, marshaledResponse.getStatusCode().intValue());
 		}));
 	}
 }

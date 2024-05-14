@@ -25,8 +25,11 @@ import com.pyranid.Transaction;
 import com.soklet.example.CurrentContext;
 import com.soklet.example.exception.ApplicationException;
 import com.soklet.example.model.api.request.ToyCreateRequest;
+import com.soklet.example.model.api.request.ToyPurchaseRequest;
 import com.soklet.example.model.api.request.ToyUpdateRequest;
 import com.soklet.example.model.db.Toy;
+import com.soklet.example.util.CreditCardProcessor;
+import com.soklet.example.util.CreditCardProcessor.CreditCardPaymentException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +39,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
 import java.sql.Savepoint;
 import java.text.NumberFormat;
+import java.time.YearMonth;
 import java.util.Currency;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -53,6 +57,8 @@ public class ToyService {
 	@Nonnull
 	private final Provider<CurrentContext> currentContextProvider;
 	@Nonnull
+	private final CreditCardProcessor creditCardProcessor;
+	@Nonnull
 	private final Database database;
 	@Nonnull
 	private final Strings strings;
@@ -61,13 +67,16 @@ public class ToyService {
 
 	@Inject
 	public ToyService(@Nonnull Provider<CurrentContext> currentContextProvider,
+										@Nonnull CreditCardProcessor creditCardProcessor,
 										@Nonnull Database database,
 										@Nonnull Strings strings) {
 		requireNonNull(currentContextProvider);
+		requireNonNull(creditCardProcessor);
 		requireNonNull(database);
 		requireNonNull(strings);
 
 		this.currentContextProvider = currentContextProvider;
+		this.creditCardProcessor = creditCardProcessor;
 		this.database = database;
 		this.strings = strings;
 		this.logger = LoggerFactory.getLogger(getClass());
@@ -136,11 +145,8 @@ public class ToyService {
 					.fieldErrors(fieldErrors)
 					.build();
 
-		if (getLogger().isInfoEnabled()) {
-			NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(getCurrentContext().getPreferredLocale());
-			currencyFormatter.setCurrency(currency);
-			getLogger().info("Creating toy '{}', which costs {}", name, currencyFormatter.format(price));
-		}
+		if (getLogger().isInfoEnabled())
+			getLogger().info("Creating toy '{}', which costs {}", name, formatPriceForDisplay(price, currency));
 
 		// Make a savepoint in case there is a unique constraint violation (duplicate name)
 		Transaction transaction = getDatabase().currentTransaction().get();
@@ -192,8 +198,45 @@ public class ToyService {
 	}
 
 	@Nonnull
+	public String purchaseToy(@Nonnull ToyPurchaseRequest request) {
+		requireNonNull(request);
+
+		String creditCardNumber = request.creditCardNumber();
+		YearMonth creditCardExpiration = request.creditCardExpiration();
+		Toy toy = findToyById(request.toyId()).orElse(null);
+
+		// TODO: validation
+
+		try {
+			return getCreditCardProcessor().makePayment(request.creditCardNumber(), toy.price(), toy.currency());
+		} catch (CreditCardPaymentException e) {
+			throw ApplicationException.withStatusCode(422)
+					.error(getStrings().get("We were unable to charge {{amount}} to your credit card.",
+							Map.of("amount", formatPriceForDisplay(toy.price(), toy.currency()))))
+					.metadata(Map.of("creditCardPaymentFailed", true))
+					.build();
+		}
+	}
+
+	@Nonnull
+	protected String formatPriceForDisplay(@Nonnull BigDecimal price,
+																				 @Nonnull Currency currency) {
+		requireNonNull(price);
+		requireNonNull(currency);
+
+		NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(getCurrentContext().getPreferredLocale());
+		currencyFormatter.setCurrency(currency);
+		return currencyFormatter.format(price);
+	}
+
+	@Nonnull
 	protected CurrentContext getCurrentContext() {
 		return this.currentContextProvider.get();
+	}
+
+	@Nonnull
+	protected CreditCardProcessor getCreditCardProcessor() {
+		return this.creditCardProcessor;
 	}
 
 	@Nonnull

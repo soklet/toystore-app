@@ -23,7 +23,6 @@ import com.soklet.example.CurrentContext;
 import com.soklet.example.model.db.Toy;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
@@ -45,7 +44,7 @@ public class ToyResponse {
 	private final UUID toyId;
 	@Nonnull
 	private final String name;
-	@Nullable
+	@Nonnull
 	private final BigDecimal price;
 	@Nonnull
 	private final String priceDescription;

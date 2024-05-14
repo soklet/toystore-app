@@ -55,7 +55,7 @@ public class AccountResource {
 
 	@Nonnull
 	@POST("/accounts/authenticate")
-	public AccountAuthenticateReponse authenticate(@Nonnull @RequestBody AccountAuthenticateRequest request) {
+	public AccountAuthenticateReponseHolder authenticate(@Nonnull @RequestBody AccountAuthenticateRequest request) {
 		requireNonNull(request);
 
 		// Authenticate the email/password, and pull the account information from the JWT assertion
@@ -63,14 +63,14 @@ public class AccountResource {
 		Account account = getAccountService().findAccountById(accountJwt.accountId()).get();
 
 		// Return both account data and a JWT that authenticates it to the client
-		return new AccountAuthenticateReponse(accountJwt, getAccountResponseFactory().create(account));
+		return new AccountAuthenticateReponseHolder(accountJwt, getAccountResponseFactory().create(account));
 	}
 
-	public record AccountAuthenticateReponse(
+	public record AccountAuthenticateReponseHolder(
 			@Nonnull AccountJwt authenticationToken,
 			@Nonnull AccountResponse account
 	) {
-		public AccountAuthenticateReponse {
+		public AccountAuthenticateReponseHolder {
 			requireNonNull(authenticationToken);
 			requireNonNull(account);
 		}

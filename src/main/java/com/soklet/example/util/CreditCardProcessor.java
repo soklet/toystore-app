@@ -14,27 +14,22 @@
  * limitations under the License.
  */
 
-package com.soklet.example.model.api.request;
+package com.soklet.example.util;
 
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.math.BigDecimal;
 import java.util.Currency;
-import java.util.UUID;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record ToyUpdateRequest(
-		@Nonnull UUID toyId,
-		@Nonnull String name,
-		@Nonnull BigDecimal price,
-		@Nonnull Currency currency
-) {
+public interface CreditCardProcessor {
 	@Nonnull
-	public ToyUpdateRequest withToyId(@Nonnull UUID toyId) {
-		requireNonNull(toyId);
-		return new ToyUpdateRequest(toyId, name, price, currency);
-	}
+	String makePayment(@Nonnull String creditCardNumber,
+										 @Nonnull BigDecimal amount,
+										 @Nonnull Currency currency) throws CreditCardPaymentException;
+
+	@NotThreadSafe
+	class CreditCardPaymentException extends Exception {}
 }

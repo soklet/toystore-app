@@ -174,8 +174,12 @@ public class AppModule extends AbstractModule {
 						if (authenticationTokenAsString != null) {
 							AccountJwt accountJwt = AccountJwt.fromStringRepresentation(authenticationTokenAsString, configuration.getKeyPair().getPrivate()).orElse(null);
 
-							if (accountJwt != null && !accountJwt.isExpired())
-								account = accountService.findAccountById(accountJwt.accountId()).orElse(null);
+							if (accountJwt != null) {
+								if (accountJwt.isExpired())
+									logger.info("JWT for account ID {} expired on {}", accountJwt.accountId(), accountJwt.expiration());
+								else
+									account = accountService.findAccountById(accountJwt.accountId()).orElse(null);
+							}
 						}
 
 						if (resourceMethod != null) {
@@ -324,13 +328,13 @@ public class AppModule extends AbstractModule {
 						Map<String, Object> bodyObject = new LinkedHashMap<>();
 
 						// Combine all the messages into one field for easy access by clients
-						String error = format("%s %s",
+						String errorSummary = format("%s %s",
 								errors.stream().collect(Collectors.joining(" ")),
 								fieldErrors.values().stream().collect(Collectors.joining(" "))
 						).trim();
 
-						if (error.length() > 0)
-							bodyObject.put("error", error);
+						if (errorSummary.length() > 0)
+							bodyObject.put("errorSummary", errorSummary);
 
 						if (errors.size() > 0)
 							bodyObject.put("errors", errors);
