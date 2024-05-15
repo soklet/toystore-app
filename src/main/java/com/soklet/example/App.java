@@ -43,7 +43,6 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class App {
 	public static void main(@Nullable String[] args) throws Exception {
-		System.setProperty("logback.configurationFile", "logback.xml");
 		new App(new Configuration()).startServer();
 	}
 

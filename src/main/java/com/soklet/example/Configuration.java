@@ -68,6 +68,10 @@ public class Configuration {
 		this.port = 8080;
 		this.corsWhitelistedOrigins = Set.of();
 		this.keyPair = loadKeyPair();
+
+		// Initialize Logback if not done already
+		if (System.getProperty("logback.configurationFile") == null)
+			System.setProperty("logback.configurationFile", "logback.xml");
 	}
 
 	@Nonnull
