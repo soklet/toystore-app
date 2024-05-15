@@ -52,11 +52,14 @@ import com.soklet.example.exception.AuthenticationException;
 import com.soklet.example.exception.AuthorizationException;
 import com.soklet.example.exception.NotFoundException;
 import com.soklet.example.model.api.response.AccountResponse.AccountResponseFactory;
+import com.soklet.example.model.api.response.PurchaseResponse.PurchaseResponseFactory;
 import com.soklet.example.model.api.response.ToyResponse.ToyResponseFactory;
 import com.soklet.example.model.auth.AccountJwt;
 import com.soklet.example.model.db.Account;
 import com.soklet.example.model.db.Role.RoleId;
 import com.soklet.example.service.AccountService;
+import com.soklet.example.util.CreditCardProcessor;
+import com.soklet.example.util.DefaultCreditCardProcessor;
 import com.soklet.example.util.PasswordManager;
 import com.soklet.exception.BadRequestException;
 import com.soklet.exception.IllegalQueryParameterException;
@@ -74,6 +77,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -428,6 +432,13 @@ public class AppModule extends AbstractModule {
 	@Nonnull
 	@Provides
 	@Singleton
+	public CreditCardProcessor provideCreditCardProcessor() {
+		return new DefaultCreditCardProcessor();
+	}
+
+	@Nonnull
+	@Provides
+	@Singleton
 	public Gson provideGson(@Nonnull Configuration configuration) {
 		requireNonNull(configuration);
 
@@ -475,6 +486,20 @@ public class AppModule extends AbstractModule {
 						return Instant.parse(jsonReader.nextString());
 					}
 				})
+				// Use ISO formatting for YearMonths
+				.registerTypeAdapter(YearMonth.class, new TypeAdapter<YearMonth>() {
+					@Override
+					public void write(@Nonnull JsonWriter jsonWriter,
+														@Nonnull YearMonth yearMonth) throws IOException {
+						jsonWriter.value(yearMonth.toString());
+					}
+
+					@Override
+					@Nullable
+					public YearMonth read(@Nonnull JsonReader jsonReader) throws IOException {
+						return YearMonth.parse(jsonReader.nextString());
+					}
+				})
 				// Convert our custom AccountJwt to and from a JSON string
 				.registerTypeAdapter(AccountJwt.class, new TypeAdapter<AccountJwt>() {
 					@Override
@@ -498,5 +523,6 @@ public class AppModule extends AbstractModule {
 		// See https://github.com/google/guice/wiki/AssistedInject
 		install(new FactoryModuleBuilder().build(AccountResponseFactory.class));
 		install(new FactoryModuleBuilder().build(ToyResponseFactory.class));
+		install(new FactoryModuleBuilder().build(PurchaseResponseFactory.class));
 	}
 }

@@ -17,28 +17,34 @@
 package com.soklet.example.util;
 
 import javax.annotation.Nonnull;
-import javax.annotation.concurrent.NotThreadSafe;
+import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
 import java.util.Currency;
+import java.util.UUID;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public interface CreditCardProcessor {
+@ThreadSafe
+public class DefaultCreditCardProcessor implements CreditCardProcessor {
 	@Nonnull
-	String makePayment(@Nonnull String creditCardNumber,
-										 @Nonnull BigDecimal amount,
-										 @Nonnull Currency currency) throws CreditCardPaymentException;
+	@Override
+	public String makePayment(@Nonnull String creditCardNumber,
+														@Nonnull BigDecimal amount,
+														@Nonnull Currency currency) throws CreditCardPaymentException {
+		requireNonNull(creditCardNumber);
+		requireNonNull(amount);
+		requireNonNull(currency);
 
-	@NotThreadSafe
-	abstract class CreditCardPaymentException extends Exception {}
+		// Pretend to do some work
+		try {
+			Thread.sleep(250L);
+		} catch (InterruptedException ignored) {
+			// Don't care
+		}
 
-	@NotThreadSafe
-	class CreditCardPaymentDeclinedException extends CreditCardPaymentException {}
-
-	@NotThreadSafe
-	class CreditCardPaymentInvalidCardNumberException extends CreditCardPaymentException {}
-
-	@NotThreadSafe
-	class CreditCardPaymentInvalidExpirationDateException extends CreditCardPaymentException {}
+		return UUID.randomUUID().toString();
+	}
 }

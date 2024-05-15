@@ -140,6 +140,18 @@ public class App {
 					CONSTRAINT toy_name_unique_idx UNIQUE(name)
 				)
 				""");
+
+		database.execute("""
+				CREATE TABLE purchase (
+					purchase_id UUID PRIMARY KEY,
+					account_id UUID NOT NULL REFERENCES account,
+					toy_id UUID NOT NULL REFERENCES toy,
+					price DECIMAL(10,2) NOT NULL,
+					currency VARCHAR(8) NOT NULL,
+					credit_card_txn_id VARCHAR(255) NOT NULL,
+					created_at TIMESTAMP DEFAULT NOW() NOT NULL
+				)
+				""");
 	}
 
 	@Nonnull

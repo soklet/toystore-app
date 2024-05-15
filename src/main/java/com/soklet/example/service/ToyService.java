@@ -27,6 +27,7 @@ import com.soklet.example.exception.ApplicationException;
 import com.soklet.example.model.api.request.ToyCreateRequest;
 import com.soklet.example.model.api.request.ToyPurchaseRequest;
 import com.soklet.example.model.api.request.ToyUpdateRequest;
+import com.soklet.example.model.db.Purchase;
 import com.soklet.example.model.db.Toy;
 import com.soklet.example.util.CreditCardProcessor;
 import com.soklet.example.util.CreditCardProcessor.CreditCardPaymentException;
@@ -160,14 +161,14 @@ public class ToyService {
 						price,
 						currency
 					) VALUES (?,?,?,?)
-					""", toyId, request.name(), request.price(), request.currency());
+					""", toyId, name, price, currency);
 		} catch (DatabaseException e) {
 			// If this is a unique constraint violation on the 'name' field, handle it specially:
 			// roll the transaction back to a known-good state and expose some details to the caller
 			if (e.getMessage().contains("TOY_NAME_UNIQUE_IDX")) {
 				getDatabase().currentTransaction().get().rollback(savepoint);
 				throw ApplicationException.withStatusCode(422)
-						.fieldErrors(Map.of("name", getStrings().get("Name '{{name}}' is already in use.", Map.of("name", name))))
+						.fieldErrors(Map.of("name", getStrings().get("There is already a toy named '{{name}}'.", Map.of("name", name))))
 						.build();
 			} else {
 				// Some other problem; just bubble out
@@ -198,17 +199,35 @@ public class ToyService {
 	}
 
 	@Nonnull
-	public String purchaseToy(@Nonnull ToyPurchaseRequest request) {
+	public UUID purchaseToy(@Nonnull ToyPurchaseRequest request) {
 		requireNonNull(request);
 
+		UUID accountId = request.accountId();
 		String creditCardNumber = request.creditCardNumber();
 		YearMonth creditCardExpiration = request.creditCardExpiration();
 		Toy toy = findToyById(request.toyId()).orElse(null);
+		String creditCardTransactionId = null;
 
-		// TODO: validation
+		Map<String, String> fieldErrors = new LinkedHashMap<>();
+
+		if (accountId == null)
+			fieldErrors.put("accountId", getStrings().get("Account ID is required."));
+
+		if (creditCardNumber == null)
+			fieldErrors.put("creditCardNumber", getStrings().get("Credit card number is required."));
+
+		if (creditCardExpiration == null)
+			fieldErrors.put("creditCardExpiration", getStrings().get("Credit card expiration is required."));
+		else if (creditCardExpiration.isBefore(YearMonth.now(getCurrentContext().getPreferredTimeZone())))
+			fieldErrors.put("creditCardExpiration", getStrings().get("Credit card is expired."));
+
+		if (fieldErrors.size() > 0)
+			throw ApplicationException.withStatusCode(422)
+					.fieldErrors(fieldErrors)
+					.build();
 
 		try {
-			return getCreditCardProcessor().makePayment(request.creditCardNumber(), toy.price(), toy.currency());
+			creditCardTransactionId = getCreditCardProcessor().makePayment(request.creditCardNumber(), toy.price(), toy.currency());
 		} catch (CreditCardPaymentException e) {
 			throw ApplicationException.withStatusCode(422)
 					.error(getStrings().get("We were unable to charge {{amount}} to your credit card.",
@@ -216,6 +235,33 @@ public class ToyService {
 					.metadata(Map.of("creditCardPaymentFailed", true))
 					.build();
 		}
+
+		UUID purchaseId = UUID.randomUUID();
+
+		getDatabase().execute("""
+				INSERT INTO purchase (
+					purchase_id,
+					account_id,
+					toy_id,
+					price,
+					currency,
+					credit_card_txn_id
+				) VALUES (?,?,?,?,?,?)
+				""", purchaseId, accountId, toy.toyId(), toy.price(), toy.currency(), creditCardTransactionId);
+
+		return purchaseId;
+	}
+
+	@Nonnull
+	public Optional<Purchase> findPurchaseById(@Nullable UUID purchaseId) {
+		if (purchaseId == null)
+			return Optional.empty();
+
+		return getDatabase().queryForObject("""
+				SELECT *
+				FROM purchase
+				WHERE purchase_id=?
+				""", Purchase.class, purchaseId);
 	}
 
 	@Nonnull

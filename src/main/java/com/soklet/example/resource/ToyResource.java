@@ -32,8 +32,12 @@ import com.soklet.example.exception.NotFoundException;
 import com.soklet.example.model.api.request.ToyCreateRequest;
 import com.soklet.example.model.api.request.ToyPurchaseRequest;
 import com.soklet.example.model.api.request.ToyUpdateRequest;
+import com.soklet.example.model.api.response.PurchaseResponse;
+import com.soklet.example.model.api.response.PurchaseResponse.PurchaseResponseFactory;
 import com.soklet.example.model.api.response.ToyResponse;
 import com.soklet.example.model.api.response.ToyResponse.ToyResponseFactory;
+import com.soklet.example.model.db.Account;
+import com.soklet.example.model.db.Purchase;
 import com.soklet.example.model.db.Role.RoleId;
 import com.soklet.example.model.db.Toy;
 import com.soklet.example.service.ToyService;
@@ -58,18 +62,23 @@ public class ToyResource {
 	@Nonnull
 	private final ToyResponseFactory toyResponseFactory;
 	@Nonnull
+	private final PurchaseResponseFactory purchaseResponseFactory;
+	@Nonnull
 	private final Provider<CurrentContext> currentContextProvider;
 
 	@Inject
 	public ToyResource(@Nonnull ToyService toyService,
 										 @Nonnull ToyResponseFactory toyResponseFactory,
+										 @Nonnull PurchaseResponseFactory purchaseResponseFactory,
 										 @Nonnull Provider<CurrentContext> currentContextProvider) {
 		requireNonNull(toyService);
 		requireNonNull(toyResponseFactory);
+		requireNonNull(purchaseResponseFactory);
 		requireNonNull(currentContextProvider);
 
 		this.toyService = toyService;
 		this.toyResponseFactory = toyResponseFactory;
+		this.purchaseResponseFactory = purchaseResponseFactory;
 		this.currentContextProvider = currentContextProvider;
 	}
 
@@ -150,8 +159,8 @@ public class ToyResource {
 	@Nonnull
 	@AuthorizationRequired
 	@POST("/toys/{toyId}/purchase")
-	public void purchaseToy(@Nonnull @PathParameter UUID toyId,
-													@Nonnull @RequestBody ToyPurchaseRequest request) {
+	public PurchaseResponseHolder purchaseToy(@Nonnull @PathParameter UUID toyId,
+																						@Nonnull @RequestBody ToyPurchaseRequest request) {
 		requireNonNull(toyId);
 		requireNonNull(request);
 
@@ -160,12 +169,22 @@ public class ToyResource {
 		if (toy == null)
 			throw new NotFoundException();
 
-		// Apply the path parameter to the record
-		request = request.withToyId(toyId);
+		// Apply path parameter and current account to the record
+		Account account = getCurrentContext().getAccount().get();
+		request = request.withToyId(toyId).withAccountId(account.accountId());
 
-		getToyService().purchaseToy(request);
+		UUID purchaseId = getToyService().purchaseToy(request);
+		Purchase purchase = getToyService().findPurchaseById(purchaseId).get();
 
-		throw new UnsupportedOperationException();
+		return new PurchaseResponseHolder(getPurchaseResponseFactory().create(purchase));
+	}
+
+	public record PurchaseResponseHolder(
+			@Nonnull PurchaseResponse purchase
+	) {
+		public PurchaseResponseHolder {
+			requireNonNull(purchase);
+		}
 	}
 
 	@Nonnull
@@ -176,6 +195,11 @@ public class ToyResource {
 	@Nonnull
 	protected ToyResponseFactory getToyResponseFactory() {
 		return this.toyResponseFactory;
+	}
+
+	@Nonnull
+	protected PurchaseResponseFactory getPurchaseResponseFactory() {
+		return this.purchaseResponseFactory;
 	}
 
 	@Nonnull

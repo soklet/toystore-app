@@ -36,4 +36,10 @@ public record ToyPurchaseRequest(
 		requireNonNull(toyId);
 		return new ToyPurchaseRequest(toyId, accountId, creditCardNumber, creditCardExpiration);
 	}
+
+	@Nonnull
+	public ToyPurchaseRequest withAccountId(@Nonnull UUID accountId) {
+		requireNonNull(accountId);
+		return new ToyPurchaseRequest(toyId, accountId, creditCardNumber, creditCardExpiration);
+	}
 }

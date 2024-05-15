@@ -14,31 +14,25 @@
  * limitations under the License.
  */
 
-package com.soklet.example.util;
+package com.soklet.example.model.db;
+
+import com.pyranid.DatabaseColumn;
 
 import javax.annotation.Nonnull;
-import javax.annotation.concurrent.NotThreadSafe;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Currency;
+import java.util.UUID;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public interface CreditCardProcessor {
-	@Nonnull
-	String makePayment(@Nonnull String creditCardNumber,
-										 @Nonnull BigDecimal amount,
-										 @Nonnull Currency currency) throws CreditCardPaymentException;
-
-	@NotThreadSafe
-	abstract class CreditCardPaymentException extends Exception {}
-
-	@NotThreadSafe
-	class CreditCardPaymentDeclinedException extends CreditCardPaymentException {}
-
-	@NotThreadSafe
-	class CreditCardPaymentInvalidCardNumberException extends CreditCardPaymentException {}
-
-	@NotThreadSafe
-	class CreditCardPaymentInvalidExpirationDateException extends CreditCardPaymentException {}
-}
+public record Purchase(
+		@Nonnull UUID purchaseId,
+		@Nonnull UUID accountId,
+		@Nonnull UUID toyId,
+		@Nonnull BigDecimal price,
+		@Nonnull Currency currency,
+		@Nonnull @DatabaseColumn("credit_card_txn_id") String creditCardTransactionId,
+		@Nonnull Instant createdAt
+) {}
