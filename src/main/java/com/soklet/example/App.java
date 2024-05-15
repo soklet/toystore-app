@@ -43,7 +43,8 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class App {
 	public static void main(@Nullable String[] args) throws Exception {
-		new App(new Configuration()).startServer();
+		App app = new App(new Configuration());
+		app.startServer();
 	}
 
 	@Nonnull
