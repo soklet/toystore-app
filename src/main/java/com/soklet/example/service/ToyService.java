@@ -232,7 +232,7 @@ public class ToyService {
 			throw ApplicationException.withStatusCode(422)
 					.error(getStrings().get("We were unable to charge {{amount}} to your credit card.",
 							Map.of("amount", formatPriceForDisplay(toy.price(), toy.currency()))))
-					.metadata(Map.of("creditCardPaymentFailed", true))
+					.metadata(Map.of("failureReason", e.getFailureReason()))
 					.build();
 		}
 

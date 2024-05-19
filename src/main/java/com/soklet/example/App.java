@@ -18,6 +18,8 @@ package com.soklet.example;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.util.Modules;
 import com.pyranid.Database;
 import com.soklet.Soklet;
 import com.soklet.SokletConfiguration;
@@ -54,11 +56,19 @@ public class App {
 	@Nonnull
 	private final Logger logger;
 
-	public App(@Nonnull Configuration configuration) {
+	public App(@Nonnull Configuration configuration,
+						 @Nullable Module... testingModules) {
 		requireNonNull(configuration);
 
+		// Use Guice modules for DI.
+		// Also permit overrides for testing, e.g. swap in a mock credit card processor
+		Module module = new AppModule();
+
+		if (testingModules != null)
+			module = Modules.override(module).with(testingModules);
+
 		this.configuration = configuration;
-		this.injector = Guice.createInjector(new AppModule());
+		this.injector = Guice.createInjector(module);
 		this.logger = LoggerFactory.getLogger(App.class);
 
 		// Load up an example schema and data

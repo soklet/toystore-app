@@ -21,6 +21,8 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.math.BigDecimal;
 import java.util.Currency;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
@@ -30,15 +32,26 @@ public interface CreditCardProcessor {
 										 @Nonnull BigDecimal amount,
 										 @Nonnull Currency currency) throws CreditCardPaymentException;
 
-	@NotThreadSafe
-	abstract class CreditCardPaymentException extends Exception {}
+	enum CreditCardPaymentFailureReason {
+		INVALID_CARD_NUMBER,
+		CARD_EXPIRED,
+		DECLINED,
+		UNKNOWN
+	}
 
 	@NotThreadSafe
-	class CreditCardPaymentDeclinedException extends CreditCardPaymentException {}
+	class CreditCardPaymentException extends Exception {
+		@Nonnull
+		CreditCardPaymentFailureReason failureReason;
 
-	@NotThreadSafe
-	class CreditCardPaymentInvalidCardNumberException extends CreditCardPaymentException {}
+		public CreditCardPaymentException(@Nonnull CreditCardPaymentFailureReason failureReason) {
+			super(requireNonNull(failureReason).name());
+			this.failureReason = failureReason;
+		}
 
-	@NotThreadSafe
-	class CreditCardPaymentInvalidExpirationDateException extends CreditCardPaymentException {}
+		@Nonnull
+		public CreditCardPaymentFailureReason getFailureReason() {
+			return this.failureReason;
+		}
+	}
 }
