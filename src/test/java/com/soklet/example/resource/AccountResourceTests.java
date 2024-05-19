@@ -25,13 +25,13 @@ import com.soklet.core.MarshaledResponse;
 import com.soklet.core.Request;
 import com.soklet.example.App;
 import com.soklet.example.Configuration;
+import com.soklet.example.model.api.request.AccountAuthenticateRequest;
 import com.soklet.example.resource.AccountResource.AccountAuthenticateReponseHolder;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
@@ -47,10 +47,7 @@ public class AccountResourceTests {
 
 		Soklet.runSimulator(config, (simulator -> {
 			// Correct email/password
-			String requestBodyJson = gson.toJson(Map.of(
-					"emailAddress", "admin@soklet.com",
-					"password", "test123"
-			));
+			String requestBodyJson = gson.toJson(new AccountAuthenticateRequest("admin@soklet.com", "test123"));
 
 			Request request = Request.with(HttpMethod.POST, "/accounts/authenticate")
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
@@ -65,10 +62,7 @@ public class AccountResourceTests {
 			Assert.assertEquals("Email doesn't match", "admin@soklet.com", response.account().getEmailAddress().get());
 
 			// Incorrect email/password
-			requestBodyJson = gson.toJson(Map.of(
-					"emailAddress", "fake@soklet.com",
-					"password", "fake-password"
-			));
+			requestBodyJson = gson.toJson(new AccountAuthenticateRequest("fake@soklet.com", "fake"));
 
 			request = Request.with(HttpMethod.POST, "/accounts/authenticate")
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))

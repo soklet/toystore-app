@@ -24,7 +24,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -47,9 +49,9 @@ public class ApplicationException extends RuntimeException {
 		return new Builder(statusCode);
 	}
 
-	protected ApplicationException(@Nonnull Builder builder) {
-		super();
-
+	protected ApplicationException(@Nonnull String message,
+																 @Nonnull Builder builder) {
+		super(requireNonNull(message));
 		requireNonNull(builder);
 
 		this.statusCode = builder.statusCode;
@@ -107,7 +109,22 @@ public class ApplicationException extends RuntimeException {
 
 		@Nonnull
 		public ApplicationException build() {
-			return new ApplicationException(this);
+			// Create an exception message by combining fields
+			List<String> messageComponents = new ArrayList<>(4);
+			messageComponents.add(format("Status %d", this.statusCode));
+
+			if (this.errors != null && this.errors.size() > 0)
+				messageComponents.add(format("Errors: %s", this.errors));
+
+			if (this.fieldErrors != null && this.fieldErrors.size() > 0)
+				messageComponents.add(format("Field Errors: %s", this.fieldErrors));
+
+			if (this.metadata != null && this.metadata.size() > 0)
+				messageComponents.add(format("Metadata: %s", this.metadata));
+			
+			String message = messageComponents.stream().collect(Collectors.joining(", "));
+
+			return new ApplicationException(message, this);
 		}
 	}
 

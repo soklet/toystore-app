@@ -37,6 +37,7 @@ import com.pyranid.StatementContext;
 import com.pyranid.StatementLog;
 import com.soklet.SokletConfiguration;
 import com.soklet.core.LifecycleInterceptor;
+import com.soklet.core.LogHandler;
 import com.soklet.core.MarshaledResponse;
 import com.soklet.core.Request;
 import com.soklet.core.RequestBodyMarshaler;
@@ -52,6 +53,7 @@ import com.soklet.example.exception.AuthenticationException;
 import com.soklet.example.exception.AuthorizationException;
 import com.soklet.example.exception.NotFoundException;
 import com.soklet.example.model.api.response.AccountResponse.AccountResponseFactory;
+import com.soklet.example.model.api.response.ErrorResponse;
 import com.soklet.example.model.api.response.PurchaseResponse.PurchaseResponseFactory;
 import com.soklet.example.model.api.response.ToyResponse.ToyResponseFactory;
 import com.soklet.example.model.auth.AccountJwt;
@@ -328,26 +330,21 @@ public class AppModule extends AbstractModule {
 							}
 						}
 
-						// Use Gson to turn response objects into JSON to go over the wire
-						Map<String, Object> bodyObject = new LinkedHashMap<>();
-
 						// Combine all the messages into one field for easy access by clients
-						String errorSummary = format("%s %s",
+						String summary = format("%s %s",
 								errors.stream().collect(Collectors.joining(" ")),
 								fieldErrors.values().stream().collect(Collectors.joining(" "))
 						).trim();
 
-						if (errorSummary.length() > 0)
-							bodyObject.put("errorSummary", errorSummary);
+						// Ensure there is always a summary
+						if (summary.length() == 0)
+							summary = strings.get("An unexpected error occurred.");
 
-						if (errors.size() > 0)
-							bodyObject.put("errors", errors);
-						if (fieldErrors.size() > 0)
-							bodyObject.put("fieldErrors", fieldErrors);
-						if (metadata.size() > 0)
-							bodyObject.put("metadata", metadata);
+						// Collect all the error information into an object for transport over the wire
+						ErrorResponse errorResponse = new ErrorResponse(summary, errors, fieldErrors, metadata);
 
-						byte[] body = gson.toJson(bodyObject).getBytes(StandardCharsets.UTF_8);
+						// Use Gson to turn the error response into JSON
+						byte[] body = gson.toJson(errorResponse).getBytes(StandardCharsets.UTF_8);
 
 						Map<String, Set<String>> headers = new HashMap<>();
 						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
@@ -356,6 +353,22 @@ public class AppModule extends AbstractModule {
 								.headers(headers)
 								.body(body)
 								.build();
+					}
+				})
+				.logHandler(new LogHandler() {
+					@Nonnull
+					private final Logger logger = LoggerFactory.getLogger("com.soklet.example.ErrorLogger");
+
+					@Override
+					public void logError(@Nonnull String message) {
+						// TODO: rethink logging
+						logger.debug(message);
+					}
+
+					@Override
+					public void logError(@Nonnull String message, @Nonnull Throwable throwable) {
+						// TODO: rethink logging
+						logger.debug(message, throwable);
 					}
 				})
 				.corsAuthorizer(new WhitelistedOriginsCorsAuthorizer(configuration.getCorsWhitelistedOrigins()))
