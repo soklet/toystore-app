@@ -251,7 +251,6 @@ public class ToyResourceTests {
 		AccountService accountService = app.getInjector().getInstance(AccountService.class);
 
 		// Hold reference to data inside of the closure.
-		// Alternatively, CurrentContext::run could accept a Callable<T> to return values
 		AtomicReference<String> holder = new AtomicReference<>();
 
 		CurrentContext.with(Locale.US, ZoneId.of("America/New_York")).run(() -> {
