@@ -45,7 +45,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.ZoneId;
 import java.util.Currency;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -115,7 +117,9 @@ public class ToyResourceTests {
 
 	@Test
 	public void testPurchaseToyWithDeclinedCreditCard() {
-		// Run the app, but override it to use a custom credit card processor that declines in certain scenarios
+		// Run the entire app, but use a special credit card processor that declines in certain scenarios.
+		// Our app is using Guice for Dependency Injection, which enables these kinds of "surgical" overrides.
+		// See https://github.com/google/guice/wiki/GettingStarted for details.
 		App app = new App(new Configuration(), new AbstractModule() {
 			@Nonnull
 			@Provides
@@ -250,7 +254,7 @@ public class ToyResourceTests {
 		// Alternatively, CurrentContext::run could accept a Callable<T> to return values
 		AtomicReference<String> holder = new AtomicReference<>();
 
-		CurrentContext.empty().run(() -> {
+		CurrentContext.with(Locale.US, ZoneId.of("America/New_York")).run(() -> {
 			// Ask the backend for an authentication token
 			AccountAuthenticateRequest accountAuthenticateRequest = new AccountAuthenticateRequest(emailAddress, password);
 			AccountJwt accountJwt = accountService.authenticateAccount(accountAuthenticateRequest);

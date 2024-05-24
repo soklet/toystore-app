@@ -46,9 +46,13 @@ public class CurrentContext {
 	}
 
 	@Nullable
-	private Request request;
+	private final Request request;
 	@Nullable
-	private Account account;
+	private final Account account;
+	@Nonnull
+	private final Locale locale;
+	@Nonnull
+	private final ZoneId timeZone;
 
 	@Nonnull
 	public static CurrentContext get() {
@@ -67,11 +71,27 @@ public class CurrentContext {
 	}
 
 	@NotThreadSafe
-	public static class Builder {
+	protected static class Builder {
+		@Nullable
+		private Locale locale;
+		@Nullable
+		private ZoneId timeZone;
 		@Nullable
 		private Request request;
 		@Nullable
 		private Account account;
+
+		@Nonnull
+		public Builder locale(@Nullable Locale locale) {
+			this.locale = locale;
+			return this;
+		}
+
+		@Nonnull
+		public Builder timeZone(@Nullable ZoneId timeZone) {
+			this.timeZone = timeZone;
+			return this;
+		}
 
 		@Nonnull
 		public Builder request(@Nullable Request request) {
@@ -92,8 +112,9 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	public static CurrentContext empty() {
-		return new CurrentContext.Builder().build();
+	public static CurrentContext with(@Nonnull Locale locale,
+																		@Nonnull ZoneId timeZone) {
+		return new Builder().locale(locale).timeZone(timeZone).build();
 	}
 
 	@Nonnull
@@ -107,8 +128,12 @@ public class CurrentContext {
 	}
 
 	private CurrentContext(@Nonnull Builder builder) {
+		requireNonNull(builder);
+
 		this.request = builder.request;
 		this.account = builder.account;
+		this.timeZone = determineTimeZone(builder);
+		this.locale = determineLocale(builder);
 	}
 
 	public void run(@Nonnull Runnable runnable) {
@@ -120,7 +145,7 @@ public class CurrentContext {
 
 		ScopedValue.where(CURRENT_CONTEXT_STACK_SCOPED_VALUE, currentContextStack).run(() -> {
 			currentContextStack.push(this);
-			MDC.put("CURRENT_CONTEXT", getLoggingDescription());
+			MDC.put("CURRENT_CONTEXT", determineLoggingDescription());
 
 			try {
 				runnable.run();
@@ -134,7 +159,27 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	protected String getLoggingDescription() {
+	public Optional<Request> getRequest() {
+		return Optional.ofNullable(this.request);
+	}
+
+	@Nonnull
+	public Optional<Account> getAccount() {
+		return Optional.ofNullable(this.account);
+	}
+
+	@Nonnull
+	public ZoneId getTimeZone() {
+		return this.timeZone;
+	}
+
+	@Nonnull
+	public Locale getLocale() {
+		return this.locale;
+	}
+
+	@Nonnull
+	protected String determineLoggingDescription() {
 		CurrentContext currentContext = get();
 		Request request = currentContext.getRequest().orElse(null);
 		Account account = currentContext.getAccount().orElse(null);
@@ -146,18 +191,14 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	public Optional<Request> getRequest() {
-		return Optional.ofNullable(this.request);
-	}
+	protected Locale determineLocale(@Nonnull Builder builder) {
+		requireNonNull(builder);
 
-	@Nonnull
-	public Optional<Account> getAccount() {
-		return Optional.ofNullable(this.account);
-	}
+		// If an explicit locale was specified, use it
+		if (builder.locale != null)
+			return builder.locale;
 
-	@Nonnull
-	public Locale getPreferredLocale() {
-		Request request = getRequest().orElse(null);
+		Request request = builder.request;
 
 		// If this is in the context of a web request, allow clients to specify a special header which indicates preferred locale
 		if (request != null) {
@@ -173,7 +214,7 @@ public class CurrentContext {
 		}
 
 		// Next, if there's a signed-in account, use their configured locale
-		Account account = getAccount().orElse(null);
+		Account account = builder.account;
 
 		if (account != null)
 			return account.locale();
@@ -187,8 +228,14 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	public ZoneId getPreferredTimeZone() {
-		Request request = getRequest().orElse(null);
+	protected ZoneId determineTimeZone(@Nonnull Builder builder) {
+		requireNonNull(builder);
+
+		// If an explicit time zone was specified, use it
+		if (builder.timeZone != null)
+			return builder.timeZone;
+
+		Request request = builder.request;
 
 		// If this is in the context of a web request, allow clients to specify a special header which indicates preferred timezone
 		if (request != null) {
@@ -204,7 +251,7 @@ public class CurrentContext {
 		}
 
 		// Next, if there's a signed-in account, use their configured timezone
-		Account account = getAccount().orElse(null);
+		Account account = builder.account;
 
 		if (account != null)
 			return account.timeZone();

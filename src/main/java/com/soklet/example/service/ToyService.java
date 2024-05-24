@@ -218,7 +218,7 @@ public class ToyService {
 
 		if (creditCardExpiration == null)
 			fieldErrors.put("creditCardExpiration", getStrings().get("Credit card expiration is required."));
-		else if (creditCardExpiration.isBefore(YearMonth.now(getCurrentContext().getPreferredTimeZone())))
+		else if (creditCardExpiration.isBefore(YearMonth.now(getCurrentContext().getTimeZone())))
 			fieldErrors.put("creditCardExpiration", getStrings().get("Credit card is expired."));
 
 		if (fieldErrors.size() > 0)
@@ -270,7 +270,7 @@ public class ToyService {
 		requireNonNull(price);
 		requireNonNull(currency);
 
-		NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(getCurrentContext().getPreferredLocale());
+		NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(getCurrentContext().getLocale());
 		currencyFormatter.setCurrency(currency);
 		return currencyFormatter.format(price);
 	}

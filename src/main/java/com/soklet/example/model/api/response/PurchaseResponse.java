@@ -81,8 +81,8 @@ public class PurchaseResponse {
 
 		// Tailor our response based on current context
 		CurrentContext currentContext = currentContextProvider.get();
-		Locale currentLocale = currentContext.getPreferredLocale();
-		ZoneId currentTimeZone = currentContext.getPreferredTimeZone();
+		Locale currentLocale = currentContext.getLocale();
+		ZoneId currentTimeZone = currentContext.getTimeZone();
 
 		// A real application would cache this formatter in a threadsafe way, e.g. ThreadLocal<T> or Scope<T>
 		NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(currentLocale);

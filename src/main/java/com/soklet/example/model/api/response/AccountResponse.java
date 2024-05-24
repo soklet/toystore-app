@@ -77,8 +77,8 @@ public class AccountResponse {
 
 		// Tailor our response based on current context
 		CurrentContext currentContext = currentContextProvider.get();
-		Locale currentLocale = currentContext.getPreferredLocale();
-		ZoneId currentTimeZone = currentContext.getPreferredTimeZone();
+		Locale currentLocale = currentContext.getLocale();
+		ZoneId currentTimeZone = currentContext.getTimeZone();
 
 		this.accountId = account.accountId();
 		this.roleId = account.roleId();

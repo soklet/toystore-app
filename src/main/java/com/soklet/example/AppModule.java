@@ -431,7 +431,7 @@ public class AppModule extends AbstractModule {
 		return new DefaultStrings.Builder(defaultLanguageCode,
 				() -> LocalizedStringLoader.loadFromFilesystem(Paths.get("src/main/resources/strings")))
 				// Rely on the current context's preferred locale to pick the appropriate localization file
-				.localeSupplier(() -> currentContextProvider.get().getPreferredLocale())
+				.localeSupplier(() -> currentContextProvider.get().getLocale())
 				.build();
 	}
 
