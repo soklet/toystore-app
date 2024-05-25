@@ -295,9 +295,9 @@ public class AppModule extends AbstractModule {
 						switch (throwable) {
 							case IllegalQueryParameterException ex -> {
 								statusCode = 400;
-								errors.add(strings.get("Illegal value '{{parameterValue}}' for query parameter '{{parameterName}}'",
+								errors.add(strings.get("Illegal value '{{parameterValue}}' specified for query parameter '{{parameterName}}'",
 										Map.of(
-												"parameterValue", ex.getQueryParameterValue().orElse("[not provided]"),
+												"parameterValue", ex.getQueryParameterValue().orElse(strings.get("[not provided]")),
 												"parameterName", ex.getQueryParameterName()
 										)
 								));
