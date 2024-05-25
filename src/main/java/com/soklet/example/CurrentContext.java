@@ -71,7 +71,7 @@ public class CurrentContext {
 	}
 
 	@NotThreadSafe
-	protected static class Builder {
+	public static class Builder {
 		@Nullable
 		private Locale locale;
 		@Nullable
@@ -80,6 +80,8 @@ public class CurrentContext {
 		private Request request;
 		@Nullable
 		private Account account;
+
+		private Builder() {}
 
 		@Nonnull
 		public Builder locale(@Nullable Locale locale) {
