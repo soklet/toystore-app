@@ -4,9 +4,9 @@ This app showcases how you might build a real production backend using Soklet.  
 
 * Authentication/authorization
 * Basic CRUD operations
-* Dependency injection via [Guice](https://github.com/google/guice)
+* Dependency injection via [Google Guice](https://github.com/google/guice)
 * Relational database integration/atomic operations via [Pyranid](https://www.pyranid.com)
-* Context-awareness via [ScopedValue (JEP 446)](https://openjdk.org/jeps/446)
+* Context-awareness via [ScopedValue (JEP 464)](https://openjdk.org/jeps/464)
 * Internationalization via [Lokalized](https://www.lokalized.com)
 * JSON requests/responses via [Gson](https://github.com/google/gson)
 * Logging via [SLF4J](https://slf4j.org/) / [Logback](https://logback.qos.ch/)
