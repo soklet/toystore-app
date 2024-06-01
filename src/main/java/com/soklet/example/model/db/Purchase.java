@@ -14,22 +14,25 @@
  * limitations under the License.
  */
 
-package com.soklet.example.model.api.request;
+package com.soklet.example.model.db;
 
-import com.soklet.example.model.db.Role.RoleId;
+import com.pyranid.DatabaseColumn;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.time.ZoneId;
-import java.util.Locale;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Currency;
+import java.util.UUID;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record EmployeeCreateApiRequest(
-		@Nonnull String name,
-		@Nonnull RoleId roleId,
-		@Nullable String emailAddress,
-		@Nonnull ZoneId timeZone,
-		@Nonnull Locale locale
+public record Purchase(
+		@Nonnull UUID purchaseId,
+		@Nonnull UUID accountId,
+		@Nonnull UUID toyId,
+		@Nonnull BigDecimal price,
+		@Nonnull Currency currency,
+		@Nonnull @DatabaseColumn("credit_card_txn_id") String creditCardTransactionId,
+		@Nonnull Instant createdAt
 ) {}

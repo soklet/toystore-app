@@ -14,26 +14,27 @@
  * limitations under the License.
  */
 
-package com.soklet.example.model.db;
-
-import com.soklet.example.model.db.Role.RoleId;
+package com.soklet.example.model.api.request;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.util.Locale;
+import java.math.BigDecimal;
+import java.util.Currency;
 import java.util.UUID;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record Employee(
-		@Nonnull UUID employeeId,
-		@Nonnull RoleId roleId,
+public record ToyUpdateRequest(
+		@Nonnull UUID toyId,
 		@Nonnull String name,
-		@Nullable String emailAddress,
-		@Nonnull ZoneId timeZone,
-		@Nonnull Locale locale,
-		@Nonnull Instant createdAt
-) {}
+		@Nonnull BigDecimal price,
+		@Nonnull Currency currency
+) {
+	@Nonnull
+	public ToyUpdateRequest withToyId(@Nonnull UUID toyId) {
+		requireNonNull(toyId);
+		return new ToyUpdateRequest(toyId, name, price, currency);
+	}
+}

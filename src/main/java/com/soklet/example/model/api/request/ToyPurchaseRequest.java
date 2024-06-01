@@ -16,20 +16,30 @@
 
 package com.soklet.example.model.api.request;
 
-import com.soklet.example.model.db.Role.RoleId;
-
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.time.ZoneId;
-import java.util.Locale;
+import java.time.YearMonth;
+import java.util.UUID;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record EmployeeUpdateApiRequest(
-		@Nonnull String name,
-		@Nonnull RoleId roleId,
-		@Nullable String emailAddress,
-		@Nonnull ZoneId timeZone,
-		@Nonnull Locale locale
-) {}
+public record ToyPurchaseRequest(
+		@Nonnull UUID toyId,
+		@Nonnull UUID accountId,
+		@Nonnull String creditCardNumber,
+		@Nonnull YearMonth creditCardExpiration
+) {
+	@Nonnull
+	public ToyPurchaseRequest withToyId(@Nonnull UUID toyId) {
+		requireNonNull(toyId);
+		return new ToyPurchaseRequest(toyId, accountId, creditCardNumber, creditCardExpiration);
+	}
+
+	@Nonnull
+	public ToyPurchaseRequest withAccountId(@Nonnull UUID accountId) {
+		requireNonNull(accountId);
+		return new ToyPurchaseRequest(toyId, accountId, creditCardNumber, creditCardExpiration);
+	}
+}

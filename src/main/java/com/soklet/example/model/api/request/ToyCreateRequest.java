@@ -14,33 +14,17 @@
  * limitations under the License.
  */
 
-package com.soklet.example.exception;
+package com.soklet.example.model.api.request;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.NotThreadSafe;
-import java.util.Optional;
+import java.math.BigDecimal;
+import java.util.Currency;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-@NotThreadSafe
-public class UserFacingException extends RuntimeException {
-	@Nullable
-	private final Integer statusCode;
-
-	public UserFacingException(@Nullable String message) {
-		this(null, message);
-	}
-
-	public UserFacingException(@Nullable Integer statusCode,
-														 @Nullable String message) {
-		super(message);
-		this.statusCode = statusCode;
-	}
-
-	@Nonnull
-	public Optional<Integer> getStatusCode() {
-		return Optional.ofNullable(this.statusCode);
-	}
-}
+public record ToyCreateRequest(
+		@Nonnull String name,
+		@Nonnull BigDecimal price,
+		@Nonnull Currency currency
+) {}

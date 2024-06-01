@@ -1,8 +1,22 @@
 {
   "Sorry, we could not authenticate you.": "Desculpe, não foi possível autenticá-lo.",
-  "Your authentication token expired on {{expirationDateTime}} - please re-authenticate.": "Seu token de autenticação expirou em {{expirationDateTime}}. Autentique-se novamente.",
+  "Illegal value '{{parameterValue}}' specified for query parameter '{{parameterName}}'": "Valor ilegal '{{parameterValue}}' especificado para o parâmetro de consulta '{{parameterName}}'",
+  "[not provided]": "[não fornecido]",
   "You must be authenticated to perform this action.": "Você deve estar autenticado para executar esta ação.",
   "You are not authorized to perform this action.": "Você não está autorizado a executar esta ação.",
-  "The resource you requested was not found.": "O recurso solicitado não foi encontrado.",
-  "An unexpected error occurred.": "Um erro inesperado ocorreu."
+  "An unexpected error occurred.": "Um erro inesperado ocorreu.",
+  "Your request was improperly formatted.": "Sua solicitação foi formatada incorretamente.",
+  "The resource you requested was not found.": "O recurso que você solicitou não foi encontrado.",
+  "Name is required.": "O nome é obrigatório.",
+  "Price is required.": "O preço é obrigatório.",
+  "Price cannot be negative.": "O preço não pode ser negativo.",
+  "Currency is required.": "A moeda é obrigatória.",
+  "There is already a toy named '{{name}}'.": "Já existe um brinquedo chamado '{{name}}'.",
+  "Account ID is required.": "O identificador da conta é obrigatório.",
+  "Credit card number is required.": "O número do cartão de crédito é obrigatório.",
+  "Credit card expiration is required.": "A expiração do cartão de crédito é obrigatória.",
+  "Credit card is expired.": "O cartão de crédito expirou.",
+  "We were unable to charge {{amount}} to your credit card.": "Não foi possível cobrar {{amount}} no seu cartão de crédito.",
+  "Email address is required.": "É necessário um endereço de e-mail.",
+  "Password is required.": "Senha requerida."
 }

@@ -20,7 +20,7 @@ import com.google.inject.Provider;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 import com.soklet.example.CurrentContext;
-import com.soklet.example.model.db.Employee;
+import com.soklet.example.model.db.Account;
 import com.soklet.example.model.db.Role.RoleId;
 
 import javax.annotation.Nonnull;
@@ -41,9 +41,9 @@ import static java.util.Objects.requireNonNull;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe
-public class EmployeeApiResponse {
+public class AccountResponse {
 	@Nonnull
-	private final UUID employeeId;
+	private final UUID accountId;
 	@Nonnull
 	private final RoleId roleId;
 	@Nonnull
@@ -64,40 +64,40 @@ public class EmployeeApiResponse {
 	private final String createdAtDescription;
 
 	@ThreadSafe
-	public interface EmployeeApiResponseFactory {
+	public interface AccountResponseFactory {
 		@Nonnull
-		EmployeeApiResponse create(@Nonnull Employee employee);
+		AccountResponse create(@Nonnull Account account);
 	}
 
 	@AssistedInject
-	public EmployeeApiResponse(@Nonnull Provider<CurrentContext> currentContextProvider,
-														 @Assisted @Nonnull Employee employee) {
+	public AccountResponse(@Nonnull Provider<CurrentContext> currentContextProvider,
+												 @Assisted @Nonnull Account account) {
 		requireNonNull(currentContextProvider);
-		requireNonNull(employee);
+		requireNonNull(account);
 
-		// We can tailor our response based on current context
+		// Tailor our response based on current context
 		CurrentContext currentContext = currentContextProvider.get();
-		Locale currentLocale = currentContext.getPreferredLocale();
-		ZoneId currentTimeZone = currentContext.getPreferredTimeZone();
+		Locale currentLocale = currentContext.getLocale();
+		ZoneId currentTimeZone = currentContext.getTimeZone();
 
-		this.employeeId = employee.employeeId();
-		this.roleId = employee.roleId();
-		this.name = employee.name();
-		this.emailAddress = employee.emailAddress();
-		this.locale = employee.locale();
+		this.accountId = account.accountId();
+		this.roleId = account.roleId();
+		this.name = account.name();
+		this.emailAddress = account.emailAddress();
+		this.locale = account.locale();
 		this.localeDescription = this.locale.getDisplayName(currentLocale);
-		this.timeZone = employee.timeZone();
+		this.timeZone = account.timeZone();
 		this.timeZoneDescription = this.timeZone.getDisplayName(TextStyle.FULL, currentLocale);
-		this.createdAt = employee.createdAt();
+		this.createdAt = account.createdAt();
 		this.createdAtDescription = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
 				.localizedBy(currentLocale)
 				.withZone(currentTimeZone)
-				.format(employee.createdAt());
+				.format(account.createdAt());
 	}
 
 	@Nonnull
-	public UUID getEmployeeId() {
-		return this.employeeId;
+	public UUID getAccountId() {
+		return this.accountId;
 	}
 
 	@Nonnull

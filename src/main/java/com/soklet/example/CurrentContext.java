@@ -17,7 +17,7 @@
 package com.soklet.example;
 
 import com.soklet.core.Request;
-import com.soklet.example.model.db.Employee;
+import com.soklet.example.model.db.Account;
 import org.slf4j.MDC;
 
 import javax.annotation.Nonnull;
@@ -46,9 +46,13 @@ public class CurrentContext {
 	}
 
 	@Nullable
-	private Request request;
+	private final Request request;
 	@Nullable
-	private Employee employee;
+	private final Account account;
+	@Nonnull
+	private final Locale locale;
+	@Nonnull
+	private final ZoneId timeZone;
 
 	@Nonnull
 	public static CurrentContext get() {
@@ -69,9 +73,27 @@ public class CurrentContext {
 	@NotThreadSafe
 	public static class Builder {
 		@Nullable
+		private Locale locale;
+		@Nullable
+		private ZoneId timeZone;
+		@Nullable
 		private Request request;
 		@Nullable
-		private Employee employee;
+		private Account account;
+
+		private Builder() {}
+
+		@Nonnull
+		public Builder locale(@Nullable Locale locale) {
+			this.locale = locale;
+			return this;
+		}
+
+		@Nonnull
+		public Builder timeZone(@Nullable ZoneId timeZone) {
+			this.timeZone = timeZone;
+			return this;
+		}
 
 		@Nonnull
 		public Builder request(@Nullable Request request) {
@@ -80,8 +102,8 @@ public class CurrentContext {
 		}
 
 		@Nonnull
-		public Builder employee(@Nullable Employee employee) {
-			this.employee = employee;
+		public Builder account(@Nullable Account account) {
+			this.account = account;
 			return this;
 		}
 
@@ -92,23 +114,28 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	public static CurrentContext empty() {
-		return new CurrentContext.Builder().build();
+	public static CurrentContext with(@Nonnull Locale locale,
+																		@Nonnull ZoneId timeZone) {
+		return new Builder().locale(locale).timeZone(timeZone).build();
 	}
 
 	@Nonnull
-	public static CurrentContext.Builder forRequest(@Nullable Request request) {
-		return new CurrentContext.Builder().request(request);
+	public static Builder withRequest(@Nullable Request request) {
+		return new Builder().request(request);
 	}
 
 	@Nonnull
-	public static CurrentContext.Builder forEmployee(@Nullable Employee employee) {
-		return new CurrentContext.Builder().employee(employee);
+	public static Builder withAccount(@Nullable Account account) {
+		return new Builder().account(account);
 	}
 
 	private CurrentContext(@Nonnull Builder builder) {
+		requireNonNull(builder);
+
 		this.request = builder.request;
-		this.employee = builder.employee;
+		this.account = builder.account;
+		this.timeZone = determineTimeZone(builder);
+		this.locale = determineLocale(builder);
 	}
 
 	public void run(@Nonnull Runnable runnable) {
@@ -120,7 +147,7 @@ public class CurrentContext {
 
 		ScopedValue.where(CURRENT_CONTEXT_STACK_SCOPED_VALUE, currentContextStack).run(() -> {
 			currentContextStack.push(this);
-			MDC.put("CURRENT_CONTEXT", getLoggingDescription());
+			MDC.put("CURRENT_CONTEXT", determineLoggingDescription());
 
 			try {
 				runnable.run();
@@ -134,30 +161,46 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	protected String getLoggingDescription() {
-		CurrentContext currentContext = get();
-		Request request = currentContext.getRequest().orElse(null);
-		Employee employee = currentContext.getEmployee().orElse(null);
-
-		String requestDescription = request == null ? "background thread" : request.getId().toString();
-		String employeeDescription = employee == null ? "unauthenticated" : employee.name();
-
-		return format("%s (%s)", requestDescription, employeeDescription);
-	}
-
-	@Nonnull
 	public Optional<Request> getRequest() {
 		return Optional.ofNullable(this.request);
 	}
 
 	@Nonnull
-	public Optional<Employee> getEmployee() {
-		return Optional.ofNullable(this.employee);
+	public Optional<Account> getAccount() {
+		return Optional.ofNullable(this.account);
 	}
 
 	@Nonnull
-	public Locale getPreferredLocale() {
-		Request request = getRequest().orElse(null);
+	public ZoneId getTimeZone() {
+		return this.timeZone;
+	}
+
+	@Nonnull
+	public Locale getLocale() {
+		return this.locale;
+	}
+
+	@Nonnull
+	protected String determineLoggingDescription() {
+		CurrentContext currentContext = get();
+		Request request = currentContext.getRequest().orElse(null);
+		Account account = currentContext.getAccount().orElse(null);
+
+		String requestDescription = request == null ? "background thread" : request.getId().toString();
+		String accountDescription = account == null ? "unauthenticated" : account.name();
+
+		return format("%s (%s)", requestDescription, accountDescription);
+	}
+
+	@Nonnull
+	protected Locale determineLocale(@Nonnull Builder builder) {
+		requireNonNull(builder);
+
+		// If an explicit locale was specified, use it
+		if (builder.locale != null)
+			return builder.locale;
+
+		Request request = builder.request;
 
 		// If this is in the context of a web request, allow clients to specify a special header which indicates preferred locale
 		if (request != null) {
@@ -172,23 +215,29 @@ public class CurrentContext {
 			}
 		}
 
-		// Next, if there's a signed-in employee, use their configured locale
-		Employee employee = getEmployee().orElse(null);
+		// Next, if there's a signed-in account, use their configured locale
+		Account account = builder.account;
 
-		if (employee != null)
-			return employee.locale();
+		if (account != null)
+			return account.locale();
 
 		// If that didn't work, and we're in the context of a web request, try its Accept-Language header
 		if (request != null && request.getLocales().size() > 0)
 			return request.getLocales().get(0);
 
 		// Still not sure?  Fall back to a safe default
-		return Configuration.getFallbackLocale();
+		return Configuration.getDefaultLocale();
 	}
 
 	@Nonnull
-	public ZoneId getPreferredTimeZone() {
-		Request request = getRequest().orElse(null);
+	protected ZoneId determineTimeZone(@Nonnull Builder builder) {
+		requireNonNull(builder);
+
+		// If an explicit time zone was specified, use it
+		if (builder.timeZone != null)
+			return builder.timeZone;
+
+		Request request = builder.request;
 
 		// If this is in the context of a web request, allow clients to specify a special header which indicates preferred timezone
 		if (request != null) {
@@ -203,13 +252,13 @@ public class CurrentContext {
 			}
 		}
 
-		// Next, if there's a signed-in employee, use their configured timezone
-		Employee employee = getEmployee().orElse(null);
+		// Next, if there's a signed-in account, use their configured timezone
+		Account account = builder.account;
 
-		if (employee != null)
-			return employee.timeZone();
+		if (account != null)
+			return account.timeZone();
 
 		// Still not sure?  Fall back to a safe default
-		return Configuration.getFallbackTimeZone();
+		return Configuration.getDefaultTimeZone();
 	}
 }

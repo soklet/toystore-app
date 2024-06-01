@@ -16,18 +16,24 @@
 
 package com.soklet.example.model.db;
 
+import com.soklet.example.model.db.Role.RoleId;
+
 import javax.annotation.Nonnull;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.Locale;
+import java.util.UUID;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record Role(
+public record Account(
+		@Nonnull UUID accountId,
 		@Nonnull RoleId roleId,
-		@Nonnull String description
-) {
-	public enum RoleId {
-		CUSTOMER,
-		EMPLOYEE,
-		ADMINISTRATOR
-	}
-}
+		@Nonnull String name,
+		@Nonnull String emailAddress,
+		@Nonnull String password,
+		@Nonnull ZoneId timeZone,
+		@Nonnull Locale locale,
+		@Nonnull Instant createdAt
+) {}

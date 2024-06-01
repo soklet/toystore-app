@@ -37,6 +37,7 @@ import com.pyranid.StatementContext;
 import com.pyranid.StatementLog;
 import com.soklet.SokletConfiguration;
 import com.soklet.core.LifecycleInterceptor;
+import com.soklet.core.LogHandler;
 import com.soklet.core.MarshaledResponse;
 import com.soklet.core.Request;
 import com.soklet.core.RequestBodyMarshaler;
@@ -47,15 +48,21 @@ import com.soklet.core.impl.DefaultResponseMarshaler;
 import com.soklet.core.impl.DefaultServer;
 import com.soklet.core.impl.WhitelistedOriginsCorsAuthorizer;
 import com.soklet.example.annotation.AuthorizationRequired;
+import com.soklet.example.exception.ApplicationException;
 import com.soklet.example.exception.AuthenticationException;
 import com.soklet.example.exception.AuthorizationException;
 import com.soklet.example.exception.NotFoundException;
-import com.soklet.example.exception.UserFacingException;
-import com.soklet.example.model.api.response.EmployeeApiResponse.EmployeeApiResponseFactory;
-import com.soklet.example.model.auth.AuthenticationToken;
-import com.soklet.example.model.db.Employee;
+import com.soklet.example.model.api.response.AccountResponse.AccountResponseFactory;
+import com.soklet.example.model.api.response.ErrorResponse;
+import com.soklet.example.model.api.response.PurchaseResponse.PurchaseResponseFactory;
+import com.soklet.example.model.api.response.ToyResponse.ToyResponseFactory;
+import com.soklet.example.model.auth.AccountJwt;
+import com.soklet.example.model.db.Account;
 import com.soklet.example.model.db.Role.RoleId;
-import com.soklet.example.service.EmployeeService;
+import com.soklet.example.service.AccountService;
+import com.soklet.example.util.CreditCardProcessor;
+import com.soklet.example.util.DefaultCreditCardProcessor;
+import com.soklet.example.util.PasswordManager;
 import com.soklet.exception.BadRequestException;
 import com.soklet.exception.IllegalQueryParameterException;
 import org.hsqldb.jdbc.JDBCDataSource;
@@ -72,9 +79,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -84,6 +94,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -97,17 +108,17 @@ public class AppModule extends AbstractModule {
 	public SokletConfiguration provideSokletConfiguration(@Nonnull Injector injector,
 																												@Nonnull Configuration configuration,
 																												@Nonnull Database database,
-																												@Nonnull EmployeeService employeeService,
+																												@Nonnull AccountService accountService,
 																												@Nonnull Strings strings,
 																												@Nonnull Gson gson) {
 		requireNonNull(injector);
 		requireNonNull(configuration);
 		requireNonNull(database);
-		requireNonNull(employeeService);
+		requireNonNull(accountService);
 		requireNonNull(strings);
 		requireNonNull(gson);
 
-		return new SokletConfiguration.Builder(new DefaultServer.Builder(configuration.getPort()).host("0.0.0.0").build())
+		return SokletConfiguration.withServer(DefaultServer.withPort(configuration.getPort()).host("0.0.0.0").build())
 				.lifecycleInterceptor(new LifecycleInterceptor() {
 					@Nonnull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.example.LifecycleInterceptor");
@@ -146,7 +157,7 @@ public class AppModule extends AbstractModule {
 						requireNonNull(requestProcessor);
 
 						// Ensure a "current context" scope exists for all request-handling code
-						CurrentContext.forRequest(request).build().run(() -> {
+						CurrentContext.withRequest(request).build().run(() -> {
 							requestProcessor.accept(request);
 						});
 					}
@@ -160,35 +171,43 @@ public class AppModule extends AbstractModule {
 						requireNonNull(responseGenerator);
 						requireNonNull(responseWriter);
 
-						// Look at request headers to see if there's a token that identifies an authenticated employee.
-						// In a real system, this might be a JWT
-						String authenticationTokenAsString = request.getHeader("X-Authentication-Token").orElse(null);
-						Employee employee = null;
+						Account account = null;
 
-						// If the token exists, look up the employee
-						if (authenticationTokenAsString != null)
-							employee = employeeService.findEmployeeByAuthenticationToken(
-									AuthenticationToken.decodeFromString(authenticationTokenAsString)).orElse(null);
+						// Try to pull authentication token from request headers...
+						String authenticationTokenAsString = request.getHeader("X-Authentication-Token").orElse(null);
+
+						// ...and if it exists, see if we can pull an account from it.
+						if (authenticationTokenAsString != null) {
+							AccountJwt accountJwt = AccountJwt.fromStringRepresentation(authenticationTokenAsString, configuration.getKeyPair().getPrivate()).orElse(null);
+
+							if (accountJwt != null) {
+								if (accountJwt.isExpired())
+									logger.info("JWT for account ID {} expired on {}", accountJwt.accountId(), accountJwt.expiration());
+								else
+									account = accountService.findAccountById(accountJwt.accountId()).orElse(null);
+							}
+						}
 
 						if (resourceMethod != null) {
 							// See if the resource method has an @AuthorizationRequired annotation...
 							AuthorizationRequired authorizationRequired = resourceMethod.getMethod().getAnnotation(AuthorizationRequired.class);
 
 							if (authorizationRequired != null) {
-								if (employee == null)
+								// Ensure an account was found for the authentication token
+								if (account == null)
 									throw new AuthenticationException();
 
 								Set<RoleId> requiredRoleIds = authorizationRequired.value() == null
 										? Set.of() : Arrays.stream(authorizationRequired.value()).collect(Collectors.toSet());
 
-								if (requiredRoleIds.size() > 0 && !requiredRoleIds.contains(employee.roleId()))
+								if (requiredRoleIds.size() > 0 && !requiredRoleIds.contains(account.roleId()))
 									throw new AuthorizationException();
 							}
 						}
 
-						// Create a new current context scope to take the authenticated employee into account (if present)
-						CurrentContext currentContext = CurrentContext.forRequest(request)
-								.employee(employee)
+						// Create a new current context scope to apply the authenticated account (if present)
+						CurrentContext currentContext = CurrentContext.withRequest(request)
+								.account(account)
 								.build();
 
 						currentContext.run(() -> {
@@ -204,6 +223,9 @@ public class AppModule extends AbstractModule {
 					}
 				})
 				.requestBodyMarshaler(new RequestBodyMarshaler() {
+					@Nonnull
+					private final Logger logger = LoggerFactory.getLogger("com.soklet.example.RequestBodyMarshaler");
+
 					@Nullable
 					@Override
 					public Object marshalRequestBody(@Nonnull Request request,
@@ -217,6 +239,8 @@ public class AppModule extends AbstractModule {
 
 						if (requestBodyAsString == null)
 							return null;
+
+						logger.debug("Request body:\n{}", requestBodyAsString);
 
 						// Use Gson to turn the request body JSON into a Java type
 						return gson.fromJson(requestBodyAsString, requestBodyType);
@@ -235,7 +259,7 @@ public class AppModule extends AbstractModule {
 						Map<String, Set<String>> headers = new HashMap<>(response.getHeaders());
 						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
 
-						return new MarshaledResponse.Builder(response.getStatusCode())
+						return MarshaledResponse.withStatusCode(response.getStatusCode())
 								.headers(headers)
 								.cookies(response.getCookies())
 								.body(body)
@@ -251,7 +275,7 @@ public class AppModule extends AbstractModule {
 						Map<String, Set<String>> headers = new HashMap<>();
 						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
 
-						return new MarshaledResponse.Builder(404)
+						return MarshaledResponse.withStatusCode(404)
 								.headers(headers)
 								.body(body)
 								.build();
@@ -259,55 +283,92 @@ public class AppModule extends AbstractModule {
 
 					@Nonnull
 					@Override
-					public MarshaledResponse forException(@Nonnull Request request,
+					public MarshaledResponse forThrowable(@Nonnull Request request,
 																								@Nonnull Throwable throwable,
 																								@Nullable ResourceMethod resourceMethod) {
-						String message;
+						// Collect error information for display to client
 						int statusCode;
+						List<String> errors = new ArrayList<>();
+						Map<String, String> fieldErrors = new LinkedHashMap<>();
+						Map<String, Object> metadata = new LinkedHashMap<>();
 
 						switch (throwable) {
-							case UserFacingException userFacingException -> {
-								message = userFacingException.getMessage();
-								statusCode = userFacingException.getStatusCode().orElse(422);
-							}
 							case IllegalQueryParameterException ex -> {
-								message = String.format("Illegal value '%s' for query parameter '%s'",
-										ex.getQueryParameterValue().orElse("[not provided]"),
-										ex.getQueryParameterName());
 								statusCode = 400;
+								errors.add(strings.get("Illegal value '{{parameterValue}}' specified for query parameter '{{parameterName}}'",
+										Map.of(
+												"parameterValue", ex.getQueryParameterValue().orElse(strings.get("[not provided]")),
+												"parameterName", ex.getQueryParameterName()
+										)
+								));
 							}
 							case BadRequestException ignored -> {
-								message = strings.get("Your request was improperly formatted.");
 								statusCode = 400;
+								errors.add(strings.get("Your request was improperly formatted."));
 							}
 							case AuthenticationException ignored -> {
-								message = strings.get("You must be authenticated to perform this action.");
 								statusCode = 401;
+								errors.add(strings.get("You must be authenticated to perform this action."));
 							}
 							case AuthorizationException ignored -> {
-								message = strings.get("You are not authorized to perform this action.");
 								statusCode = 403;
+								errors.add(strings.get("You are not authorized to perform this action."));
 							}
 							case NotFoundException ignored -> {
-								message = strings.get("The resource you requested was not found.");
 								statusCode = 404;
+								errors.add(strings.get("The resource you requested was not found."));
+							}
+							case ApplicationException applicationException -> {
+								statusCode = applicationException.getStatusCode();
+								errors.addAll(applicationException.getErrors());
+								fieldErrors.putAll(applicationException.getFieldErrors());
+								metadata.putAll(applicationException.getMetadata());
 							}
 							default -> {
-								message = strings.get("An unexpected error occurred.");
 								statusCode = 500;
+								errors.add(strings.get("An unexpected error occurred."));
 							}
 						}
 
-						// Use Gson to turn response objects into JSON to go over the wire
-						byte[] body = gson.toJson(Map.of("message", message)).getBytes(StandardCharsets.UTF_8);
+						// Combine all the messages into one field for easy access by clients
+						String summary = format("%s %s",
+								errors.stream().collect(Collectors.joining(" ")),
+								fieldErrors.values().stream().collect(Collectors.joining(" "))
+						).trim();
+
+						// Ensure there is always a summary
+						if (summary.length() == 0)
+							summary = strings.get("An unexpected error occurred.");
+
+						// Collect all the error information into an object for transport over the wire
+						ErrorResponse errorResponse = new ErrorResponse(summary, errors, fieldErrors, metadata);
+
+						// Use Gson to turn the error response into JSON
+						byte[] body = gson.toJson(errorResponse).getBytes(StandardCharsets.UTF_8);
 
 						Map<String, Set<String>> headers = new HashMap<>();
 						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
 
-						return new MarshaledResponse.Builder(statusCode)
+						return MarshaledResponse.withStatusCode(statusCode)
 								.headers(headers)
 								.body(body)
 								.build();
+					}
+				})
+				.logHandler(new LogHandler() {
+					@Nonnull
+					private final Logger logger = LoggerFactory.getLogger("com.soklet.example.ErrorLogger");
+
+					@Override
+					public void logError(@Nonnull String message) {
+						// TODO: rethink logging
+						logger.debug(message);
+					}
+
+					@Override
+					public void logError(@Nonnull String message, @Nonnull Throwable throwable) {
+						// TODO: rethink logging
+						logger.debug(message, throwable);
 					}
 				})
 				.corsAuthorizer(new WhitelistedOriginsCorsAuthorizer(configuration.getCorsWhitelistedOrigins()))
@@ -365,19 +426,35 @@ public class AppModule extends AbstractModule {
 	public Strings provideStrings(@Nonnull Provider<CurrentContext> currentContextProvider) {
 		requireNonNull(currentContextProvider);
 
-		String fallbackLanguageCode = Configuration.getFallbackLocale().getLanguage();
+		String defaultLanguageCode = Configuration.getDefaultLocale().getLanguage();
 
-		return new DefaultStrings.Builder(fallbackLanguageCode,
+		return new DefaultStrings.Builder(defaultLanguageCode,
 				() -> LocalizedStringLoader.loadFromFilesystem(Paths.get("src/main/resources/strings")))
 				// Rely on the current context's preferred locale to pick the appropriate localization file
-				.localeSupplier(() -> currentContextProvider.get().getPreferredLocale())
+				.localeSupplier(() -> currentContextProvider.get().getLocale())
 				.build();
 	}
 
 	@Nonnull
 	@Provides
 	@Singleton
-	public Gson provideGson() {
+	public PasswordManager providePasswordManager() {
+		return PasswordManager.sharedInstance();
+	}
+
+	@Nonnull
+	@Provides
+	@Singleton
+	public CreditCardProcessor provideCreditCardProcessor() {
+		return new DefaultCreditCardProcessor();
+	}
+
+	@Nonnull
+	@Provides
+	@Singleton
+	public Gson provideGson(@Nonnull Configuration configuration) {
+		requireNonNull(configuration);
+
 		GsonBuilder gsonBuilder = new GsonBuilder()
 				.setPrettyPrinting()
 				.disableHtmlEscaping()
@@ -422,18 +499,32 @@ public class AppModule extends AbstractModule {
 						return Instant.parse(jsonReader.nextString());
 					}
 				})
-				// Support our custom `AuthenticationToken` type
-				.registerTypeAdapter(AuthenticationToken.class, new TypeAdapter<AuthenticationToken>() {
+				// Use ISO formatting for YearMonths
+				.registerTypeAdapter(YearMonth.class, new TypeAdapter<YearMonth>() {
 					@Override
 					public void write(@Nonnull JsonWriter jsonWriter,
-														@Nonnull AuthenticationToken authenticationToken) throws IOException {
-						jsonWriter.value(authenticationToken.encodeAsString());
+														@Nonnull YearMonth yearMonth) throws IOException {
+						jsonWriter.value(yearMonth.toString());
 					}
 
 					@Override
 					@Nullable
-					public AuthenticationToken read(@Nonnull JsonReader jsonReader) throws IOException {
-						return AuthenticationToken.decodeFromString(jsonReader.nextString());
+					public YearMonth read(@Nonnull JsonReader jsonReader) throws IOException {
+						return YearMonth.parse(jsonReader.nextString());
+					}
+				})
+				// Convert our custom AccountJwt to and from a JSON string
+				.registerTypeAdapter(AccountJwt.class, new TypeAdapter<AccountJwt>() {
+					@Override
+					public void write(@Nonnull JsonWriter jsonWriter,
+														@Nonnull AccountJwt accountJwt) throws IOException {
+						jsonWriter.value(accountJwt.toStringRepresentation(configuration.getKeyPair().getPrivate()));
+					}
+
+					@Override
+					@Nullable
+					public AccountJwt read(@Nonnull JsonReader jsonReader) throws IOException {
+						return AccountJwt.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPrivate()).orElse(null);
 					}
 				});
 		return gsonBuilder.create();
@@ -441,7 +532,10 @@ public class AppModule extends AbstractModule {
 
 	@Override
 	protected void configure() {
-		// Lets Guice know to set up our factory builder
-		install(new FactoryModuleBuilder().build(EmployeeApiResponseFactory.class));
+		// Tells Guice to set up assisted injection
+		// See https://github.com/google/guice/wiki/AssistedInject
+		install(new FactoryModuleBuilder().build(AccountResponseFactory.class));
+		install(new FactoryModuleBuilder().build(ToyResponseFactory.class));
+		install(new FactoryModuleBuilder().build(PurchaseResponseFactory.class));
 	}
 }
