@@ -19,7 +19,6 @@ package com.soklet.example.resource;
 import com.google.gson.Gson;
 import com.soklet.Soklet;
 import com.soklet.SokletConfiguration;
-import com.soklet.annotation.Resource;
 import com.soklet.core.HttpMethod;
 import com.soklet.core.MarshaledResponse;
 import com.soklet.core.Request;
@@ -36,7 +35,6 @@ import java.nio.charset.StandardCharsets;
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-@Resource
 @ThreadSafe
 public class AccountResourceTests {
 	@Test

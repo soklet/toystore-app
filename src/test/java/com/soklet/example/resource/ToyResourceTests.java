@@ -22,7 +22,6 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.soklet.Soklet;
 import com.soklet.SokletConfiguration;
-import com.soklet.annotation.Resource;
 import com.soklet.core.HttpMethod;
 import com.soklet.core.MarshaledResponse;
 import com.soklet.core.Request;
@@ -60,7 +59,6 @@ import static java.util.Objects.requireNonNull;
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-@Resource
 @ThreadSafe
 public class ToyResourceTests {
 	@Test
