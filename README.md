@@ -2,7 +2,7 @@
 
 This app showcases how you might build a real production backend using Soklet.  Feature highlights include:
 
-* Authentication/authorization
+* Authentication/role-based authorization
 * Basic CRUD operations
 * Dependency injection via [Google Guice](https://github.com/google/guice)
 * Relational database integration/atomic operations via [Pyranid](https://www.pyranid.com)
