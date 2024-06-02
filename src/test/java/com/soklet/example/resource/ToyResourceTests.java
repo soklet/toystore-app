@@ -251,7 +251,7 @@ public class ToyResourceTests {
 		// Hold reference to data inside of the closure.
 		AtomicReference<String> holder = new AtomicReference<>();
 
-		CurrentContext.with(Locale.US, ZoneId.of("America/New_York")).run(() -> {
+		CurrentContext.with(Locale.US, ZoneId.of("America/New_York")).build().run(() -> {
 			// Ask the backend for an authentication token
 			AccountAuthenticateRequest accountAuthenticateRequest = new AccountAuthenticateRequest(emailAddress, password);
 			AccountJwt accountJwt = accountService.authenticateAccount(accountAuthenticateRequest);

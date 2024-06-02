@@ -114,9 +114,9 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	public static CurrentContext with(@Nonnull Locale locale,
-																		@Nonnull ZoneId timeZone) {
-		return new Builder().locale(locale).timeZone(timeZone).build();
+	public static Builder with(@Nonnull Locale locale,
+														 @Nonnull ZoneId timeZone) {
+		return new Builder().locale(locale).timeZone(timeZone);
 	}
 
 	@Nonnull
