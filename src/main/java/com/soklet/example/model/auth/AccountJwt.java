@@ -29,8 +29,9 @@ import java.security.PrivateKey;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.HashSet;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static java.lang.String.format;
@@ -61,16 +62,30 @@ public record AccountJwt(
 		return AccountJwt.toStringRepresentation(accountId(), expiration(), privateKey);
 	}
 
+	public sealed interface AccountJwtResult {
+		record Succeeded(@Nonnull AccountJwt accountJwt) implements AccountJwtResult {}
+
+		record InvalidStructure() implements AccountJwtResult {}
+
+		record SignatureMismatch() implements AccountJwtResult {}
+
+		record Expired(@Nonnull AccountJwt accountJwt, @Nonnull Instant expiredAt) implements AccountJwtResult {}
+
+		record MissingClaims(@Nonnull Set<String> claims) implements AccountJwtResult {}
+
+		record InvalidClaims(@Nonnull Set<String> claims) implements AccountJwtResult {}
+	}
+
 	@Nonnull
-	public static Optional<AccountJwt> fromStringRepresentation(@Nonnull String string,
-																															@Nonnull PrivateKey privateKey) {
+	public static AccountJwtResult fromStringRepresentation(@Nonnull String string,
+																													@Nonnull PrivateKey privateKey) {
 		requireNonNull(string);
 		requireNonNull(privateKey);
 
 		String[] components = string.trim().split("\\.");
 
 		if (components.length != 3)
-			return Optional.empty();
+			return new AccountJwtResult.InvalidStructure();
 
 		String encodedHeader = components[0];
 		String encodedPayload = components[1];
@@ -81,26 +96,38 @@ public record AccountJwt(
 		byte[] expectedSignature = hmacSha256(format("%s.%s", encodedHeader, encodedPayload), privateKey);
 
 		if (!Arrays.equals(expectedSignature, decodedSignature))
-			return Optional.empty();
+			return new AccountJwtResult.SignatureMismatch();
 
 		Map<String, Object> decodedPayloadAsMap = GSON.fromJson(decodedPayload, Map.class);
 		String subAsString = (String) decodedPayloadAsMap.get("sub");
 		Number iatAsNumber = (Number) decodedPayloadAsMap.get("iat");
 
+		Set<String> missingClaims = new HashSet<>();
+
+		if (subAsString == null)
+			missingClaims.add("sub");
+		if (iatAsNumber == null)
+			missingClaims.add("iat");
+
 		// Validation
-		if (subAsString == null || iatAsNumber == null)
-			return Optional.empty();
+		if (missingClaims.size() > 0)
+			return new AccountJwtResult.MissingClaims(missingClaims);
 
 		try {
 			UUID.fromString(subAsString);
 		} catch (IllegalArgumentException ignored) {
-			return Optional.empty();
+			return new AccountJwtResult.InvalidClaims(Set.of("sub"));
 		}
 
 		UUID sub = UUID.fromString(subAsString);
 		Instant iat = Instant.ofEpochMilli(iatAsNumber.longValue());
 
-		return Optional.of(new AccountJwt(sub, iat));
+		AccountJwt accountJwt = new AccountJwt(sub, iat);
+
+		if (Instant.now().isBefore(iat))
+			return new AccountJwtResult.Expired(accountJwt, iat);
+
+		return new AccountJwtResult.Succeeded(accountJwt);
 	}
 
 	@Nonnull

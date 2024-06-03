@@ -57,6 +57,10 @@ import com.soklet.example.model.api.response.ErrorResponse;
 import com.soklet.example.model.api.response.PurchaseResponse.PurchaseResponseFactory;
 import com.soklet.example.model.api.response.ToyResponse.ToyResponseFactory;
 import com.soklet.example.model.auth.AccountJwt;
+import com.soklet.example.model.auth.AccountJwt.AccountJwtResult;
+import com.soklet.example.model.auth.AccountJwt.AccountJwtResult.Expired;
+import com.soklet.example.model.auth.AccountJwt.AccountJwtResult.SignatureMismatch;
+import com.soklet.example.model.auth.AccountJwt.AccountJwtResult.Succeeded;
 import com.soklet.example.model.db.Account;
 import com.soklet.example.model.db.Role.RoleId;
 import com.soklet.example.service.AccountService;
@@ -178,13 +182,21 @@ public class AppModule extends AbstractModule {
 
 						// ...and if it exists, see if we can pull an account from it.
 						if (authenticationTokenAsString != null) {
-							AccountJwt accountJwt = AccountJwt.fromStringRepresentation(authenticationTokenAsString, configuration.getKeyPair().getPrivate()).orElse(null);
+							AccountJwtResult accountJwtResult = AccountJwt.fromStringRepresentation(authenticationTokenAsString, configuration.getKeyPair().getPrivate());
 
-							if (accountJwt != null) {
-								if (accountJwt.isExpired())
-									logger.info("JWT for account ID {} expired on {}", accountJwt.accountId(), accountJwt.expiration());
-								else
+							switch (accountJwtResult) {
+								case Succeeded(@Nonnull AccountJwt accountJwt) -> {
 									account = accountService.findAccountById(accountJwt.accountId()).orElse(null);
+								}
+								case Expired(@Nonnull AccountJwt accountJwt, @Nonnull Instant expiredAt) -> {
+									logger.debug("JWT for account ID {} expired at {}", accountJwt.accountId(), expiredAt);
+								}
+								case SignatureMismatch() -> {
+									logger.warn("JWT signature is invalid: {}", authenticationTokenAsString);
+								}
+								default -> {
+									logger.warn("JWT is invalid: {}", authenticationTokenAsString);
+								}
 							}
 						}
 
@@ -524,7 +536,19 @@ public class AppModule extends AbstractModule {
 					@Override
 					@Nullable
 					public AccountJwt read(@Nonnull JsonReader jsonReader) throws IOException {
-						return AccountJwt.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPrivate()).orElse(null);
+						AccountJwtResult accountJwtResult = AccountJwt.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPrivate());
+
+						switch (accountJwtResult) {
+							case Succeeded(@Nonnull AccountJwt accountJwt) -> {
+								return accountJwt;
+							}
+							case Expired(@Nonnull AccountJwt accountJwt, @Nonnull Instant expiredAt) -> {
+								return accountJwt;
+							}
+							default -> {
+								return null;
+							}
+						}
 					}
 				});
 		return gsonBuilder.create();
