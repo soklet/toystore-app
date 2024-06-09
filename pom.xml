@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.soklet.example</groupId>
-    <artifactId>soklet-example-full</artifactId>
+    <artifactId>toystore</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>

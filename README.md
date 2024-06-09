@@ -1,4 +1,4 @@
-## Soklet "Full" Example App
+## Soklet Toy Store App
 
 This app showcases how you might build a real production backend using Soklet.  Feature highlights include:
 
@@ -13,4 +13,4 @@ This app showcases how you might build a real production backend using Soklet.  
 * Automated tests via [JUnit](https://junit.org)
 * Ability to run in [Docker](https://www.docker.com/)
 
-If you'd like fewer moving parts, [a single-file "barebones" example is also available](https://github.com/soklet/soklet-example-barebones).
+If you'd like fewer moving parts, [a single-file "barebones" example is also available](https://github.com/soklet/barebones-app).
