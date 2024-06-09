@@ -124,7 +124,7 @@ public record AccountJwt(
 
 		AccountJwt accountJwt = new AccountJwt(sub, iat);
 
-		if (Instant.now().isBefore(iat))
+		if (iat.isBefore(Instant.now()))
 			return new AccountJwtResult.Expired(accountJwt, iat);
 
 		return new AccountJwtResult.Succeeded(accountJwt);
