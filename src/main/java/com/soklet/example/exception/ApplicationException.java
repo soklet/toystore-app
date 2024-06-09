@@ -37,7 +37,7 @@ public class ApplicationException extends RuntimeException {
 	@Nonnull
 	private final Integer statusCode;
 	@Nonnull
-	private final List<String> errors;
+	private final List<String> generalErrors;
 	@Nonnull
 	private final Map<String, String> fieldErrors;
 	@Nonnull
@@ -55,7 +55,7 @@ public class ApplicationException extends RuntimeException {
 		requireNonNull(builder);
 
 		this.statusCode = builder.statusCode;
-		this.errors = builder.errors == null ? List.of() : Collections.unmodifiableList(new ArrayList<>(builder.errors));
+		this.generalErrors = builder.generalErrors == null ? List.of() : Collections.unmodifiableList(new ArrayList<>(builder.generalErrors));
 		this.fieldErrors = builder.fieldErrors == null ? Map.of() : Collections.unmodifiableMap(new HashMap<>(builder.fieldErrors));
 		this.metadata = builder.metadata == null ? Map.of() : Collections.unmodifiableMap(new HashMap<>(builder.metadata));
 	}
@@ -65,7 +65,7 @@ public class ApplicationException extends RuntimeException {
 		@Nonnull
 		private Integer statusCode;
 		@Nullable
-		private List<String> errors;
+		private List<String> generalErrors;
 		@Nullable
 		private Map<String, String> fieldErrors;
 		@Nullable
@@ -84,14 +84,14 @@ public class ApplicationException extends RuntimeException {
 		}
 
 		@Nonnull
-		public Builder error(@Nullable String error) {
-			this.errors = error == null ? null : List.of(error);
+		public Builder generalError(@Nullable String generalError) {
+			this.generalErrors = generalError == null ? null : List.of(generalError);
 			return this;
 		}
 
 		@Nonnull
-		public Builder errors(@Nullable List<String> errors) {
-			this.errors = errors;
+		public Builder generalErrors(@Nullable List<String> generalErrors) {
+			this.generalErrors = generalErrors;
 			return this;
 		}
 
@@ -113,15 +113,15 @@ public class ApplicationException extends RuntimeException {
 			List<String> messageComponents = new ArrayList<>(4);
 			messageComponents.add(format("Status %d", this.statusCode));
 
-			if (this.errors != null && this.errors.size() > 0)
-				messageComponents.add(format("Errors: %s", this.errors));
+			if (this.generalErrors != null && this.generalErrors.size() > 0)
+				messageComponents.add(format("General Errors: %s", this.generalErrors));
 
 			if (this.fieldErrors != null && this.fieldErrors.size() > 0)
 				messageComponents.add(format("Field Errors: %s", this.fieldErrors));
 
 			if (this.metadata != null && this.metadata.size() > 0)
 				messageComponents.add(format("Metadata: %s", this.metadata));
-			
+
 			String message = messageComponents.stream().collect(Collectors.joining(", "));
 
 			return new ApplicationException(message, this);
@@ -134,8 +134,8 @@ public class ApplicationException extends RuntimeException {
 	}
 
 	@Nonnull
-	public List<String> getErrors() {
-		return this.errors;
+	public List<String> getGeneralErrors() {
+		return this.generalErrors;
 	}
 
 	@Nonnull

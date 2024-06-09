@@ -230,7 +230,7 @@ public class ToyService {
 			creditCardTransactionId = getCreditCardProcessor().makePayment(request.creditCardNumber(), toy.price(), toy.currency());
 		} catch (CreditCardPaymentException e) {
 			throw ApplicationException.withStatusCode(422)
-					.error(getStrings().get("We were unable to charge {{amount}} to your credit card.",
+					.generalError(getStrings().get("We were unable to charge {{amount}} to your credit card.",
 							Map.of("amount", formatPriceForDisplay(toy.price(), toy.currency()))))
 					.metadata(Map.of("failureReason", e.getFailureReason()))
 					.build();

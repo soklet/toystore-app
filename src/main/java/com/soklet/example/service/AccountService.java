@@ -108,7 +108,7 @@ public class AccountService {
 		// Reject if no account, or account's hashed password does not match
 		if (account == null || !getPasswordManager().verifyPassword(password, account.password()))
 			throw ApplicationException.withStatusCode(401)
-					.error(getStrings().get("Sorry, we could not authenticate you."))
+					.generalError(getStrings().get("Sorry, we could not authenticate you."))
 					.build();
 
 		// Generate a JWT
