@@ -29,7 +29,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class ErrorResponse {
 	@Nonnull
-	private final String summary;
+	private final String errorSummary;
 	@Nonnull
 	private final List<String> generalErrors;
 	@Nonnull
@@ -37,21 +37,21 @@ public class ErrorResponse {
 	@Nonnull
 	private final Map<String, Object> metadata;
 
-	public ErrorResponse(@Nonnull String summary,
+	public ErrorResponse(@Nonnull String errorSummary,
 											 @Nullable List<String> generalErrors,
 											 @Nullable Map<String, String> fieldErrors,
 											 @Nullable Map<String, Object> metadata) {
-		requireNonNull(summary);
+		requireNonNull(errorSummary);
 
-		this.summary = summary;
+		this.errorSummary = errorSummary;
 		this.generalErrors = generalErrors == null ? List.of() : Collections.unmodifiableList(generalErrors);
 		this.fieldErrors = fieldErrors == null ? Map.of() : Collections.unmodifiableMap(fieldErrors);
 		this.metadata = metadata == null ? Map.of() : Collections.unmodifiableMap(metadata);
 	}
 
 	@Nonnull
-	public String getSummary() {
-		return this.summary;
+	public String getErrorSummary() {
+		return this.errorSummary;
 	}
 
 	@Nonnull

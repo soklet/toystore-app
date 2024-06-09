@@ -343,17 +343,17 @@ public class AppModule extends AbstractModule {
 						}
 
 						// Combine all the error messages into one field for easy access by clients
-						String summary = format("%s %s",
+						String errorSummary = format("%s %s",
 								generalErrors.stream().collect(Collectors.joining(" ")),
 								fieldErrors.values().stream().collect(Collectors.joining(" "))
 						).trim();
 
 						// Ensure there is always a summary
-						if (summary.length() == 0)
-							summary = strings.get("An unexpected error occurred.");
+						if (errorSummary.length() == 0)
+							errorSummary = strings.get("An unexpected error occurred.");
 
 						// Collect all the error information into an object for transport over the wire
-						ErrorResponse errorResponse = new ErrorResponse(summary, generalErrors, fieldErrors, metadata);
+						ErrorResponse errorResponse = new ErrorResponse(errorSummary, generalErrors, fieldErrors, metadata);
 
 						// Use Gson to turn the error response into JSON
 						byte[] body = gson.toJson(errorResponse).getBytes(StandardCharsets.UTF_8);
