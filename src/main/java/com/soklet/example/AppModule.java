@@ -268,6 +268,7 @@ public class AppModule extends AbstractModule {
 						Object bodyObject = response.getBody().orElse(null);
 						byte[] body = bodyObject == null ? null : gson.toJson(bodyObject).getBytes(StandardCharsets.UTF_8);
 
+						// Ensure content type header is set
 						Map<String, Set<String>> headers = new HashMap<>(response.getHeaders());
 						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
 
@@ -281,8 +282,9 @@ public class AppModule extends AbstractModule {
 					@Nonnull
 					@Override
 					public MarshaledResponse forNotFound(@Nonnull Request request) {
-						// Use Gson to turn response objects into JSON to go over the wire
-						byte[] body = gson.toJson(Map.of("message", strings.get("The resource you requested was not found."))).getBytes(StandardCharsets.UTF_8);
+						// Use Gson to turn the error response into JSON
+						ErrorResponse errorResponse = ErrorResponse.withSummary(strings.get("The resource you requested was not found.")).build();
+						byte[] body = gson.toJson(errorResponse).getBytes(StandardCharsets.UTF_8);
 
 						Map<String, Set<String>> headers = new HashMap<>();
 						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
@@ -353,7 +355,11 @@ public class AppModule extends AbstractModule {
 							summary = strings.get("An unexpected error occurred.");
 
 						// Collect all the error information into an object for transport over the wire
-						ErrorResponse errorResponse = new ErrorResponse(summary, generalErrors, fieldErrors, metadata);
+						ErrorResponse errorResponse = ErrorResponse.withSummary(summary)
+								.generalErrors(generalErrors)
+								.fieldErrors(fieldErrors)
+								.metadata(metadata)
+								.build();
 
 						// Use Gson to turn the error response into JSON
 						byte[] body = gson.toJson(errorResponse).getBytes(StandardCharsets.UTF_8);

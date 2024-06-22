@@ -18,6 +18,7 @@ package com.soklet.example.model.api.response;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -37,16 +38,66 @@ public class ErrorResponse {
 	@Nonnull
 	private final Map<String, Object> metadata;
 
-	public ErrorResponse(@Nonnull String summary,
-											 @Nullable List<String> generalErrors,
-											 @Nullable Map<String, String> fieldErrors,
-											 @Nullable Map<String, Object> metadata) {
+	@Nonnull
+	public static Builder withSummary(@Nonnull String summary) {
 		requireNonNull(summary);
+		return new Builder(summary);
+	}
 
-		this.summary = summary;
-		this.generalErrors = generalErrors == null ? List.of() : Collections.unmodifiableList(generalErrors);
-		this.fieldErrors = fieldErrors == null ? Map.of() : Collections.unmodifiableMap(fieldErrors);
-		this.metadata = metadata == null ? Map.of() : Collections.unmodifiableMap(metadata);
+	protected ErrorResponse(@Nonnull Builder builder) {
+		requireNonNull(builder);
+
+		this.summary = requireNonNull(builder.summary);
+		this.generalErrors = builder.generalErrors == null ? List.of() : Collections.unmodifiableList(builder.generalErrors);
+		this.fieldErrors = builder.fieldErrors == null ? Map.of() : Collections.unmodifiableMap(builder.fieldErrors);
+		this.metadata = builder.metadata == null ? Map.of() : Collections.unmodifiableMap(builder.metadata);
+	}
+
+	@NotThreadSafe
+	public static class Builder {
+		@Nonnull
+		private String summary;
+		@Nullable
+		private List<String> generalErrors;
+		@Nullable
+		private Map<String, String> fieldErrors;
+		@Nullable
+		private Map<String, Object> metadata;
+
+		protected Builder(@Nonnull String summary) {
+			requireNonNull(summary);
+			this.summary = summary;
+		}
+
+		@Nonnull
+		public Builder summary(@Nonnull String summary) {
+			requireNonNull(summary);
+			this.summary = summary;
+			return this;
+		}
+
+		@Nonnull
+		public Builder generalErrors(@Nullable List<String> generalErrors) {
+			this.generalErrors = generalErrors;
+			return this;
+		}
+
+		@Nonnull
+		public Builder fieldErrors(@Nullable Map<String, String> fieldErrors) {
+			this.fieldErrors = fieldErrors;
+			return this;
+		}
+
+		@Nonnull
+		public Builder metadata(@Nullable Map<String, Object> metadata) {
+			this.metadata = metadata;
+			return this;
+		}
+
+		@Nonnull
+		public ErrorResponse build() {
+			return new ErrorResponse(this);
+		}
 	}
 
 	@Nonnull

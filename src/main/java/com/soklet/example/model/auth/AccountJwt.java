@@ -51,9 +51,14 @@ public record AccountJwt(
 		GSON = new GsonBuilder().disableHtmlEscaping().create();
 	}
 
+	public AccountJwt {
+		requireNonNull(accountId);
+		requireNonNull(expiration);
+	}
+
 	@Nonnull
 	public Boolean isExpired() {
-		return Instant.now().isAfter(expiration());
+		return expiration().isBefore(Instant.now());
 	}
 
 	@Nonnull
@@ -62,6 +67,7 @@ public record AccountJwt(
 		return AccountJwt.toStringRepresentation(accountId(), expiration(), privateKey);
 	}
 
+	// Parsing an AccountJwt can have many outcomes.
 	public sealed interface AccountJwtResult {
 		record Succeeded(@Nonnull AccountJwt accountJwt) implements AccountJwtResult {}
 
