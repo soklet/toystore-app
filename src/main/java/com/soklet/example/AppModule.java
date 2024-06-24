@@ -240,22 +240,22 @@ public class AppModule extends AbstractModule {
 
 					@Nullable
 					@Override
-					public Object marshalRequestBody(@Nonnull Request request,
-																					 @Nonnull ResourceMethod resourceMethod,
-																					 @Nonnull Parameter parameter,
-																					 @Nonnull Type requestBodyType) {
+					public Optional<Object> marshalRequestBody(@Nonnull Request request,
+																										 @Nonnull ResourceMethod resourceMethod,
+																										 @Nonnull Parameter parameter,
+																										 @Nonnull Type requestBodyType) {
 						requireNonNull(request);
 						requireNonNull(requestBodyType);
 
 						String requestBodyAsString = request.getBodyAsString().orElse(null);
 
 						if (requestBodyAsString == null)
-							return null;
+							return Optional.empty();
 
 						logger.debug("Request body:\n{}", requestBodyAsString);
 
 						// Use Gson to turn the request body JSON into a Java type
-						return gson.fromJson(requestBodyAsString, requestBodyType);
+						return Optional.of(gson.fromJson(requestBodyAsString, requestBodyType));
 					}
 				})
 				.responseMarshaler(new DefaultResponseMarshaler() {
@@ -557,6 +557,7 @@ public class AppModule extends AbstractModule {
 						}
 					}
 				});
+
 		return gsonBuilder.create();
 	}
 
