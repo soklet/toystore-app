@@ -18,6 +18,8 @@ package com.soklet.example.model.db;
 
 import javax.annotation.Nonnull;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
@@ -29,5 +31,10 @@ public record Role(
 		CUSTOMER,
 		EMPLOYEE,
 		ADMINISTRATOR
+	}
+
+	public Role {
+		requireNonNull(roleId);
+		requireNonNull(description);
 	}
 }

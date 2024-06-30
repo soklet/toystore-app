@@ -22,6 +22,8 @@ import java.time.Instant;
 import java.util.Currency;
 import java.util.UUID;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
@@ -31,4 +33,12 @@ public record Toy(
 		@Nonnull BigDecimal price,
 		@Nonnull Currency currency,
 		@Nonnull Instant createdAt
-) {}
+) {
+	public Toy {
+		requireNonNull(toyId);
+		requireNonNull(name);
+		requireNonNull(price);
+		requireNonNull(currency);
+		requireNonNull(createdAt);
+	}
+}

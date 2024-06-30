@@ -90,6 +90,8 @@ public class App {
 		}
 	}
 
+	// A real system would keep its table creates/DDL in files outside of Java code.
+	// We keep them here for demonstration purposes
 	protected void initializeDatabase() {
 		Database database = getInjector().getInstance(Database.class);
 

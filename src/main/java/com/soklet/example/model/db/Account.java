@@ -24,6 +24,8 @@ import java.time.ZoneId;
 import java.util.Locale;
 import java.util.UUID;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
@@ -36,4 +38,15 @@ public record Account(
 		@Nonnull ZoneId timeZone,
 		@Nonnull Locale locale,
 		@Nonnull Instant createdAt
-) {}
+) {
+	public Account {
+		requireNonNull(accountId);
+		requireNonNull(roleId);
+		requireNonNull(name);
+		requireNonNull(emailAddress);
+		requireNonNull(password);
+		requireNonNull(timeZone);
+		requireNonNull(locale);
+		requireNonNull(createdAt);
+	}
+}

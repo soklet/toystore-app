@@ -17,6 +17,7 @@
 package com.soklet.example.model.api.request;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.Currency;
 
@@ -24,7 +25,7 @@ import java.util.Currency;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 public record ToyCreateRequest(
-		@Nonnull String name,
-		@Nonnull BigDecimal price,
-		@Nonnull Currency currency
+		@Nullable String name,
+		@Nullable BigDecimal price,
+		@Nullable Currency currency
 ) {}

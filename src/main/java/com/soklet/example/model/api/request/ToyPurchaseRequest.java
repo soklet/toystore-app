@@ -17,6 +17,7 @@
 package com.soklet.example.model.api.request;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.time.YearMonth;
 import java.util.UUID;
 
@@ -26,20 +27,18 @@ import static java.util.Objects.requireNonNull;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 public record ToyPurchaseRequest(
-		@Nonnull UUID toyId,
-		@Nonnull UUID accountId,
-		@Nonnull String creditCardNumber,
-		@Nonnull YearMonth creditCardExpiration
+		@Nullable UUID toyId,
+		@Nullable UUID accountId,
+		@Nullable String creditCardNumber,
+		@Nullable YearMonth creditCardExpiration
 ) {
 	@Nonnull
-	public ToyPurchaseRequest withToyId(@Nonnull UUID toyId) {
-		requireNonNull(toyId);
+	public ToyPurchaseRequest withToyId(@Nullable UUID toyId) {
 		return new ToyPurchaseRequest(toyId, accountId, creditCardNumber, creditCardExpiration);
 	}
 
 	@Nonnull
-	public ToyPurchaseRequest withAccountId(@Nonnull UUID accountId) {
-		requireNonNull(accountId);
+	public ToyPurchaseRequest withAccountId(@Nullable UUID accountId) {
 		return new ToyPurchaseRequest(toyId, accountId, creditCardNumber, creditCardExpiration);
 	}
 }

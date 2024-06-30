@@ -24,6 +24,8 @@ import java.time.Instant;
 import java.util.Currency;
 import java.util.UUID;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
@@ -35,4 +37,14 @@ public record Purchase(
 		@Nonnull Currency currency,
 		@Nonnull @DatabaseColumn("credit_card_txn_id") String creditCardTransactionId,
 		@Nonnull Instant createdAt
-) {}
+) {
+	public Purchase {
+		requireNonNull(purchaseId);
+		requireNonNull(accountId);
+		requireNonNull(toyId);
+		requireNonNull(price);
+		requireNonNull(currency);
+		requireNonNull(creditCardTransactionId);
+		requireNonNull(createdAt);
+	}
+}

@@ -16,13 +16,12 @@
 
 package com.soklet.example.model.api.request;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 public record AccountAuthenticateRequest(
-		@Nonnull String emailAddress,
+		@Nullable String emailAddress,
 		@Nullable String password
 ) {}
