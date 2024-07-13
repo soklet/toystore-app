@@ -21,7 +21,6 @@ import com.google.inject.Provider;
 import com.lokalized.Strings;
 import com.pyranid.Database;
 import com.pyranid.DatabaseException;
-import com.pyranid.Transaction;
 import com.soklet.example.CurrentContext;
 import com.soklet.example.exception.ApplicationException;
 import com.soklet.example.model.api.request.ToyCreateRequest;
@@ -38,7 +37,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
-import java.sql.Savepoint;
 import java.text.NumberFormat;
 import java.time.YearMonth;
 import java.util.Currency;
@@ -149,10 +147,6 @@ public class ToyService {
 		if (getLogger().isInfoEnabled())
 			getLogger().info("Creating toy '{}', which costs {}", name, formatPriceForDisplay(price, currency));
 
-		// Make a savepoint in case there is a unique constraint violation (duplicate name)
-		Transaction transaction = getDatabase().currentTransaction().get();
-		Savepoint savepoint = transaction.createSavepoint();
-
 		try {
 			getDatabase().execute("""
 					INSERT INTO toy (
@@ -163,10 +157,9 @@ public class ToyService {
 					) VALUES (?,?,?,?)
 					""", toyId, name, price, currency);
 		} catch (DatabaseException e) {
-			// If this is a unique constraint violation on the 'name' field, handle it specially:
-			// roll the transaction back to a known-good state and expose some details to the caller
+			// If this is a unique constraint violation on the 'name' field, handle it specially
+			// by exposing a helpful message to the caller
 			if (e.getMessage().contains("TOY_NAME_UNIQUE_IDX")) {
-				getDatabase().currentTransaction().get().rollback(savepoint);
 				throw ApplicationException.withStatusCode(422)
 						.fieldErrors(Map.of("name", getStrings().get("There is already a toy named '{{name}}'.", Map.of("name", name))))
 						.build();
@@ -225,6 +218,10 @@ public class ToyService {
 			throw ApplicationException.withStatusCode(422)
 					.fieldErrors(fieldErrors)
 					.build();
+
+		// Charge the card, then record the transaction.
+		// NOTE: A real system would have more thorough recordkeeping in order to detect scenarios
+		// where a card is charged but the recording of the transaction fails
 
 		try {
 			creditCardTransactionId = getCreditCardProcessor().makePayment(request.creditCardNumber(), toy.price(), toy.currency());
