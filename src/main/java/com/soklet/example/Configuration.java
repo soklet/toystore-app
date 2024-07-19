@@ -76,15 +76,16 @@ public class Configuration {
 
 	@Nonnull
 	protected KeyPair loadKeyPair() {
+		// Keypair generation is documented at https://www.soklet.com/docs/toy-store-app#generating-keypairs
 		try {
-			KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+			KeyFactory keyFactory = KeyFactory.getInstance("Ed25519");
 
-			String publicKeyAsString = Files.readString(Path.of("src/main/resources/rsa.public"), StandardCharsets.UTF_8);
+			String publicKeyAsString = Files.readString(Path.of("src/main/resources/keypair.ed25519.public"), StandardCharsets.UTF_8);
 			X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(publicKeyAsString));
 			PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
 
 			// A real app would load from a trusted location on the filesystem or a cloud platform's Secrets Manager
-			String privateKeyAsString = Files.readString(Path.of("src/main/resources/rsa.private"), StandardCharsets.UTF_8);
+			String privateKeyAsString = Files.readString(Path.of("src/main/resources/keypair.ed25519.private"), StandardCharsets.UTF_8);
 			PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyAsString));
 			PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
 
