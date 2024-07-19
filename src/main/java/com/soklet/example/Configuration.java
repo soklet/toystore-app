@@ -27,6 +27,7 @@ import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
@@ -81,12 +82,12 @@ public class Configuration {
 			KeyFactory keyFactory = KeyFactory.getInstance("Ed25519");
 
 			String publicKeyAsString = Files.readString(Path.of("src/main/resources/keypair.ed25519.public"), StandardCharsets.UTF_8);
-			X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(publicKeyAsString));
+			EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(publicKeyAsString));
 			PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
 
 			// A real app would load from a trusted location on the filesystem or a cloud platform's Secrets Manager
 			String privateKeyAsString = Files.readString(Path.of("src/main/resources/keypair.ed25519.private"), StandardCharsets.UTF_8);
-			PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyAsString));
+			EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyAsString));
 			PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
 
 			return new KeyPair(publicKey, privateKey);
