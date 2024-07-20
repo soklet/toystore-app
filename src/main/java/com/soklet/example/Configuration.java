@@ -85,7 +85,7 @@ public class Configuration {
 			EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(publicKeyAsString));
 			PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
 
-			// A real app would load from a trusted location on the filesystem or a cloud platform's Secrets Manager
+			// A real app would load from a secure location on the filesystem or a cloud platform's Secrets Manager
 			String privateKeyAsString = Files.readString(Path.of("src/main/resources/keypair.ed25519.private"), StandardCharsets.UTF_8);
 			EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyAsString));
 			PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);

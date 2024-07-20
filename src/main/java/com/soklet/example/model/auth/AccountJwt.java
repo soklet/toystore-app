@@ -114,8 +114,7 @@ public record AccountJwt(
 			missingClaims.add("sub");
 		if (iatAsNumber == null)
 			missingClaims.add("iat");
-
-		// Validation
+		
 		if (missingClaims.size() > 0)
 			return new AccountJwtResult.MissingClaims(missingClaims);
 
