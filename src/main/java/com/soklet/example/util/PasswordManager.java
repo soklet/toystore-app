@@ -41,9 +41,12 @@ public class PasswordManager {
 	static {
 		String rngAlgorithm = "SHA1PRNG";
 		String hashAlgorithm = "PBKDF2WithHmacSHA512";
-		int iterations = 5_000;
-		int saltLength = 16;
-		int keyLength = 128 * 8;
+
+		// Because this is a sample system, we choose fast but less secure values.
+		// Real systems should increase per below.
+		int iterations = 5_000; // OWASP 2023 recommends 210_000 instead
+		int saltLength = 16; // Larger value is recommended, e.g. 64
+		int keyLength = 128 * 8; // Larger value is recommended, e.g. 128 * 16
 
 		SHARED_INSTANCE = new PasswordManager(rngAlgorithm, hashAlgorithm, iterations, saltLength, keyLength);
 	}
