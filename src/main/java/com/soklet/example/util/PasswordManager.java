@@ -24,6 +24,7 @@ import javax.crypto.spec.PBEKeySpec;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Arrays;
 import java.util.Base64;
 
 import static java.lang.String.format;
@@ -102,6 +103,8 @@ public class PasswordManager {
 		requireNonNull(plaintextPassword);
 		requireNonNull(hashedPassword);
 
+		// Hashed password is a string of the form:
+		// <iterations>:<salt>:<hashed password>
 		String[] components = hashedPassword.split(":");
 		int iterationComponent = Integer.parseInt(components[0]);
 		byte[] saltComponent = base64Decode(components[1]);
@@ -111,13 +114,7 @@ public class PasswordManager {
 			PBEKeySpec keySpec = new PBEKeySpec(plaintextPassword.toCharArray(), saltComponent, iterationComponent, getKeyLength());
 			SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance(getHashAlgorithm());
 			byte[] comparisonHash = secretKeyFactory.generateSecret(keySpec).getEncoded();
-
-			int difference = hashedPasswordComponent.length ^ comparisonHash.length;
-
-			for (int i = 0; i < hashedPasswordComponent.length && i < comparisonHash.length; i++)
-				difference |= hashedPasswordComponent[i] ^ comparisonHash[i];
-
-			return difference == 0;
+			return Arrays.equals(hashedPasswordComponent, comparisonHash);
 		} catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
 			throw new RuntimeException(e);
 		}
