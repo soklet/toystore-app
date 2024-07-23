@@ -99,7 +99,7 @@ public record AccountJwt(
 
 		String decodedPayload = new String(base64Decode(encodedPayload), StandardCharsets.UTF_8);
 		byte[] decodedSignature = base64Decode(encodedSignature);
-		byte[] expectedSignature = hmacSha256(format("%s.%s", encodedHeader, encodedPayload), privateKey);
+		byte[] expectedSignature = hmacSha512(format("%s.%s", encodedHeader, encodedPayload), privateKey);
 
 		if (!Arrays.equals(expectedSignature, decodedSignature))
 			return new AccountJwtResult.SignatureMismatch();
@@ -114,7 +114,7 @@ public record AccountJwt(
 			missingClaims.add("sub");
 		if (iatAsNumber == null)
 			missingClaims.add("iat");
-		
+
 		if (missingClaims.size() > 0)
 			return new AccountJwtResult.MissingClaims(missingClaims);
 
@@ -144,7 +144,7 @@ public record AccountJwt(
 		requireNonNull(privateKey);
 
 		String header = GSON.toJson(Map.of(
-				"alg", "HS256",
+				"alg", "HS512",
 				"typ", "JWT"
 		));
 
@@ -156,23 +156,23 @@ public record AccountJwt(
 		String encodedHeader = base64Encode(header.getBytes(StandardCharsets.UTF_8));
 		String encodedPayload = base64Encode(payload.getBytes(StandardCharsets.UTF_8));
 
-		byte[] signature = hmacSha256(format("%s.%s", encodedHeader, encodedPayload), privateKey);
+		byte[] signature = hmacSha512(format("%s.%s", encodedHeader, encodedPayload), privateKey);
 		String encodedSignature = base64Encode(signature);
 
 		return format("%s.%s.%s", encodedHeader, encodedPayload, encodedSignature);
 	}
 
 	@Nonnull
-	private static byte[] hmacSha256(@Nonnull String string,
+	private static byte[] hmacSha512(@Nonnull String string,
 																	 @Nonnull PrivateKey privateKey) {
 		requireNonNull(string);
 		requireNonNull(privateKey);
 
 		try {
-			Mac hmacSha256 = Mac.getInstance("HmacSHA256");
+			Mac hmacSha512 = Mac.getInstance("HmacSHA512");
 			SecretKeySpec secretKeySpec = new SecretKeySpec(privateKey.getEncoded(), privateKey.getAlgorithm());
-			hmacSha256.init(secretKeySpec);
-			return hmacSha256.doFinal(string.getBytes(StandardCharsets.UTF_8));
+			hmacSha512.init(secretKeySpec);
+			return hmacSha512.doFinal(string.getBytes(StandardCharsets.UTF_8));
 		} catch (NoSuchAlgorithmException | InvalidKeyException e) {
 			throw new IllegalArgumentException(e);
 		}

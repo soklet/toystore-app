@@ -93,8 +93,8 @@ public class PasswordManager {
 			byte[] hashedPassword = secretKeyFactory.generateSecret(keySpec).getEncoded();
 
 			// Generates a string of the form:
-			// <iterations>:<salt>:<hashed password>
-			return format("%d:%s:%s", getIterations(), base64Encode(salt), base64Encode(hashedPassword));
+			// <hash algorithm>:<iterations>:<key length>:<salt>:<hashed password>
+			return format("%s:%d:%d:%s:%s", getHashAlgorithm(), getIterations(), getKeyLength(), base64Encode(salt), base64Encode(hashedPassword));
 		} catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
 			throw new RuntimeException(e);
 		}
@@ -106,16 +106,16 @@ public class PasswordManager {
 		requireNonNull(plaintextPassword);
 		requireNonNull(hashedPassword);
 
-		// Hashed password is a string of the form:
-		// <iterations>:<salt>:<hashed password>
 		String[] components = hashedPassword.split(":");
-		int iterationComponent = Integer.parseInt(components[0]);
-		byte[] saltComponent = base64Decode(components[1]);
-		byte[] hashedPasswordComponent = base64Decode(components[2]);
+		String hashAlgorithm = components[0];
+		int iterations = Integer.parseInt(components[1]);
+		int keyLength = Integer.parseInt(components[2]);
+		byte[] salt = base64Decode(components[3]);
+		byte[] hashedPasswordComponent = base64Decode(components[4]);
 
 		try {
-			PBEKeySpec keySpec = new PBEKeySpec(plaintextPassword.toCharArray(), saltComponent, iterationComponent, getKeyLength());
-			SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance(getHashAlgorithm());
+			PBEKeySpec keySpec = new PBEKeySpec(plaintextPassword.toCharArray(), salt, iterations, keyLength);
+			SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance(hashAlgorithm);
 			byte[] comparisonHash = secretKeyFactory.generateSecret(keySpec).getEncoded();
 			return Arrays.equals(hashedPasswordComponent, comparisonHash);
 		} catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
