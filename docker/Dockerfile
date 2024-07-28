@@ -14,7 +14,7 @@ EXPOSE 8080
 # know that it's running inside of a Docker container
 # in case it needs to behave specially there.
 # The name and value are arbitrary
-ENV RUNNING_IN_DOCKER=true
+ENV APP_RUNNING_IN_DOCKER=true
 
 # Prepare Maven
 RUN yum install -y unzip

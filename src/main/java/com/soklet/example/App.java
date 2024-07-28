@@ -45,7 +45,12 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class App {
 	public static void main(@Nullable String[] args) throws Exception {
-		App app = new App(new Configuration());
+		String environment = System.getenv("APP_ENVIRONMENT");
+
+		if (environment == null)
+			throw new IllegalArgumentException("You must specify the APP_ENVIRONMENT environment variable");
+
+		App app = new App(new Configuration(environment));
 		app.startServer();
 	}
 
@@ -62,7 +67,7 @@ public class App {
 
 		// Use Guice modules for DI.
 		// Also permit overrides for testing, e.g. swap in a mock credit card processor
-		Module module = new AppModule();
+		Module module = new AppModule(configuration);
 
 		if (testingModules != null)
 			module = Modules.override(module).with(testingModules);

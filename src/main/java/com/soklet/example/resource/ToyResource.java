@@ -83,7 +83,6 @@ public class ToyResource {
 	}
 
 	@Nonnull
-	@AuthorizationRequired
 	@GET("/toys")
 	public ToysResponseHolder findToys(@Nullable @QueryParameter(optional = true) String query) {
 		List<Toy> toys = query == null ? getToyService().findToys() : getToyService().searchToys(query);
@@ -122,7 +121,7 @@ public class ToyResource {
 	}
 
 	@Nonnull
-	@AuthorizationRequired
+	@AuthorizationRequired({RoleId.EMPLOYEE, RoleId.ADMINISTRATOR})
 	@PUT("/toys/{toyId}")
 	public ToyResponseHolder updateToy(@Nonnull @PathParameter UUID toyId,
 																		 @Nonnull @RequestBody ToyUpdateRequest request) {

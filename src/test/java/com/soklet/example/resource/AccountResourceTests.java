@@ -39,7 +39,7 @@ import java.nio.charset.StandardCharsets;
 public class AccountResourceTests {
 	@Test
 	public void testAuthenticate() {
-		App app = new App(new Configuration());
+		App app = new App(new Configuration("local"));
 		Gson gson = app.getInjector().getInstance(Gson.class);
 		SokletConfiguration config = app.getInjector().getInstance(SokletConfiguration.class);
 

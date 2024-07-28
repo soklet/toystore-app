@@ -84,15 +84,17 @@ public class PasswordManager {
 		requireNonNull(plaintextPassword);
 
 		try {
-			SecureRandom secureRandom = SecureRandom.getInstance(getRngAlgorithm());
+			// Generate the salt
 			byte[] salt = new byte[getSaltLength()];
+			SecureRandom secureRandom = SecureRandom.getInstance(getRngAlgorithm());
 			secureRandom.nextBytes(salt);
 
+			// Generate the hash
 			PBEKeySpec keySpec = new PBEKeySpec(plaintextPassword.toCharArray(), salt, getIterations(), getKeyLength());
 			SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance(getHashAlgorithm());
 			byte[] hashedPassword = secretKeyFactory.generateSecret(keySpec).getEncoded();
 
-			// Generates a string of the form:
+			// Generate a string of the form:
 			// <hash algorithm>:<iterations>:<key length>:<salt>:<hashed password>
 			return format("%s:%d:%d:%s:%s", getHashAlgorithm(), getIterations(), getKeyLength(), base64Encode(salt), base64Encode(hashedPassword));
 		} catch (NoSuchAlgorithmException | InvalidKeySpecException e) {

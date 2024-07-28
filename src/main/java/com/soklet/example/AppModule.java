@@ -107,6 +107,21 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class AppModule extends AbstractModule {
 	@Nonnull
+	private final Configuration configuration;
+
+	public AppModule(@Nonnull Configuration configuration) {
+		requireNonNull(configuration);
+		this.configuration = configuration;
+	}
+
+	@Nonnull
+	@Provides
+	@Singleton
+	public Configuration provideConfiguration() {
+		return this.configuration;
+	}
+
+	@Nonnull
 	@Provides
 	@Singleton
 	public SokletConfiguration provideSokletConfiguration(@Nonnull Injector injector,
@@ -217,7 +232,7 @@ public class AppModule extends AbstractModule {
 							}
 						}
 
-						// Create a new current context scope to apply the authenticated account (if present)
+						// Create a new current context scope with the authenticated account (if present)
 						CurrentContext currentContext = CurrentContext.withRequest(request)
 								.account(account)
 								.build();
@@ -430,9 +445,10 @@ public class AppModule extends AbstractModule {
 
 					@Override
 					public void log(@Nonnull StatementLog statementLog) {
-						logger.trace("SQL took {}ms:\n{}\nParameters: {}", statementLog.getTotalDuration().toNanos() / 1000000.0,
-								statementLog.getStatementContext().getStatement().getSql().stripIndent().trim(),
-								statementLog.getStatementContext().getParameters());
+						if (logger.isTraceEnabled())
+							logger.trace("SQL took {}ms:\n{}\nParameters: {}", format("%.2f", statementLog.getTotalDuration().toNanos() / 1000000.0),
+									statementLog.getStatementContext().getStatement().getSql().stripIndent().trim(),
+									statementLog.getStatementContext().getParameters());
 					}
 				})
 				.build();
@@ -447,7 +463,7 @@ public class AppModule extends AbstractModule {
 		String defaultLanguageCode = Configuration.getDefaultLocale().getLanguage();
 
 		return new DefaultStrings.Builder(defaultLanguageCode,
-				() -> LocalizedStringLoader.loadFromFilesystem(Paths.get("src/main/resources/strings")))
+				() -> LocalizedStringLoader.loadFromFilesystem(Paths.get("strings")))
 				// Rely on the current context's preferred locale to pick the appropriate localization file
 				.localeSupplier(() -> currentContextProvider.get().getLocale())
 				.build();

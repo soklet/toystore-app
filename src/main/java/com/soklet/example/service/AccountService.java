@@ -102,7 +102,7 @@ public class AccountService {
 		Account account = getDatabase().executeForObject("""
 				SELECT *
 				FROM account
-				WHERE email_address=LOWER(?)
+				WHERE email_address=?
 				""", Account.class, emailAddress.toLowerCase(Locale.US)).orElse(null);
 
 		// Reject if no account, or account's hashed password does not match
