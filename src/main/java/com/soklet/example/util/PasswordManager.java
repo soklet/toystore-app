@@ -18,6 +18,7 @@ package com.soklet.example.util;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
@@ -36,47 +37,46 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class PasswordManager {
 	@Nonnull
-	private static final PasswordManager SHARED_INSTANCE;
+	private static final String DEFAULT_RNG_ALGORITHM;
+	@Nonnull
+	private static final Integer DEFAULT_ITERATIONS;
+	@Nonnull
+	private static final Integer DEFAULT_SALT_LENGTH;
+	@Nonnull
+	private static final Integer DEFAULT_KEY_LENGTH;
 
 	static {
-		String rngAlgorithm = "SHA1PRNG";
-		String hashAlgorithm = "PBKDF2WithHmacSHA512";
-
-		// Because this is a sample system, we choose fast but less secure values.
-		// Real systems should increase per below.
-		int iterations = 5_000; // OWASP 2023 recommends 210_000 instead
-		int saltLength = 16; // Larger value is recommended, e.g. 64
-		int keyLength = 128 * 8; // Larger value is recommended, e.g. 128 * 16
-
-		SHARED_INSTANCE = new PasswordManager(rngAlgorithm, hashAlgorithm, iterations, saltLength, keyLength);
+		DEFAULT_RNG_ALGORITHM = "SHA1PRNG";
+		DEFAULT_ITERATIONS = 210_000; // OWASP 2023 recommendation
+		DEFAULT_SALT_LENGTH = 64;
+		DEFAULT_KEY_LENGTH = 128 * 16;
 	}
 
 	@Nonnull
-	public static PasswordManager sharedInstance() {
-		return SHARED_INSTANCE;
-	}
-
-	@Nullable
-	private final String rngAlgorithm;
-	@Nullable
 	private final String hashAlgorithm;
-	@Nullable
+	@Nonnull
+	private final String rngAlgorithm;
+	@Nonnull
 	private final Integer iterations;
 	@Nonnull
 	private final Integer saltLength;
 	@Nonnull
 	private final Integer keyLength;
 
-	public PasswordManager(@Nonnull String rngAlgorithm,
-												 @Nonnull String hashAlgorithm,
-												 @Nonnull Integer iterations,
-												 @Nonnull Integer saltLength,
-												 @Nonnull Integer keyLength) {
-		this.rngAlgorithm = requireNonNull(rngAlgorithm);
-		this.hashAlgorithm = requireNonNull(hashAlgorithm);
-		this.iterations = requireNonNull(iterations);
-		this.saltLength = requireNonNull(saltLength);
-		this.keyLength = requireNonNull(keyLength);
+	@Nonnull
+	public static Builder withHashAlgorithm(@Nonnull String hashAlgorithm) {
+		requireNonNull(hashAlgorithm);
+		return new Builder(hashAlgorithm);
+	}
+
+	protected PasswordManager(@Nonnull Builder builder) {
+		requireNonNull(builder);
+
+		this.hashAlgorithm = requireNonNull(builder.hashAlgorithm);
+		this.rngAlgorithm = builder.rngAlgorithm == null ? DEFAULT_RNG_ALGORITHM : builder.rngAlgorithm;
+		this.iterations = builder.iterations == null ? DEFAULT_ITERATIONS : builder.iterations;
+		this.saltLength = builder.saltLength == null ? DEFAULT_SALT_LENGTH : builder.saltLength;
+		this.keyLength = builder.keyLength == null ? DEFAULT_KEY_LENGTH : builder.keyLength;
 	}
 
 	@Nonnull
@@ -137,17 +137,72 @@ public class PasswordManager {
 		return Base64.getDecoder().decode(string);
 	}
 
-	@Nullable
-	public String getRngAlgorithm() {
-		return this.rngAlgorithm;
+	@NotThreadSafe
+	public static class Builder {
+		@Nonnull
+		private String hashAlgorithm;
+		@Nullable
+		private String rngAlgorithm;
+		@Nullable
+		private Integer iterations;
+		@Nullable
+		private Integer saltLength;
+		@Nullable
+		private Integer keyLength;
+
+		protected Builder(@Nonnull String hashAlgorithm) {
+			requireNonNull(hashAlgorithm);
+			this.hashAlgorithm = hashAlgorithm;
+		}
+
+		@Nonnull
+		public Builder hashAlgorithm(@Nonnull String hashAlgorithm) {
+			requireNonNull(hashAlgorithm);
+			this.hashAlgorithm = hashAlgorithm;
+			return this;
+		}
+
+		@Nonnull
+		public Builder rngAlgorithm(@Nullable String rngAlgorithm) {
+			this.rngAlgorithm = rngAlgorithm;
+			return this;
+		}
+
+		@Nonnull
+		public Builder iterations(@Nullable Integer iterations) {
+			this.iterations = iterations;
+			return this;
+		}
+
+		@Nonnull
+		public Builder saltLength(@Nullable Integer saltLength) {
+			this.saltLength = saltLength;
+			return this;
+		}
+
+		@Nonnull
+		public Builder keyLength(@Nullable Integer keyLength) {
+			this.keyLength = keyLength;
+			return this;
+		}
+
+		@Nonnull
+		public PasswordManager build() {
+			return new PasswordManager(this);
+		}
 	}
 
-	@Nullable
+	@Nonnull
 	public String getHashAlgorithm() {
 		return this.hashAlgorithm;
 	}
 
-	@Nullable
+	@Nonnull
+	public String getRngAlgorithm() {
+		return this.rngAlgorithm;
+	}
+
+	@Nonnull
 	public Integer getIterations() {
 		return this.iterations;
 	}

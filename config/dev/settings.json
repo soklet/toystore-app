@@ -1,6 +1,6 @@
 {
   "port": 8080,
-  "corsWhitelistedOrigins": [],
+  "corsWhitelistedOrigins": ["https://my.dev.webapp"],
   "keyPair": {
     "algorithm": "Ed25519",
     "publicKey": "MCowBQYDK2VwAyEApv8tMZ0EW4t7sauPkus0aHfwosV1Lv1SAyvACucl1HY=",

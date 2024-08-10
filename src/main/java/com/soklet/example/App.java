@@ -98,7 +98,9 @@ public class App {
 	// A real system would keep its table creates/DDL in files outside of Java code.
 	// We keep them here for demonstration purposes
 	protected void initializeDatabase() {
+		// Ask Guice for some instances
 		Database database = getInjector().getInstance(Database.class);
+		PasswordManager passwordManager = getInjector().getInstance(PasswordManager.class);
 
 		database.execute("""
 				CREATE TABLE role (
@@ -142,7 +144,7 @@ public class App {
 				RoleId.ADMINISTRATOR,
 				"Example Administrator",
 				"admin@soklet.com",
-				PasswordManager.sharedInstance().hashPassword("test123"),
+				passwordManager.hashPassword("test123"),
 				ZoneId.of("America/New_York"),
 				Locale.forLanguageTag("en-US")
 		);
