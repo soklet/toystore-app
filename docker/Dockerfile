@@ -2,7 +2,7 @@
 # docker build . --file docker/Dockerfile --tag soklet/toystore
 
 # To run:
-# docker run -it -p "8080:8080" soklet/toystore
+# docker run -it -e APP_ENVIRONMENT=local -p "8080:8080" soklet/toystore
 
 # JDK 21
 FROM amazoncorretto:21
@@ -14,7 +14,7 @@ EXPOSE 8080
 # know that it's running inside of a Docker container
 # in case it needs to behave specially there.
 # The name and value are arbitrary
-ENV RUNNING_IN_DOCKER=true
+ENV APP_RUNNING_IN_DOCKER=true
 
 # Prepare Maven
 RUN yum install -y unzip
@@ -29,8 +29,9 @@ WORKDIR /app
 
 # Copy in source files
 COPY pom.xml /app
-COPY logback.xml /app
 COPY src/main /app/src/main
+COPY strings /app/strings
+COPY config /app/config
 
 # Build app
 RUN mvn compile

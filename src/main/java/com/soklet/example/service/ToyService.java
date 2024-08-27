@@ -224,7 +224,7 @@ public class ToyService {
 		// where a card is charged but the recording of the transaction fails
 
 		try {
-			creditCardTransactionId = getCreditCardProcessor().makePayment(request.creditCardNumber(), toy.price(), toy.currency());
+			creditCardTransactionId = getCreditCardProcessor().makePayment(creditCardNumber, toy.price(), toy.currency());
 		} catch (CreditCardPaymentException e) {
 			throw ApplicationException.withStatusCode(422)
 					.generalError(getStrings().get("We were unable to charge {{amount}} to your credit card.",

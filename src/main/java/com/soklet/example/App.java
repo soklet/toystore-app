@@ -45,7 +45,12 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class App {
 	public static void main(@Nullable String[] args) throws Exception {
-		App app = new App(new Configuration());
+		String environment = System.getenv("APP_ENVIRONMENT");
+
+		if (environment == null)
+			throw new IllegalArgumentException("You must specify the APP_ENVIRONMENT environment variable");
+
+		App app = new App(new Configuration(environment));
 		app.startServer();
 	}
 
@@ -62,7 +67,7 @@ public class App {
 
 		// Use Guice modules for DI.
 		// Also permit overrides for testing, e.g. swap in a mock credit card processor
-		Module module = new AppModule();
+		Module module = new AppModule(configuration);
 
 		if (testingModules != null)
 			module = Modules.override(module).with(testingModules);
@@ -93,7 +98,9 @@ public class App {
 	// A real system would keep its table creates/DDL in files outside of Java code.
 	// We keep them here for demonstration purposes
 	protected void initializeDatabase() {
+		// Ask Guice for some instances
 		Database database = getInjector().getInstance(Database.class);
+		PasswordManager passwordManager = getInjector().getInstance(PasswordManager.class);
 
 		database.execute("""
 				CREATE TABLE role (
@@ -137,7 +144,7 @@ public class App {
 				RoleId.ADMINISTRATOR,
 				"Example Administrator",
 				"admin@soklet.com",
-				PasswordManager.sharedInstance().hashPassword("test123"),
+				passwordManager.hashPassword("test123"),
 				ZoneId.of("America/New_York"),
 				Locale.forLanguageTag("en-US")
 		);

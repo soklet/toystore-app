@@ -16,9 +16,14 @@
 
 package com.soklet.example;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.soklet.example.Configuration.ConfigFile.ConfigKeyPair;
+
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,21 +41,32 @@ import java.util.Base64;
 import java.util.Locale;
 import java.util.Set;
 
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
+
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe
 public class Configuration {
 	@Nonnull
+	private static final String DEFAULT_ENVIRONMENT;
+	@Nonnull
 	private static final Locale DEFAULT_LOCALE;
 	@Nonnull
 	private static final ZoneId DEFAULT_TIME_ZONE;
+	@Nonnull
+	private static final Gson GSON;
 
 	static {
+		DEFAULT_ENVIRONMENT = "local";
 		DEFAULT_LOCALE = Locale.US;
 		DEFAULT_TIME_ZONE = ZoneId.of("UTC");
+		GSON = new GsonBuilder().disableHtmlEscaping().create();
 	}
 
+	@Nonnull
+	private final String environment;
 	@Nonnull
 	private final Boolean runningInDocker;
 	@Nonnull
@@ -63,37 +79,75 @@ public class Configuration {
 	private final Set<String> corsWhitelistedOrigins;
 
 	public Configuration() {
-		// TODO: this ctor could pull from env vars, or alternately pull from a file
-		this.runningInDocker = "true".equalsIgnoreCase(System.getenv("RUNNING_IN_DOCKER"));
+		this(DEFAULT_ENVIRONMENT);
+	}
+
+	public Configuration(@Nonnull String environment) {
+		requireNonNull(environment);
+
+		ConfigFile configFile = loadConfigFileForEnvironment(environment);
+
+		this.environment = environment;
+		this.runningInDocker = "true".equalsIgnoreCase(System.getenv("APP_RUNNING_IN_DOCKER"));
 		this.stopOnKeypress = !this.runningInDocker;
-		this.port = 8080;
-		this.corsWhitelistedOrigins = Set.of();
-		this.keyPair = loadKeyPair();
+		this.port = requireNonNull(configFile.port());
+		this.corsWhitelistedOrigins = configFile.corsWhitelistedOrigins() == null ? Set.of() : configFile.corsWhitelistedOrigins();
+		this.keyPair = loadKeyPair(configFile.keyPair());
 
 		// Initialize Logback if not done already
 		if (System.getProperty("logback.configurationFile") == null)
-			System.setProperty("logback.configurationFile", "logback.xml");
+			System.setProperty("logback.configurationFile", format("config/%s/logback.xml", environment));
 	}
 
 	@Nonnull
-	protected KeyPair loadKeyPair() {
+	protected KeyPair loadKeyPair(@Nonnull ConfigKeyPair configKeyPair) {
+		requireNonNull(configKeyPair);
+		requireNonNull(configKeyPair.algorithm());
+		requireNonNull(configKeyPair.publicKey());
+		requireNonNull(configKeyPair.privateKey());
+
 		// Keypair generation is documented at https://www.soklet.com/docs/toy-store-app#generating-keypairs
 		try {
-			KeyFactory keyFactory = KeyFactory.getInstance("Ed25519");
+			KeyFactory keyFactory = KeyFactory.getInstance(configKeyPair.algorithm());
 
-			String publicKeyAsString = Files.readString(Path.of("src/main/resources/keypair.ed25519.public"), StandardCharsets.UTF_8);
-			EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(publicKeyAsString));
+			EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(configKeyPair.publicKey()));
 			PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
 
 			// A real app would load from a secure location on the filesystem or a cloud platform's Secrets Manager
-			String privateKeyAsString = Files.readString(Path.of("src/main/resources/keypair.ed25519.private"), StandardCharsets.UTF_8);
-			EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyAsString));
+			EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(configKeyPair.privateKey()));
 			PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
 
 			return new KeyPair(publicKey, privateKey);
-		} catch (NoSuchAlgorithmException | InvalidKeySpecException | IOException e) {
+		} catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	@Nonnull
+	protected ConfigFile loadConfigFileForEnvironment(@Nonnull String environment) {
+		Path configFile = Path.of(format("config/%s/settings.json", environment));
+
+		if (!Files.isRegularFile(configFile))
+			throw new IllegalArgumentException(format("Config file not found at %s", configFile.toAbsolutePath()));
+
+		try {
+			return GSON.fromJson(Files.readString(configFile, StandardCharsets.UTF_8), ConfigFile.class);
+		} catch (IOException e) {
+			throw new UncheckedIOException(format("Error reading from %s", configFile.toAbsolutePath()), e);
+		}
+	}
+
+	// Record that maps to the config/{environment/settings.json file format
+	protected record ConfigFile(
+			Integer port,
+			Set<String> corsWhitelistedOrigins,
+			ConfigKeyPair keyPair
+	) {
+		protected record ConfigKeyPair(
+				String algorithm,
+				String publicKey,
+				String privateKey
+		) {}
 	}
 
 	@Nonnull
@@ -104,6 +158,11 @@ public class Configuration {
 	@Nonnull
 	public static ZoneId getDefaultTimeZone() {
 		return DEFAULT_TIME_ZONE;
+	}
+
+	@Nonnull
+	public String getEnvironment() {
+		return this.environment;
 	}
 
 	@Nonnull

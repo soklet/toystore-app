@@ -27,7 +27,7 @@ import java.lang.annotation.Target;
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-@Target({ElementType.METHOD, ElementType.FIELD})
+@Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface AuthorizationRequired {
 	@Nullable RoleId[] value() default {};

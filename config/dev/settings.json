@@ -1,0 +1,9 @@
+{
+  "port": 8080,
+  "corsWhitelistedOrigins": ["https://my.dev.webapp"],
+  "keyPair": {
+    "algorithm": "Ed25519",
+    "publicKey": "MCowBQYDK2VwAyEApv8tMZ0EW4t7sauPkus0aHfwosV1Lv1SAyvACucl1HY=",
+    "privateKey": "MC4CAQAwBQYDK2VwBCIEIDOkZQNyINDg/r724e76xatJ0cdPWMZH501o8lAFUhk3"
+  }
+}
