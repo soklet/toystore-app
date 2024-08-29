@@ -2,7 +2,7 @@
 # docker build . --file docker/Dockerfile --tag soklet/toystore
 
 # To run:
-# docker run -it -e APP_ENVIRONMENT=local -p "8080:8080" soklet/toystore
+# docker run -it -e APP_ENVIRONMENT="local" -p "8080:8080" soklet/toystore
 
 # JDK 21
 FROM amazoncorretto:21
@@ -33,7 +33,7 @@ COPY src/main /app/src/main
 COPY strings /app/strings
 COPY config /app/config
 
-# Build app
+# Build app and copy dependency JARs into position
 RUN mvn compile
 RUN mvn dependency:copy-dependencies
 

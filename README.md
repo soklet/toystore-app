@@ -7,7 +7,9 @@
 
 ### Soklet Toy Store App
 
-This app showcases how you might build a real production backend using [Soklet](https://www.soklet.com) (a virtual-threaded Java HTTP server with zero dependencies).  Feature highlights include:
+This app showcases how you might build a real production backend using [Soklet](https://www.soklet.com) (a virtual-threaded Java HTTP server with zero dependencies).
+
+Feature highlights include:
 
 * Authentication and role-based authorization
 * Basic CRUD operations
