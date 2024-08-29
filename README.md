@@ -38,7 +38,7 @@ First, clone the Git repository and set your working directory.
 
 #### With Docker
 
-This is the easiest way to run the Toy Store App.  You don't need anything on your machine other than [Docker](https://www.docker.com).  The app will run in its own sandboxed Java 21 Docker Container.
+This is the easiest way to run the Toy Store App.  You don't need anything on your machine other than [Docker](https://www.docker.com).  The app will run in its own sandboxed Java 22 Docker Container.
 
 [The Dockerfile is viewable here](https://github.com/soklet/toystore-app/blob/main/docker/Dockerfile) if you are curious about how it works.
 
@@ -70,7 +70,7 @@ Hello, world!
 
 #### Without Docker
 
-The Toy Store App requires [Apache Maven](https://maven.apache.org/) (you can skip Maven if you prefer to run directly through your IDE) and JDK 21+. If you need a JDK, [Amazon Corretto](https://docs.aws.amazon.com/corretto/latest/corretto-21-ug/downloads-list.html) is a free-to-use-commercially, production-ready distribution of [OpenJDK](https://openjdk.org/) that includes long-term support.
+The Toy Store App requires [Apache Maven](https://maven.apache.org/) (you can skip Maven if you prefer to run directly through your IDE) and JDK 21+. If you need a JDK, [Amazon Corretto](https://aws.amazon.com/corretto/) is a free-to-use-commercially, production-ready distribution of [OpenJDK](https://openjdk.org/) that includes long-term support.
 
 ##### **Build**
 
