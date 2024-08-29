@@ -231,3 +231,9 @@ Content-Type: application/json;charset=UTF-8
   "metadata": {}
 }
 ```
+
+### Learning More
+
+Please refer to the official Soklet website [https://www.soklet.com](https://www.soklet.com) for detailed documentation.
+
+The Toy Store App has its own [dedicated section of the website](https://www.soklet.com/docs/toy-store-app).
