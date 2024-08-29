@@ -160,7 +160,7 @@ public class AppModule extends AbstractModule {
 
 					@Override
 					public void didStartServer(@Nonnull Server server) {
-						logger.debug("Server started on port {}", configuration.getPort());
+						logger.debug("Server started in {} environment on port {}", configuration.getEnvironment(), configuration.getPort());
 					}
 
 					@Override

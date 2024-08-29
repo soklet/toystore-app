@@ -7,7 +7,7 @@
 
 ### Soklet Toy Store App
 
-This app showcases how you might build a real production backend using [Soklet](https:/www.soklet.com) (a virtual-threaded Java HTTP server with zero dependencies).  Feature highlights include:
+This app showcases how you might build a real production backend using [Soklet](https://www.soklet.com) (a virtual-threaded Java HTTP server with zero dependencies).  Feature highlights include:
 
 * Authentication and role-based authorization
 * Basic CRUD operations
@@ -52,7 +52,7 @@ You likely will want to have your app run inside of a Docker Container using thi
 
 ```shell
 # Press Ctrl+C to stop the interactive container session
-% docker run -it -p "8080:8080" soklet/toystore  
+% docker run -it -p "8080:8080" -e APP_ENVIRONMENT="local" soklet/toystore    
 ```
 
 ##### **Test**
@@ -73,13 +73,13 @@ The Toy Store App requires [Apache Maven](https://maven.apache.org/) (you can sk
 ##### **Build**
 
 ```shell
-% mvn compile  
+% mvn compile
 ```
 
 ##### **Run**
 
 ```shell
-% MAVEN_OPTS="--enable-preview --add-opens java.base/java.time=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED" mvn -e exec:java -Dexec.mainClass="com.soklet.example.App"
+% APP_ENVIRONMENT="local" MAVEN_OPTS="--enable-preview --add-opens java.base/java.time=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED" mvn -e exec:java -Dexec.mainClass="com.soklet.example.App"
 ```
 
 ### API Demonstration
