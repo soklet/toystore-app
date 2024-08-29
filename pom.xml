@@ -24,10 +24,11 @@
                 <configuration>
                     <source>21</source>
                     <target>21</target>
-                    <release>21</release>
                     <compilerArgs>
                         <arg>--enable-preview</arg>
                         <arg>-parameters</arg>
+                        <arg>-processor</arg>
+                        <arg>com.soklet.annotation.SokletProcessor</arg>
                     </compilerArgs>
                 </configuration>
             </plugin>

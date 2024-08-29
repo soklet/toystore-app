@@ -4,8 +4,8 @@
 # To run:
 # docker run -it -e APP_ENVIRONMENT="local" -p "8080:8080" soklet/toystore
 
-# JDK 21
-FROM amazoncorretto:21
+# JDK 22
+FROM amazoncorretto:22
 
 # Let port 8080 be available to the outside world
 EXPOSE 8080
@@ -27,7 +27,7 @@ RUN unzip apache-maven-3.9.7-bin.zip
 RUN mkdir -p /app/src
 WORKDIR /app
 
-# Copy in source files
+# Copy in source and configuration files
 COPY pom.xml /app
 COPY src/main /app/src/main
 COPY strings /app/strings
