@@ -111,6 +111,14 @@ public class PurchaseResponse {
 			this.creditCardTransactionId = null;
 	}
 
+	public record PurchaseResponseHolder(
+			@Nonnull PurchaseResponse purchase
+	) {
+		public PurchaseResponseHolder {
+			requireNonNull(purchase);
+		}
+	}
+
 	@Nonnull
 	public UUID getPurchaseId() {
 		return this.purchaseId;

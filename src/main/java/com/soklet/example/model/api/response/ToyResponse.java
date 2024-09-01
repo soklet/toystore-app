@@ -30,6 +30,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -92,6 +93,22 @@ public class ToyResponse {
 				.localizedBy(currentLocale)
 				.withZone(currentTimeZone)
 				.format(toy.createdAt());
+	}
+
+	public record ToyResponseHolder(
+			@Nonnull ToyResponse toy
+	) {
+		public ToyResponseHolder {
+			requireNonNull(toy);
+		}
+	}
+
+	public record ToysResponseHolder(
+			@Nonnull List<ToyResponse> toys
+	) {
+		public ToysResponseHolder {
+			requireNonNull(toys);
+		}
 	}
 
 	@Nonnull

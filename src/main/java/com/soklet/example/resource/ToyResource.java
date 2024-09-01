@@ -32,10 +32,11 @@ import com.soklet.example.exception.NotFoundException;
 import com.soklet.example.model.api.request.ToyCreateRequest;
 import com.soklet.example.model.api.request.ToyPurchaseRequest;
 import com.soklet.example.model.api.request.ToyUpdateRequest;
-import com.soklet.example.model.api.response.PurchaseResponse;
 import com.soklet.example.model.api.response.PurchaseResponse.PurchaseResponseFactory;
-import com.soklet.example.model.api.response.ToyResponse;
+import com.soklet.example.model.api.response.PurchaseResponse.PurchaseResponseHolder;
 import com.soklet.example.model.api.response.ToyResponse.ToyResponseFactory;
+import com.soklet.example.model.api.response.ToyResponse.ToyResponseHolder;
+import com.soklet.example.model.api.response.ToyResponse.ToysResponseHolder;
 import com.soklet.example.model.db.Account;
 import com.soklet.example.model.db.Purchase;
 import com.soklet.example.model.db.Role.RoleId;
@@ -92,14 +93,6 @@ public class ToyResource {
 				.collect(Collectors.toList()));
 	}
 
-	public record ToysResponseHolder(
-			@Nonnull List<ToyResponse> toys
-	) {
-		public ToysResponseHolder {
-			requireNonNull(toys);
-		}
-	}
-
 	@Nonnull
 	@AuthorizationRequired({RoleId.EMPLOYEE, RoleId.ADMINISTRATOR})
 	@POST("/toys")
@@ -110,14 +103,6 @@ public class ToyResource {
 		Toy toy = getToyService().findToyById(toyId).get();
 
 		return new ToyResponseHolder(getToyResponseFactory().create(toy));
-	}
-
-	public record ToyResponseHolder(
-			@Nonnull ToyResponse toy
-	) {
-		public ToyResponseHolder {
-			requireNonNull(toy);
-		}
 	}
 
 	@Nonnull
@@ -176,14 +161,6 @@ public class ToyResource {
 		Purchase purchase = getToyService().findPurchaseById(purchaseId).get();
 
 		return new PurchaseResponseHolder(getPurchaseResponseFactory().create(purchase));
-	}
-
-	public record PurchaseResponseHolder(
-			@Nonnull PurchaseResponse purchase
-	) {
-		public PurchaseResponseHolder {
-			requireNonNull(purchase);
-		}
 	}
 
 	@Nonnull
