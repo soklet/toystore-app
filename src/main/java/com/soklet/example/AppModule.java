@@ -38,7 +38,6 @@ import com.pyranid.StatementLog;
 import com.soklet.SokletConfiguration;
 import com.soklet.core.LifecycleInterceptor;
 import com.soklet.core.LogEvent;
-import com.soklet.core.LogEventHandler;
 import com.soklet.core.MarshaledResponse;
 import com.soklet.core.Request;
 import com.soklet.core.RequestBodyMarshaler;
@@ -249,6 +248,12 @@ public class AppModule extends AbstractModule {
 							responseWriter.accept(marshaledResponse);
 						});
 					}
+
+					@Override
+					public void didReceiveLogEvent(@Nonnull LogEvent logEvent) {
+						requireNonNull(logEvent);
+						logger.warn(logEvent.getMessage(), logEvent.getThrowable().orElse(null));
+					}
 				})
 				.requestBodyMarshaler(new RequestBodyMarshaler() {
 					@Nonnull
@@ -387,15 +392,6 @@ public class AppModule extends AbstractModule {
 								.headers(headers)
 								.body(body)
 								.build();
-					}
-				})
-				.logEventHandler(new LogEventHandler() {
-					@Nonnull
-					private final Logger logger = LoggerFactory.getLogger("com.soklet.example.ErrorLogger");
-
-					@Override
-					public void log(@Nonnull LogEvent logEvent) {
-						logger.warn(logEvent.getMessage(), logEvent.getThrowable().orElse(null));
 					}
 				})
 				.corsAuthorizer(new WhitelistedOriginsCorsAuthorizer(configuration.getCorsWhitelistedOrigins()))
