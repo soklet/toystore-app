@@ -169,6 +169,12 @@ public class AppModule extends AbstractModule {
 					}
 
 					@Override
+					public void didReceiveLogEvent(@Nonnull LogEvent logEvent) {
+						requireNonNull(logEvent);
+						logger.warn(logEvent.getMessage(), logEvent.getThrowable().orElse(null));
+					}
+
+					@Override
 					public void wrapRequest(@Nonnull Request request,
 																	@Nullable ResourceMethod resourceMethod,
 																	@Nonnull Consumer<Request> requestProcessor) {
@@ -247,12 +253,6 @@ public class AppModule extends AbstractModule {
 
 							responseWriter.accept(marshaledResponse);
 						});
-					}
-
-					@Override
-					public void didReceiveLogEvent(@Nonnull LogEvent logEvent) {
-						requireNonNull(logEvent);
-						logger.warn(logEvent.getMessage(), logEvent.getThrowable().orElse(null));
 					}
 				})
 				.requestBodyMarshaler(new RequestBodyMarshaler() {
