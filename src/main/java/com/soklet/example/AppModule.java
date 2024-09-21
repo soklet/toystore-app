@@ -154,8 +154,8 @@ public class AppModule extends AbstractModule {
 																							 @Nonnull MarshaledResponse marshaledResponse,
 																							 @Nonnull Duration processingDuration,
 																							 @Nonnull List<Throwable> throwables) {
-						logger.debug("Finished processing {} {} (HTTP {}) in {}ms", request.getHttpMethod(),
-								request.getUri(), marshaledResponse.getStatusCode(), processingDuration.toNanos() / 1000000.0);
+						logger.debug(format("Finished processing %s %s (HTTP %d) in %.2fms", request.getHttpMethod(),
+								request.getUri(), marshaledResponse.getStatusCode(), processingDuration.toNanos() / 1000000.0));
 					}
 
 					@Override
