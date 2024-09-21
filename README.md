@@ -38,7 +38,7 @@ First, clone the Git repository and set your working directory.
 
 #### With Docker
 
-This is the easiest way to run the Toy Store App.  You don't need anything on your machine other than [Docker](https://www.docker.com).  The app will run in its own sandboxed Java 22 Docker Container.
+This is the easiest way to run the Toy Store App.  You don't need anything on your machine other than [Docker](https://www.docker.com).  The app will run in its own sandboxed Java 23 Docker Container.
 
 [The Dockerfile is viewable here](https://github.com/soklet/toystore-app/blob/main/docker/Dockerfile) if you are curious about how it works.
 
