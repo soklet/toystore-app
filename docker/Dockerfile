@@ -4,8 +4,8 @@
 # To run:
 # docker run -it -e APP_ENVIRONMENT="local" -p "8080:8080" soklet/toystore
 
-# JDK 22
-FROM amazoncorretto:22
+# JDK 23
+FROM amazoncorretto:23
 
 # Let port 8080 be available to the outside world
 EXPOSE 8080
@@ -41,4 +41,4 @@ RUN mvn dependency:copy-dependencies
 USER 1000
 
 # Run app
-CMD ["/bin/sh", "-c", "java -Xms128m -Xmx512m -cp \"target/classes:target/dependency/*\" --enable-preview --add-opens java.base/java.time=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED com.soklet.example.App"]
+CMD ["/bin/sh", "-c", "java -Xms128m -Xmx512m -cp \"target/classes:target/dependency/*\" --add-opens java.base/java.time=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED com.soklet.example.App"]

@@ -9,8 +9,6 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
@@ -22,10 +20,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
+                    <release>21</release>
                     <compilerArgs>
-                        <arg>--enable-preview</arg>
                         <arg>-parameters</arg>
                         <arg>-processor</arg>
                         <arg>com.soklet.annotation.SokletProcessor</arg>
@@ -34,11 +30,6 @@
             </plugin>
         </plugins>
     </build>
-
-    <!--
-      TODO: ensure run configuration includes the following:
-      &#45;&#45;add-opens java.base/java.time=ALL-UNNAMED &#45;&#45;add-modules jdk.incubator.concurrent
-    -->
 
     <!-- Ensure we can see Soklet snapshots -->
     <repositories>
@@ -104,12 +95,12 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.4.8</version>
+            <version>1.5.8</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>2.0.7</version>
+            <version>2.0.16</version>
         </dependency>
 
         <!-- Findbugs to mark @Nonnull, @Nullable, etc. -->

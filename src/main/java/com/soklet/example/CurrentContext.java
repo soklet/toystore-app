@@ -38,11 +38,13 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class CurrentContext {
+	// TODO: Replace with ScopedValue<Deque<CurrentContext>> once ScopedValue is out of preview.  See https://openjdk.org/jeps/481
 	@Nonnull
-	private static final ScopedValue<Deque<CurrentContext>> CURRENT_CONTEXT_STACK_SCOPED_VALUE;
+	private static final ThreadLocal<Deque<CurrentContext>> CURRENT_CONTEXT_STACK_SCOPED_VALUE;
 
 	static {
-		CURRENT_CONTEXT_STACK_SCOPED_VALUE = ScopedValue.newInstance();
+		// TODO: Replace with ScopedValue.newInstance()  once ScopedValue is out of preview.  See https://openjdk.org/jeps/481
+		CURRENT_CONTEXT_STACK_SCOPED_VALUE = new ThreadLocal<>();
 	}
 
 	@Nullable
@@ -56,7 +58,8 @@ public class CurrentContext {
 
 	@Nonnull
 	public static CurrentContext get() {
-		if (!CURRENT_CONTEXT_STACK_SCOPED_VALUE.isBound())
+		// TODO: Replace with !CURRENT_CONTEXT_STACK_SCOPED_VALUE.isBound() once ScopedValue is out of preview.  See https://openjdk.org/jeps/481
+		if (CURRENT_CONTEXT_STACK_SCOPED_VALUE.get() == null)
 			throw new IllegalStateException(format("No %s is bound to the current scope",
 					CurrentContext.class.getSimpleName()));
 
@@ -143,21 +146,44 @@ public class CurrentContext {
 
 		// Maintain a stack of scoped current contexts so we can set logging context
 		// and clear it out after the topmost context has been unwound
-		Deque<CurrentContext> currentContextStack = CURRENT_CONTEXT_STACK_SCOPED_VALUE.orElse(new ArrayDeque<>());
 
-		ScopedValue.where(CURRENT_CONTEXT_STACK_SCOPED_VALUE, currentContextStack).run(() -> {
+		// TODO: replace with CURRENT_CONTEXT_STACK_SCOPED_VALUE.orElse(new ArrayDeque<>()) once ScopedValue is out of preview.  See https://openjdk.org/jeps/481
+		Deque<CurrentContext> currentContextStack = CURRENT_CONTEXT_STACK_SCOPED_VALUE.get();
+
+		if (currentContextStack == null) {
+			currentContextStack = new ArrayDeque<>();
+			CURRENT_CONTEXT_STACK_SCOPED_VALUE.set(currentContextStack);
+		}
+
+		// TODO: replace with the below commented-out code once ScopedValue is out of preview.  See https://openjdk.org/jeps/481
+		try {
 			currentContextStack.push(this);
-			MDC.put("CURRENT_CONTEXT", determineLoggingDescription());
-
 			try {
+				MDC.put("CURRENT_CONTEXT", determineLoggingDescription());
 				runnable.run();
 			} finally {
 				currentContextStack.pop();
-
-				if (currentContextStack.size() == 0)
-					MDC.remove("CURRENT_CONTEXT");
 			}
-		});
+		} finally {
+			if (currentContextStack.size() == 0) {
+				MDC.remove("CURRENT_CONTEXT");
+				CURRENT_CONTEXT_STACK_SCOPED_VALUE.remove();
+			}
+		}
+
+//		ScopedValue.where(CURRENT_CONTEXT_STACK_SCOPED_VALUE, currentContextStack).run(() -> {
+//			currentContextStack.push(this);
+//
+//			try {
+//				MDC.put("CURRENT_CONTEXT", determineLoggingDescription());
+//				runnable.run();
+//			} finally {
+//				currentContextStack.pop();
+//
+//				if (currentContextStack.size() == 0)
+//					MDC.remove("CURRENT_CONTEXT");
+//			}
+//		});
 	}
 
 	@Nonnull
