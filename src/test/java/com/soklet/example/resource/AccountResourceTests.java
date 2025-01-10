@@ -51,7 +51,7 @@ public class AccountResourceTests {
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			MarshaledResponse marshaledResponse = simulator.performRequest(request);
+			MarshaledResponse marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
 			String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
 			AccountAuthenticateReponseHolder response = gson.fromJson(responseBody, AccountAuthenticateReponseHolder.class);
@@ -66,7 +66,7 @@ public class AccountResourceTests {
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			marshaledResponse = simulator.performRequest(request);
+			marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
 			Assert.assertEquals("Bad status code", 401, marshaledResponse.getStatusCode().intValue());
 		}));

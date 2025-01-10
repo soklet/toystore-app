@@ -83,7 +83,7 @@ public class ToyResourceTests {
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			MarshaledResponse marshaledResponse = simulator.performRequest(request);
+			MarshaledResponse marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
 			Assert.assertEquals("Bad status code", 200, marshaledResponse.getStatusCode().intValue());
 
@@ -101,7 +101,7 @@ public class ToyResourceTests {
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			marshaledResponse = simulator.performRequest(request);
+			marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
 			Assert.assertEquals("Bad status code", 422, marshaledResponse.getStatusCode().intValue());
 
@@ -164,7 +164,7 @@ public class ToyResourceTests {
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			MarshaledResponse marshaledResponse = simulator.performRequest(request);
+			MarshaledResponse marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
 			Assert.assertEquals("Expensive toy creation failed", 200, marshaledResponse.getStatusCode().intValue());
 
@@ -183,7 +183,7 @@ public class ToyResourceTests {
 					)).getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			marshaledResponse = simulator.performRequest(request);
+			marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
 			Assert.assertEquals("Expensive toy purchase did not fail as expected", 422, marshaledResponse.getStatusCode().intValue());
 
@@ -207,7 +207,7 @@ public class ToyResourceTests {
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			marshaledResponse = simulator.performRequest(request);
+			marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
 			Assert.assertEquals("Cheap toy creation failed", 200, marshaledResponse.getStatusCode().intValue());
 
@@ -226,7 +226,7 @@ public class ToyResourceTests {
 					)).getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			marshaledResponse = simulator.performRequest(request);
+			marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
 			Assert.assertEquals("Cheap toy purchase did not succeed", 200, marshaledResponse.getStatusCode().intValue());
 
