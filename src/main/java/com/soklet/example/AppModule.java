@@ -27,14 +27,14 @@ import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
-import com.lokalized.DefaultStrings;
+import com.lokalized.LocaleMatcher;
 import com.lokalized.LocalizedStringLoader;
 import com.lokalized.Strings;
 import com.pyranid.Database;
-import com.pyranid.DefaultInstanceProvider;
-import com.pyranid.DefaultStatementLogger;
+import com.pyranid.InstanceProvider;
 import com.pyranid.StatementContext;
 import com.pyranid.StatementLog;
+import com.pyranid.StatementLogger;
 import com.soklet.SokletConfiguration;
 import com.soklet.core.LifecycleInterceptor;
 import com.soklet.core.LogEvent;
@@ -419,9 +419,9 @@ public class AppModule extends AbstractModule {
 		dataSource.setPassword("");
 
 		// Use Pyranid to simplify JDBC operations
-		return Database.forDataSource(dataSource)
+		return Database.withDataSource(dataSource)
 				// Use Google Guice when Pyranid needs to vend instances
-				.instanceProvider(new DefaultInstanceProvider() {
+				.instanceProvider(new InstanceProvider() {
 					@Override
 					@Nonnull
 					public <T> T provide(@Nonnull StatementContext<T> statementContext,
@@ -429,7 +429,7 @@ public class AppModule extends AbstractModule {
 						return injector.getInstance(instanceType);
 					}
 				})
-				.statementLogger(new DefaultStatementLogger() {
+				.statementLogger(new StatementLogger() {
 					@Nonnull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.example.StatementLogger");
 
@@ -450,12 +450,13 @@ public class AppModule extends AbstractModule {
 	public Strings provideStrings(@Nonnull Provider<CurrentContext> currentContextProvider) {
 		requireNonNull(currentContextProvider);
 
-		String defaultLanguageCode = Configuration.getDefaultLocale().getLanguage();
-
-		return new DefaultStrings.Builder(defaultLanguageCode,
-				() -> LocalizedStringLoader.loadFromFilesystem(Paths.get("strings")))
-				// Rely on the current context's preferred locale to pick the appropriate localization file
-				.localeSupplier(() -> currentContextProvider.get().getLocale())
+		return Strings.withFallbackLocale(Locale.forLanguageTag("en-US"))
+				.localizedStringSupplier(() -> LocalizedStringLoader.loadFromFilesystem(Paths.get("strings")))
+				.localeSupplier((LocaleMatcher localeMatcher) -> {
+					// Using the current context's preferred locale as a hint, pick the best-matching strings file
+					Locale locale = currentContextProvider.get().getLocale();
+					return localeMatcher.bestMatchFor(locale);
+				})
 				.build();
 	}
 

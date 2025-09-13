@@ -67,40 +67,40 @@
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
-            <version>2.11.0</version>
+            <version>2.13.2</version>
         </dependency>
 
         <!-- HSQLDB for an in-memory relational database -->
         <dependency>
             <groupId>org.hsqldb</groupId>
             <artifactId>hsqldb</artifactId>
-            <version>2.7.3</version>
+            <version>2.7.4</version>
         </dependency>
 
         <!-- Pyranid for JDBC -->
         <dependency>
             <groupId>com.pyranid</groupId>
             <artifactId>pyranid</artifactId>
-            <version>2.0.1</version>
+            <version>3.0.0</version>
         </dependency>
 
         <!-- Lokalized for text localization -->
         <dependency>
             <groupId>com.lokalized</groupId>
             <artifactId>lokalized-java</artifactId>
-            <version>1.0.3</version>
+            <version>1.1.0</version>
         </dependency>
 
         <!-- SLF4J for logging -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.5.8</version>
+            <version>1.5.18</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>2.0.16</version>
+            <version>2.0.17</version>
         </dependency>
 
         <!-- Findbugs to mark @Nonnull, @Nullable, etc. -->
