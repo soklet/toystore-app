@@ -26,8 +26,8 @@ import com.soklet.example.App;
 import com.soklet.example.Configuration;
 import com.soklet.example.model.api.request.AccountAuthenticateRequest;
 import com.soklet.example.resource.AccountResource.AccountAuthenticateReponseHolder;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.nio.charset.StandardCharsets;
@@ -56,8 +56,8 @@ public class AccountResourceTests {
 			String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
 			AccountAuthenticateReponseHolder response = gson.fromJson(responseBody, AccountAuthenticateReponseHolder.class);
 
-			Assert.assertEquals("Bad status code", 200, marshaledResponse.getStatusCode().intValue());
-			Assert.assertEquals("Email doesn't match", "admin@soklet.com", response.account().getEmailAddress().get());
+			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Bad status code");
+			Assertions.assertEquals("admin@soklet.com", response.account().getEmailAddress().get(), "Email doesn't match");
 
 			// Incorrect email/password
 			requestBodyJson = gson.toJson(new AccountAuthenticateRequest("fake@soklet.com", "fake"));
@@ -68,7 +68,7 @@ public class AccountResourceTests {
 
 			marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
-			Assert.assertEquals("Bad status code", 401, marshaledResponse.getStatusCode().intValue());
+			Assertions.assertEquals(401, marshaledResponse.getStatusCode().intValue(), "Bad status code");
 		}));
 	}
 }

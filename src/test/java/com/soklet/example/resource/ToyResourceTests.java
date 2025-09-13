@@ -37,8 +37,8 @@ import com.soklet.example.model.auth.AccountJwt;
 import com.soklet.example.service.AccountService;
 import com.soklet.example.util.CreditCardProcessor;
 import com.soklet.example.util.CreditCardProcessor.CreditCardPaymentFailureReason;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -85,15 +85,15 @@ public class ToyResourceTests {
 
 			MarshaledResponse marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
-			Assert.assertEquals("Bad status code", 200, marshaledResponse.getStatusCode().intValue());
+			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Bad status code");
 
 			String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
 			ToyResponseHolder response = gson.fromJson(responseBody, ToyResponseHolder.class);
 
 			// Verify that the toy was created and looks like we expect
-			Assert.assertEquals("Name doesn't match", name, response.toy().getName());
-			Assert.assertEquals("Price doesn't match", price, response.toy().getPrice());
-			Assert.assertEquals("Currency doesn't match", currency.getCurrencyCode(), response.toy().getCurrencyCode());
+			Assertions.assertEquals(name, response.toy().getName(), "Name doesn't match");
+			Assertions.assertEquals(price, response.toy().getPrice(), "Price doesn't match");
+			Assertions.assertEquals(currency.getCurrencyCode(), response.toy().getCurrencyCode(), "Currency doesn't match");
 
 			// Try to create the same toy again and verify that the backend prevents it
 			request = Request.with(HttpMethod.POST, "/toys")
@@ -103,13 +103,13 @@ public class ToyResourceTests {
 
 			marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
-			Assert.assertEquals("Bad status code", 422, marshaledResponse.getStatusCode().intValue());
+			Assertions.assertEquals(422, marshaledResponse.getStatusCode().intValue(), "Bad status code");
 
 			responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
 			ErrorResponse errorResponse = gson.fromJson(responseBody, ErrorResponse.class);
 
-			Assert.assertTrue("Error response was missing a 'name' field error message",
-					errorResponse.getFieldErrors().keySet().contains("name"));
+			Assertions.assertTrue(errorResponse.getFieldErrors().keySet().contains("name"),
+					"Error response was missing a 'name' field error message");
 		}));
 	}
 
@@ -166,7 +166,7 @@ public class ToyResourceTests {
 
 			MarshaledResponse marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
-			Assert.assertEquals("Expensive toy creation failed", 200, marshaledResponse.getStatusCode().intValue());
+			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Expensive toy creation failed");
 
 			String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
 			ToyResponseHolder expensiveToyResponse = gson.fromJson(responseBody, ToyResponseHolder.class);
@@ -185,14 +185,14 @@ public class ToyResourceTests {
 
 			marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
-			Assert.assertEquals("Expensive toy purchase did not fail as expected", 422, marshaledResponse.getStatusCode().intValue());
+			Assertions.assertEquals(422, marshaledResponse.getStatusCode().intValue(), "Expensive toy purchase did not fail as expected");
 
 			responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
 			ErrorResponse errorResponse = gson.fromJson(responseBody, ErrorResponse.class);
 
 			// Ensure the metadata returned in the API response says that the card was declined
-			Assert.assertTrue("Expensive toy error response was missing 'declined' metadata",
-					Objects.equals(CreditCardPaymentFailureReason.DECLINED.name(), errorResponse.getMetadata().get("failureReason")));
+			Assertions.assertTrue(Objects.equals(CreditCardPaymentFailureReason.DECLINED.name(), errorResponse.getMetadata().get("failureReason")),
+					"Expensive toy error response was missing 'declined' metadata");
 
 			// Now, we create a cheap toy and verify that we don't get declined.
 			// First, create a toy by calling the API
@@ -209,7 +209,7 @@ public class ToyResourceTests {
 
 			marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
-			Assert.assertEquals("Cheap toy creation failed", 200, marshaledResponse.getStatusCode().intValue());
+			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Cheap toy creation failed");
 
 			responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
 			ToyResponseHolder cheapToyResponse = gson.fromJson(responseBody, ToyResponseHolder.class);
@@ -228,13 +228,13 @@ public class ToyResourceTests {
 
 			marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
 
-			Assert.assertEquals("Cheap toy purchase did not succeed", 200, marshaledResponse.getStatusCode().intValue());
+			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Cheap toy purchase did not succeed");
 
 			responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
 			PurchaseResponseHolder purchaseResponseHolder = gson.fromJson(responseBody, PurchaseResponseHolder.class);
 
-			Assert.assertEquals("Cheap toy purchase amount mismatch", price, purchaseResponseHolder.purchase().getPrice());
-			Assert.assertEquals("Cheap toy purchase currency mismatch", currency.getCurrencyCode(), purchaseResponseHolder.purchase().getCurrencyCode());
+			Assertions.assertEquals(price, purchaseResponseHolder.purchase().getPrice(), "Cheap toy purchase amount mismatch");
+			Assertions.assertEquals(currency.getCurrencyCode(), purchaseResponseHolder.purchase().getCurrencyCode(), "Cheap toy purchase currency mismatch");
 		}));
 	}
 
