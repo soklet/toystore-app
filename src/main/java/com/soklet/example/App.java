@@ -21,8 +21,9 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import com.pyranid.Database;
+import com.soklet.ShutdownTrigger;
 import com.soklet.Soklet;
-import com.soklet.SokletConfiguration;
+import com.soklet.SokletConfig;
 import com.soklet.example.model.db.Role.RoleId;
 import com.soklet.example.util.PasswordManager;
 import org.slf4j.Logger;
@@ -31,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
-import java.io.IOException;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
@@ -80,17 +80,17 @@ public class App {
 		initializeDatabase();
 	}
 
-	public void startServer() throws IOException, InterruptedException {
-		SokletConfiguration sokletConfiguration = getInjector().getInstance(SokletConfiguration.class);
+	public void startServer() throws InterruptedException {
+		SokletConfig config = getInjector().getInstance(SokletConfig.class);
 
-		try (Soklet soklet = new Soklet(sokletConfiguration)) {
+		try (Soklet soklet = Soklet.withConfig(config)) {
 			soklet.start();
 
 			if (getConfiguration().getStopOnKeypress()) {
 				getLogger().debug("Press [enter] to exit");
-				System.in.read();
+				soklet.awaitShutdown(ShutdownTrigger.ENTER_KEY);
 			} else {
-				Thread.currentThread().join();
+				soklet.awaitShutdown();
 			}
 		}
 	}

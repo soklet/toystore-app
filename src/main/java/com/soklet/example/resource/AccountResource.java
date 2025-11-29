@@ -19,7 +19,6 @@ package com.soklet.example.resource;
 import com.google.inject.Inject;
 import com.soklet.annotation.POST;
 import com.soklet.annotation.RequestBody;
-import com.soklet.annotation.Resource;
 import com.soklet.example.model.api.request.AccountAuthenticateRequest;
 import com.soklet.example.model.api.response.AccountResponse;
 import com.soklet.example.model.api.response.AccountResponse.AccountResponseFactory;
@@ -35,7 +34,6 @@ import static java.util.Objects.requireNonNull;
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-@Resource
 @ThreadSafe
 public class AccountResource {
 	@Nonnull

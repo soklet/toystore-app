@@ -25,7 +25,6 @@ import com.soklet.annotation.PUT;
 import com.soklet.annotation.PathParameter;
 import com.soklet.annotation.QueryParameter;
 import com.soklet.annotation.RequestBody;
-import com.soklet.annotation.Resource;
 import com.soklet.example.CurrentContext;
 import com.soklet.example.annotation.AuthorizationRequired;
 import com.soklet.example.exception.NotFoundException;
@@ -55,7 +54,6 @@ import static java.util.Objects.requireNonNull;
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-@Resource
 @ThreadSafe
 public class ToyResource {
 	@Nonnull

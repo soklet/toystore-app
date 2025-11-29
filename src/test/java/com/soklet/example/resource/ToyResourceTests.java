@@ -20,11 +20,11 @@ import com.google.gson.Gson;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.soklet.HttpMethod;
+import com.soklet.MarshaledResponse;
+import com.soklet.Request;
 import com.soklet.Soklet;
-import com.soklet.SokletConfiguration;
-import com.soklet.core.HttpMethod;
-import com.soklet.core.MarshaledResponse;
-import com.soklet.core.Request;
+import com.soklet.SokletConfig;
 import com.soklet.example.App;
 import com.soklet.example.Configuration;
 import com.soklet.example.CurrentContext;
@@ -65,7 +65,7 @@ public class ToyResourceTests {
 	public void testCreateToy() {
 		App app = new App(new Configuration());
 		Gson gson = app.getInjector().getInstance(Gson.class);
-		SokletConfiguration config = app.getInjector().getInstance(SokletConfiguration.class);
+		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
 
 		Soklet.runSimulator(config, (simulator -> {
 			// Get an auth token so we can provide to API calls
@@ -78,7 +78,7 @@ public class ToyResourceTests {
 
 			String requestBodyJson = gson.toJson(new ToyCreateRequest(name, price, currency));
 
-			Request request = Request.with(HttpMethod.POST, "/toys")
+			Request request = Request.withPath(HttpMethod.POST, "/toys")
 					.headers(Map.of("X-Authentication-Token", Set.of(authenticationToken)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
@@ -96,7 +96,7 @@ public class ToyResourceTests {
 			Assertions.assertEquals(currency.getCurrencyCode(), response.toy().getCurrencyCode(), "Currency doesn't match");
 
 			// Try to create the same toy again and verify that the backend prevents it
-			request = Request.with(HttpMethod.POST, "/toys")
+			request = Request.withPath(HttpMethod.POST, "/toys")
 					.headers(Map.of("X-Authentication-Token", Set.of(authenticationToken)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
@@ -146,7 +146,7 @@ public class ToyResourceTests {
 		});
 
 		Gson gson = app.getInjector().getInstance(Gson.class);
-		SokletConfiguration config = app.getInjector().getInstance(SokletConfiguration.class);
+		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
 
 		Soklet.runSimulator(config, (simulator -> {
 			// Get an auth token so we can provide to API calls
@@ -159,7 +159,7 @@ public class ToyResourceTests {
 
 			String requestBodyJson = gson.toJson(new ToyCreateRequest(name, price, currency));
 
-			Request request = Request.with(HttpMethod.POST, "/toys")
+			Request request = Request.withPath(HttpMethod.POST, "/toys")
 					.headers(Map.of("X-Authentication-Token", Set.of(authenticationToken)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
@@ -175,7 +175,7 @@ public class ToyResourceTests {
 			UUID expensiveToyId = expensiveToyResponse.toy().getToyId();
 
 			// Now, try to purchase the expensive toy and verify that the backend indicates a CC decline
-			request = Request.with(HttpMethod.POST, format("/toys/%s/purchase", expensiveToyId))
+			request = Request.withPath(HttpMethod.POST, format("/toys/%s/purchase", expensiveToyId))
 					.headers(Map.of("X-Authentication-Token", Set.of(authenticationToken)))
 					.body(gson.toJson(Map.of(
 							"creditCardNumber", "4111111111111111",
@@ -202,7 +202,7 @@ public class ToyResourceTests {
 
 			requestBodyJson = gson.toJson(new ToyCreateRequest(name, price, currency));
 
-			request = Request.with(HttpMethod.POST, "/toys")
+			request = Request.withPath(HttpMethod.POST, "/toys")
 					.headers(Map.of("X-Authentication-Token", Set.of(authenticationToken)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
@@ -218,7 +218,7 @@ public class ToyResourceTests {
 			UUID cheapToyId = cheapToyResponse.toy().getToyId();
 
 			// Now, try to purchase the cheap toy and verify that we don't get declined
-			request = Request.with(HttpMethod.POST, format("/toys/%s/purchase", cheapToyId))
+			request = Request.withPath(HttpMethod.POST, format("/toys/%s/purchase", cheapToyId))
 					.headers(Map.of("X-Authentication-Token", Set.of(authenticationToken)))
 					.body(gson.toJson(Map.of(
 							"creditCardNumber", "4111111111111111",

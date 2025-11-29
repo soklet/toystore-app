@@ -35,18 +35,17 @@ import com.pyranid.InstanceProvider;
 import com.pyranid.StatementContext;
 import com.pyranid.StatementLog;
 import com.pyranid.StatementLogger;
-import com.soklet.SokletConfiguration;
-import com.soklet.core.LifecycleInterceptor;
-import com.soklet.core.LogEvent;
-import com.soklet.core.MarshaledResponse;
-import com.soklet.core.Request;
-import com.soklet.core.RequestBodyMarshaler;
-import com.soklet.core.ResourceMethod;
-import com.soklet.core.Response;
-import com.soklet.core.Server;
-import com.soklet.core.impl.DefaultResponseMarshaler;
-import com.soklet.core.impl.DefaultServer;
-import com.soklet.core.impl.WhitelistedOriginsCorsAuthorizer;
+import com.soklet.CorsAuthorizer;
+import com.soklet.LifecycleInterceptor;
+import com.soklet.LogEvent;
+import com.soklet.MarshaledResponse;
+import com.soklet.Request;
+import com.soklet.RequestBodyMarshaler;
+import com.soklet.ResourceMethod;
+import com.soklet.Response;
+import com.soklet.ResponseMarshaler;
+import com.soklet.Server;
+import com.soklet.SokletConfig;
 import com.soklet.example.annotation.AuthorizationRequired;
 import com.soklet.example.exception.ApplicationException;
 import com.soklet.example.exception.AuthenticationException;
@@ -124,12 +123,12 @@ public class AppModule extends AbstractModule {
 	@Nonnull
 	@Provides
 	@Singleton
-	public SokletConfiguration provideSokletConfiguration(@Nonnull Injector injector,
-																												@Nonnull Configuration configuration,
-																												@Nonnull Database database,
-																												@Nonnull AccountService accountService,
-																												@Nonnull Strings strings,
-																												@Nonnull Gson gson) {
+	public SokletConfig provideSokletConfig(@Nonnull Injector injector,
+																					@Nonnull Configuration configuration,
+																					@Nonnull Database database,
+																					@Nonnull AccountService accountService,
+																					@Nonnull Strings strings,
+																					@Nonnull Gson gson) {
 		requireNonNull(injector);
 		requireNonNull(configuration);
 		requireNonNull(database);
@@ -137,7 +136,7 @@ public class AppModule extends AbstractModule {
 		requireNonNull(strings);
 		requireNonNull(gson);
 
-		return SokletConfiguration.withServer(DefaultServer.withPort(configuration.getPort()).host("0.0.0.0").build())
+		return SokletConfig.withServer(Server.withPort(configuration.getPort()).host("0.0.0.0").build())
 				.lifecycleInterceptor(new LifecycleInterceptor() {
 					@Nonnull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.example.LifecycleInterceptor");
@@ -145,7 +144,7 @@ public class AppModule extends AbstractModule {
 					@Override
 					public void didStartRequestHandling(@Nonnull Request request,
 																							@Nullable ResourceMethod resourceMethod) {
-						logger.debug("Received {} {}", request.getHttpMethod(), request.getUri());
+						logger.debug("Received {} {}", request.getHttpMethod(), request.getRawPathAndQuery());
 					}
 
 					@Override
@@ -155,7 +154,7 @@ public class AppModule extends AbstractModule {
 																							 @Nonnull Duration processingDuration,
 																							 @Nonnull List<Throwable> throwables) {
 						logger.debug(format("Finished processing %s %s (HTTP %d) in %.2fms", request.getHttpMethod(),
-								request.getUri(), marshaledResponse.getStatusCode(), processingDuration.toNanos() / 1000000.0));
+								request.getRawPathAndQuery(), marshaledResponse.getStatusCode(), processingDuration.toNanos() / 1000000.0));
 					}
 
 					@Override
@@ -279,122 +278,114 @@ public class AppModule extends AbstractModule {
 						return Optional.of(gson.fromJson(requestBodyAsString, requestBodyType));
 					}
 				})
-				.responseMarshaler(new DefaultResponseMarshaler() {
-					@Nonnull
-					@Override
-					public MarshaledResponse forHappyPath(@Nonnull Request request,
-																								@Nonnull Response response,
-																								@Nonnull ResourceMethod resourceMethod) {
-						// Use Gson to turn response objects into JSON to go over the wire
-						Object bodyObject = response.getBody().orElse(null);
-						byte[] body = bodyObject == null ? null : gson.toJson(bodyObject).getBytes(StandardCharsets.UTF_8);
+				.responseMarshaler(ResponseMarshaler.withDefaults()
+						.resourceMethodHandler((@Nonnull Request request,
+																		@Nonnull Response response,
+																		@Nonnull ResourceMethod resourceMethod) -> {
+							// Use Gson to turn response objects into JSON to go over the wire
+							Object bodyObject = response.getBody().orElse(null);
+							byte[] body = bodyObject == null ? null : gson.toJson(bodyObject).getBytes(StandardCharsets.UTF_8);
 
-						// Ensure content type header is set
-						Map<String, Set<String>> headers = new HashMap<>(response.getHeaders());
-						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
+							// Ensure content type header is set
+							Map<String, Set<String>> headers = new HashMap<>(response.getHeaders());
+							headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
 
-						return MarshaledResponse.withStatusCode(response.getStatusCode())
-								.headers(headers)
-								.cookies(response.getCookies())
-								.body(body)
-								.build();
-					}
+							return MarshaledResponse.withStatusCode(response.getStatusCode())
+									.headers(headers)
+									.cookies(response.getCookies())
+									.body(body)
+									.build();
+						})
+						.notFoundHandler((@Nonnull Request request) -> {
+							// Use Gson to turn the error response into JSON
+							ErrorResponse errorResponse = ErrorResponse.withSummary(strings.get("The resource you requested was not found.")).build();
+							byte[] body = gson.toJson(errorResponse).getBytes(StandardCharsets.UTF_8);
 
-					@Nonnull
-					@Override
-					public MarshaledResponse forNotFound(@Nonnull Request request) {
-						// Use Gson to turn the error response into JSON
-						ErrorResponse errorResponse = ErrorResponse.withSummary(strings.get("The resource you requested was not found.")).build();
-						byte[] body = gson.toJson(errorResponse).getBytes(StandardCharsets.UTF_8);
+							Map<String, Set<String>> headers = new HashMap<>();
+							headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
 
-						Map<String, Set<String>> headers = new HashMap<>();
-						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
+							return MarshaledResponse.withStatusCode(404)
+									.headers(headers)
+									.body(body)
+									.build();
+						})
+						.throwableHandler((@Nonnull Request request,
+															 @Nonnull Throwable throwable,
+															 @Nullable ResourceMethod resourceMethod) -> {
+							// Collect error information for display to client
+							int statusCode;
+							List<String> generalErrors = new ArrayList<>();
+							Map<String, String> fieldErrors = new LinkedHashMap<>();
+							Map<String, Object> metadata = new LinkedHashMap<>();
 
-						return MarshaledResponse.withStatusCode(404)
-								.headers(headers)
-								.body(body)
-								.build();
-					}
-
-					@Nonnull
-					@Override
-					public MarshaledResponse forThrowable(@Nonnull Request request,
-																								@Nonnull Throwable throwable,
-																								@Nullable ResourceMethod resourceMethod) {
-						// Collect error information for display to client
-						int statusCode;
-						List<String> generalErrors = new ArrayList<>();
-						Map<String, String> fieldErrors = new LinkedHashMap<>();
-						Map<String, Object> metadata = new LinkedHashMap<>();
-
-						switch (throwable) {
-							case IllegalQueryParameterException ex -> {
-								statusCode = 400;
-								generalErrors.add(strings.get("Illegal value '{{parameterValue}}' specified for query parameter '{{parameterName}}'",
-										Map.of(
-												"parameterValue", ex.getQueryParameterValue().orElse(strings.get("[not provided]")),
-												"parameterName", ex.getQueryParameterName()
-										)
-								));
+							switch (throwable) {
+								case IllegalQueryParameterException ex -> {
+									statusCode = 400;
+									generalErrors.add(strings.get("Illegal value '{{parameterValue}}' specified for query parameter '{{parameterName}}'",
+											Map.of(
+													"parameterValue", ex.getQueryParameterValue().orElse(strings.get("[not provided]")),
+													"parameterName", ex.getQueryParameterName()
+											)
+									));
+								}
+								case BadRequestException ignored -> {
+									statusCode = 400;
+									generalErrors.add(strings.get("Your request was improperly formatted."));
+								}
+								case AuthenticationException ignored -> {
+									statusCode = 401;
+									generalErrors.add(strings.get("You must be authenticated to perform this action."));
+								}
+								case AuthorizationException ignored -> {
+									statusCode = 403;
+									generalErrors.add(strings.get("You are not authorized to perform this action."));
+								}
+								case NotFoundException ignored -> {
+									statusCode = 404;
+									generalErrors.add(strings.get("The resource you requested was not found."));
+								}
+								case ApplicationException applicationException -> {
+									statusCode = applicationException.getStatusCode();
+									generalErrors.addAll(applicationException.getGeneralErrors());
+									fieldErrors.putAll(applicationException.getFieldErrors());
+									metadata.putAll(applicationException.getMetadata());
+								}
+								default -> {
+									statusCode = 500;
+									generalErrors.add(strings.get("An unexpected error occurred."));
+								}
 							}
-							case BadRequestException ignored -> {
-								statusCode = 400;
-								generalErrors.add(strings.get("Your request was improperly formatted."));
-							}
-							case AuthenticationException ignored -> {
-								statusCode = 401;
-								generalErrors.add(strings.get("You must be authenticated to perform this action."));
-							}
-							case AuthorizationException ignored -> {
-								statusCode = 403;
-								generalErrors.add(strings.get("You are not authorized to perform this action."));
-							}
-							case NotFoundException ignored -> {
-								statusCode = 404;
-								generalErrors.add(strings.get("The resource you requested was not found."));
-							}
-							case ApplicationException applicationException -> {
-								statusCode = applicationException.getStatusCode();
-								generalErrors.addAll(applicationException.getGeneralErrors());
-								fieldErrors.putAll(applicationException.getFieldErrors());
-								metadata.putAll(applicationException.getMetadata());
-							}
-							default -> {
-								statusCode = 500;
-								generalErrors.add(strings.get("An unexpected error occurred."));
-							}
-						}
 
-						// Combine all the error messages into one field for easy access by clients
-						String summary = format("%s %s",
-								generalErrors.stream().collect(Collectors.joining(" ")),
-								fieldErrors.values().stream().collect(Collectors.joining(" "))
-						).trim();
+							// Combine all the error messages into one field for easy access by clients
+							String summary = format("%s %s",
+									generalErrors.stream().collect(Collectors.joining(" ")),
+									fieldErrors.values().stream().collect(Collectors.joining(" "))
+							).trim();
 
-						// Ensure there is always a summary
-						if (summary.length() == 0)
-							summary = strings.get("An unexpected error occurred.");
+							// Ensure there is always a summary
+							if (summary.length() == 0)
+								summary = strings.get("An unexpected error occurred.");
 
-						// Collect all the error information into an object for transport over the wire
-						ErrorResponse errorResponse = ErrorResponse.withSummary(summary)
-								.generalErrors(generalErrors)
-								.fieldErrors(fieldErrors)
-								.metadata(metadata)
-								.build();
+							// Collect all the error information into an object for transport over the wire
+							ErrorResponse errorResponse = ErrorResponse.withSummary(summary)
+									.generalErrors(generalErrors)
+									.fieldErrors(fieldErrors)
+									.metadata(metadata)
+									.build();
 
-						// Use Gson to turn the error response into JSON
-						byte[] body = gson.toJson(errorResponse).getBytes(StandardCharsets.UTF_8);
+							// Use Gson to turn the error response into JSON
+							byte[] body = gson.toJson(errorResponse).getBytes(StandardCharsets.UTF_8);
 
-						Map<String, Set<String>> headers = new HashMap<>();
-						headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
+							Map<String, Set<String>> headers = new HashMap<>();
+							headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
 
-						return MarshaledResponse.withStatusCode(statusCode)
-								.headers(headers)
-								.body(body)
-								.build();
-					}
-				})
-				.corsAuthorizer(new WhitelistedOriginsCorsAuthorizer(configuration.getCorsWhitelistedOrigins()))
+							return MarshaledResponse.withStatusCode(statusCode)
+									.headers(headers)
+									.body(body)
+									.build();
+						}).build()
+				)
+				.corsAuthorizer(CorsAuthorizer.withWhitelistedOrigins(configuration.getCorsWhitelistedOrigins()))
 				// Use Google Guice when Soklet needs to vend instances
 				.instanceProvider(injector::getInstance)
 				.build();

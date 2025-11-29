@@ -16,7 +16,7 @@
 
 package com.soklet.example;
 
-import com.soklet.core.Request;
+import com.soklet.Request;
 import com.soklet.example.model.db.Account;
 import org.slf4j.MDC;
 

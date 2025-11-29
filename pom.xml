@@ -24,7 +24,7 @@
                     <compilerArgs>
                         <arg>-parameters</arg>
                         <arg>-processor</arg>
-                        <arg>com.soklet.annotation.SokletProcessor</arg>
+                        <arg>com.soklet.SokletProcessor</arg>
                     </compilerArgs>
                 </configuration>
             </plugin>

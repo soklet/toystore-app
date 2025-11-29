@@ -17,11 +17,11 @@
 package com.soklet.example.resource;
 
 import com.google.gson.Gson;
+import com.soklet.HttpMethod;
+import com.soklet.MarshaledResponse;
+import com.soklet.Request;
 import com.soklet.Soklet;
-import com.soklet.SokletConfiguration;
-import com.soklet.core.HttpMethod;
-import com.soklet.core.MarshaledResponse;
-import com.soklet.core.Request;
+import com.soklet.SokletConfig;
 import com.soklet.example.App;
 import com.soklet.example.Configuration;
 import com.soklet.example.model.api.request.AccountAuthenticateRequest;
@@ -41,13 +41,13 @@ public class AccountResourceTests {
 	public void testAuthenticate() {
 		App app = new App(new Configuration());
 		Gson gson = app.getInjector().getInstance(Gson.class);
-		SokletConfiguration config = app.getInjector().getInstance(SokletConfiguration.class);
+		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
 
 		Soklet.runSimulator(config, (simulator -> {
 			// Correct email/password
 			String requestBodyJson = gson.toJson(new AccountAuthenticateRequest("admin@soklet.com", "test123"));
 
-			Request request = Request.with(HttpMethod.POST, "/accounts/authenticate")
+			Request request = Request.withPath(HttpMethod.POST, "/accounts/authenticate")
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -62,7 +62,7 @@ public class AccountResourceTests {
 			// Incorrect email/password
 			requestBodyJson = gson.toJson(new AccountAuthenticateRequest("fake@soklet.com", "fake"));
 
-			request = Request.with(HttpMethod.POST, "/accounts/authenticate")
+			request = Request.withPath(HttpMethod.POST, "/accounts/authenticate")
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 

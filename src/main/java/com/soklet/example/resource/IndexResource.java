@@ -18,9 +18,8 @@ package com.soklet.example.resource;
 
 import com.google.inject.Inject;
 import com.lokalized.Strings;
+import com.soklet.MarshaledResponse;
 import com.soklet.annotation.GET;
-import com.soklet.annotation.Resource;
-import com.soklet.core.MarshaledResponse;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -33,7 +32,6 @@ import static java.util.Objects.requireNonNull;
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-@Resource
 @ThreadSafe
 public class IndexResource {
 	@Nonnull
