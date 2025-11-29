@@ -34,9 +34,12 @@
     <!-- Ensure we can see Soklet snapshots -->
     <repositories>
         <repository>
-            <id>oss-sonatype</id>
-            <name>oss-sonatype</name>
-            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+            <name>Central Portal Snapshots</name>
+            <id>central-portal-snapshots</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
@@ -110,7 +113,6 @@
             <version>3.0.2</version>
             <scope>compile</scope>
         </dependency>
-
 
         <!-- JUnit for testing -->
         <dependency>
