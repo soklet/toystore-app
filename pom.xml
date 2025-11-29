@@ -111,12 +111,6 @@
             <scope>compile</scope>
         </dependency>
 
-        <!-- Force Guava transitive dependency version to avoid Java 24 sun.misc.Unsafe warning -->
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>33.5.0-jre</version>
-        </dependency>
 
         <!-- JUnit for testing -->
         <dependency>
