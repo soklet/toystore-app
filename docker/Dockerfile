@@ -41,4 +41,4 @@ RUN mvn dependency:copy-dependencies
 USER 1000
 
 # Run app
-CMD ["/bin/sh", "-c", "java -Xms128m -Xmx512m -cp \"target/classes:target/dependency/*\" --add-opens java.base/java.time=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED com.soklet.example.App"]
+CMD ["/bin/sh", "-c", "java -Xms128m -Xmx512m -cp \"target/classes:target/dependency/*\" --sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED --add-opens java.base/java.time=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED com.soklet.example.App"]

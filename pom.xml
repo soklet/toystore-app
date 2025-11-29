@@ -20,7 +20,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <release>21</release>
+                    <release>25</release>
                     <compilerArgs>
                         <arg>-parameters</arg>
                         <arg>-processor</arg>
@@ -87,7 +87,7 @@
         <!-- Lokalized for text localization -->
         <dependency>
             <groupId>com.lokalized</groupId>
-            <artifactId>lokalized-java</artifactId>
+            <artifactId>lokalized</artifactId>
             <version>1.1.0</version>
         </dependency>
 
@@ -109,6 +109,13 @@
             <artifactId>jsr305</artifactId>
             <version>3.0.2</version>
             <scope>compile</scope>
+        </dependency>
+
+        <!-- Force Guava transitive dependency version to avoid Java 24 sun.misc.Unsafe warning -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>33.5.0-jre</version>
         </dependency>
 
         <!-- JUnit for testing -->

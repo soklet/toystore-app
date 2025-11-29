@@ -25,8 +25,6 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.annotation.concurrent.ThreadSafe;
 import java.time.ZoneId;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -38,13 +36,11 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class CurrentContext {
-	// TODO: Replace with ScopedValue<Deque<CurrentContext>> once ScopedValue is out of preview.  See https://openjdk.org/jeps/481
 	@Nonnull
-	private static final ThreadLocal<Deque<CurrentContext>> CURRENT_CONTEXT_STACK_SCOPED_VALUE;
+	private static final ScopedValue<CurrentContext> CURRENT_CONTEXT_SCOPED_VALUE;
 
 	static {
-		// TODO: Replace with ScopedValue.newInstance()  once ScopedValue is out of preview.  See https://openjdk.org/jeps/481
-		CURRENT_CONTEXT_STACK_SCOPED_VALUE = new ThreadLocal<>();
+		CURRENT_CONTEXT_SCOPED_VALUE = ScopedValue.newInstance();
 	}
 
 	@Nullable
@@ -58,19 +54,10 @@ public class CurrentContext {
 
 	@Nonnull
 	public static CurrentContext get() {
-		// TODO: Replace with !CURRENT_CONTEXT_STACK_SCOPED_VALUE.isBound() once ScopedValue is out of preview.  See https://openjdk.org/jeps/481
-		if (CURRENT_CONTEXT_STACK_SCOPED_VALUE.get() == null)
-			throw new IllegalStateException(format("No %s is bound to the current scope",
-					CurrentContext.class.getSimpleName()));
+		if (!CURRENT_CONTEXT_SCOPED_VALUE.isBound())
+			throw new IllegalStateException(format("No %s is bound to the current scope", CurrentContext.class.getSimpleName()));
 
-		CurrentContext currentContext = CURRENT_CONTEXT_STACK_SCOPED_VALUE.get().peek();
-
-		// Indicates programmer error
-		if (currentContext == null)
-			throw new IllegalStateException(format("The %s stack bound to the current scope is empty",
-					CurrentContext.class.getSimpleName()));
-
-		return currentContext;
+		return CURRENT_CONTEXT_SCOPED_VALUE.get();
 	}
 
 	@NotThreadSafe
@@ -117,8 +104,8 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	public static Builder with(@Nonnull Locale locale,
-														 @Nonnull ZoneId timeZone) {
+	public static Builder with(@Nullable Locale locale,
+														 @Nullable ZoneId timeZone) {
 		return new Builder().locale(locale).timeZone(timeZone);
 	}
 
@@ -144,46 +131,24 @@ public class CurrentContext {
 	public void run(@Nonnull Runnable runnable) {
 		requireNonNull(runnable);
 
-		// Maintain a stack of scoped current contexts so we can set logging context
-		// and clear it out after the topmost context has been unwound
+		// Capture the previous MDC value to restore it later
+		String previousMdc = MDC.get("CURRENT_CONTEXT");
 
-		// TODO: replace with CURRENT_CONTEXT_STACK_SCOPED_VALUE.orElse(new ArrayDeque<>()) once ScopedValue is out of preview.  See https://openjdk.org/jeps/481
-		Deque<CurrentContext> currentContextStack = CURRENT_CONTEXT_STACK_SCOPED_VALUE.get();
-
-		if (currentContextStack == null) {
-			currentContextStack = new ArrayDeque<>();
-			CURRENT_CONTEXT_STACK_SCOPED_VALUE.set(currentContextStack);
-		}
-
-		// TODO: replace with the below commented-out code once ScopedValue is out of preview.  See https://openjdk.org/jeps/481
-		try {
-			currentContextStack.push(this);
+		// Create the binding for the new scope
+		ScopedValue.where(CURRENT_CONTEXT_SCOPED_VALUE, this).run(() -> {
 			try {
+				// Apply new logging context
 				MDC.put("CURRENT_CONTEXT", determineLoggingDescription());
 				runnable.run();
 			} finally {
-				currentContextStack.pop();
+				// Restore previous logging context (or clear if we were at the root)
+				if (previousMdc != null) {
+					MDC.put("CURRENT_CONTEXT", previousMdc);
+				} else {
+					MDC.remove("CURRENT_CONTEXT");
+				}
 			}
-		} finally {
-			if (currentContextStack.size() == 0) {
-				MDC.remove("CURRENT_CONTEXT");
-				CURRENT_CONTEXT_STACK_SCOPED_VALUE.remove();
-			}
-		}
-
-//		ScopedValue.where(CURRENT_CONTEXT_STACK_SCOPED_VALUE, currentContextStack).run(() -> {
-//			currentContextStack.push(this);
-//
-//			try {
-//				MDC.put("CURRENT_CONTEXT", determineLoggingDescription());
-//				runnable.run();
-//			} finally {
-//				currentContextStack.pop();
-//
-//				if (currentContextStack.size() == 0)
-//					MDC.remove("CURRENT_CONTEXT");
-//			}
-//		});
+		});
 	}
 
 	@Nonnull
@@ -208,9 +173,10 @@ public class CurrentContext {
 
 	@Nonnull
 	protected String determineLoggingDescription() {
-		CurrentContext currentContext = get();
-		Request request = currentContext.getRequest().orElse(null);
-		Account account = currentContext.getAccount().orElse(null);
+		// Optimization: we can use 'this' directly instead of calling get()
+		// because this method is called within the context of the instance being bound.
+		Request request = this.getRequest().orElse(null);
+		Account account = this.getAccount().orElse(null);
 
 		String requestDescription = request == null ? "background thread" : request.getId().toString();
 		String accountDescription = account == null ? "unauthenticated" : account.name();
