@@ -34,7 +34,7 @@ public record Account(
 		@Nonnull RoleId roleId,
 		@Nonnull String name,
 		@Nonnull String emailAddress,
-		@Nonnull String password,
+		@Nonnull String passwordHash,
 		@Nonnull ZoneId timeZone,
 		@Nonnull Locale locale,
 		@Nonnull Instant createdAt
@@ -44,7 +44,7 @@ public record Account(
 		requireNonNull(roleId);
 		requireNonNull(name);
 		requireNonNull(emailAddress);
-		requireNonNull(password);
+		requireNonNull(passwordHash);
 		requireNonNull(timeZone);
 		requireNonNull(locale);
 		requireNonNull(createdAt);

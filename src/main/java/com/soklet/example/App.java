@@ -121,7 +121,7 @@ public class App {
 					role_id VARCHAR(255) NOT NULL REFERENCES role(role_id),
 					name VARCHAR(1024) NOT NULL,
 					email_address VARCHAR(1024),
-					password VARCHAR(1024),
+					password_hash VARCHAR(1024),
 					time_zone VARCHAR(255) NOT NULL, -- e.g. 'America/New_York'
 					locale VARCHAR(255) NOT NULL, -- e.g. 'pt-BR'
 					created_at TIMESTAMP DEFAULT NOW() NOT NULL
@@ -135,7 +135,7 @@ public class App {
 							role_id,
 							name,
 							email_address,
-							password,
+							password_hash,
 							time_zone,
 							locale
 						) VALUES (?,?,?,?,?,?,?)

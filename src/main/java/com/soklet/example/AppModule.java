@@ -478,10 +478,9 @@ public class AppModule extends AbstractModule {
 		// Because this is a sample system, we choose fast but less secure values.
 		// Real systems should increase per comments below.
 		return PasswordManager.withHashAlgorithm("PBKDF2WithHmacSHA512")
-				.rngAlgorithm("SHA1PRNG")
 				.iterations(5_000) // OWASP 2023 recommends 210_000 instead
 				.saltLength(16) // Larger value is recommended, e.g. 64
-				.keyLength(128 * 8) // Larger value is recommended, e.g. 128 * 16
+				.keyLength(512)
 				.build();
 	}
 

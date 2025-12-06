@@ -103,7 +103,7 @@ public class AccountService {
 				""", Account.class, emailAddress.toLowerCase(Locale.US)).orElse(null);
 
 		// Reject if no account, or account's hashed password does not match
-		if (account == null || !getPasswordManager().verifyPassword(password, account.password()))
+		if (account == null || !getPasswordManager().verifyPassword(password, account.passwordHash()))
 			throw ApplicationException.withStatusCode(401)
 					.generalError(getStrings().get("Sorry, we could not authenticate you."))
 					.build();
