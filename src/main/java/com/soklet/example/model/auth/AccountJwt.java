@@ -81,6 +81,10 @@ public record AccountJwt(
 
 		record Expired(@Nonnull AccountJwt accountJwt, @Nonnull Instant expiredAt) implements AccountJwtResult {}
 
+		record MissingHeaders(@Nonnull Set<String> headers) implements AccountJwtResult {}
+
+		record InvalidHeaders(@Nonnull Set<String> headers) implements AccountJwtResult {}
+
 		record MissingClaims(@Nonnull Set<String> claims) implements AccountJwtResult {}
 
 		record InvalidClaims(@Nonnull Set<String> claims) implements AccountJwtResult {}
@@ -96,6 +100,7 @@ public record AccountJwt(
 		requireNonNull(publicKey);
 
 		String[] components = string.trim().split("\\.");
+
 		if (components.length != 3)
 			return new AccountJwtResult.InvalidStructure();
 
@@ -125,11 +130,22 @@ public record AccountJwt(
 			return new AccountJwtResult.InvalidStructure();
 		}
 
-		Object algObj = header.get("alg");
-		if (!(algObj instanceof String alg) || !"EdDSA".equals(alg)) {
-			// Wrong or missing alg
-			return new AccountJwtResult.InvalidClaims(Set.of("alg"));
-		}
+		// Validate required headers
+		Set<String> missingHeaders = new LinkedHashSet<>();
+		Set<String> invalidHeaders = new LinkedHashSet<>();
+
+		Object algAsObject = header.get("alg");
+
+		if (algAsObject == null)
+			missingHeaders.add("alg");
+		else if (!(algAsObject instanceof String alg) || !"EdDSA".equals(alg))
+			invalidHeaders.add("alg");
+
+		if (!missingHeaders.isEmpty())
+			return new AccountJwtResult.MissingHeaders(missingHeaders);
+
+		if (!invalidHeaders.isEmpty())
+			return new AccountJwtResult.InvalidHeaders(invalidHeaders);
 
 		// Verify signature
 		String signingInput = format("%s.%s", encodedHeader, encodedPayload);
@@ -172,6 +188,7 @@ public record AccountJwt(
 			return new AccountJwtResult.MissingClaims(missingClaims);
 
 		UUID sub;
+
 		try {
 			sub = UUID.fromString(subAsString);
 		} catch (IllegalArgumentException ignored) {
