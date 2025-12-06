@@ -204,7 +204,7 @@ public class AppModule extends AbstractModule {
 
 						// ...and if it exists, see if we can pull an account from it.
 						if (authenticationTokenAsString != null) {
-							AccountJwtResult accountJwtResult = AccountJwt.fromStringRepresentation(authenticationTokenAsString, configuration.getKeyPair().getPrivate());
+							AccountJwtResult accountJwtResult = AccountJwt.fromStringRepresentation(authenticationTokenAsString, configuration.getKeyPair().getPublic());
 
 							switch (accountJwtResult) {
 								case Succeeded(@Nonnull AccountJwt accountJwt) -> {
@@ -567,7 +567,7 @@ public class AppModule extends AbstractModule {
 					@Override
 					@Nullable
 					public AccountJwt read(@Nonnull JsonReader jsonReader) throws IOException {
-						AccountJwtResult accountJwtResult = AccountJwt.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPrivate());
+						AccountJwtResult accountJwtResult = AccountJwt.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPublic());
 
 						switch (accountJwtResult) {
 							case Succeeded(@Nonnull AccountJwt accountJwt) -> {

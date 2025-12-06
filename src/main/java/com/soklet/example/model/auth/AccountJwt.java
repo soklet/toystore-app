@@ -20,16 +20,14 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import javax.annotation.Nonnull;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
+import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.Signature;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Base64;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -63,6 +61,10 @@ public record AccountJwt(
 		return expiresAt().isBefore(Instant.now());
 	}
 
+
+	/**
+	 * Encodes this JWT to a string representation and signs it using Ed25519.
+	 */
 	@Nonnull
 	public String toStringRepresentation(@Nonnull PrivateKey privateKey) {
 		requireNonNull(privateKey);
@@ -84,14 +86,16 @@ public record AccountJwt(
 		record InvalidClaims(@Nonnull Set<String> claims) implements AccountJwtResult {}
 	}
 
+	/**
+	 * Parses and verifies an AccountJwt from its string representation using the given Ed25519 public key.
+	 */
 	@Nonnull
 	public static AccountJwtResult fromStringRepresentation(@Nonnull String string,
-																													@Nonnull PrivateKey privateKey) {
+																													@Nonnull PublicKey publicKey) {
 		requireNonNull(string);
-		requireNonNull(privateKey);
+		requireNonNull(publicKey);
 
 		String[] components = string.trim().split("\\.");
-
 		if (components.length != 3)
 			return new AccountJwtResult.InvalidStructure();
 
@@ -99,44 +103,88 @@ public record AccountJwt(
 		String encodedPayload = components[1];
 		String encodedSignature = components[2];
 
-		String decodedPayload = new String(base64Decode(encodedPayload), StandardCharsets.UTF_8);
-		byte[] decodedSignature = base64Decode(encodedSignature);
-		byte[] expectedSignature = hmacSha512(format("%s.%s", encodedHeader, encodedPayload), privateKey);
+		String decodedHeaderJson;
+		String decodedPayloadJson;
+		byte[] signatureBytes;
 
-		if (!Arrays.equals(expectedSignature, decodedSignature))
+		try {
+			decodedHeaderJson = new String(base64UrlDecode(encodedHeader), StandardCharsets.UTF_8);
+			decodedPayloadJson = new String(base64UrlDecode(encodedPayload), StandardCharsets.UTF_8);
+			signatureBytes = base64UrlDecode(encodedSignature);
+		} catch (RuntimeException e) {
+			// Bad base64, etc.
+			return new AccountJwtResult.InvalidStructure();
+		}
+
+		// Verify header alg
+		Map<String, Object> header;
+
+		try {
+			header = GSON.fromJson(decodedHeaderJson, Map.class);
+		} catch (RuntimeException e) {
+			return new AccountJwtResult.InvalidStructure();
+		}
+
+		Object algObj = header.get("alg");
+		if (!(algObj instanceof String alg) || !"EdDSA".equals(alg)) {
+			// Wrong or missing alg
+			return new AccountJwtResult.InvalidClaims(Set.of("alg"));
+		}
+
+		// Verify signature
+		String signingInput = format("%s.%s", encodedHeader, encodedPayload);
+		boolean signatureValid;
+
+		try {
+			signatureValid = verifyEd25519(signingInput, signatureBytes, publicKey);
+		} catch (GeneralSecurityException | RuntimeException e) {
+			return new AccountJwtResult.InvalidStructure();
+		}
+
+		if (!signatureValid)
 			return new AccountJwtResult.SignatureMismatch();
 
-		Map<String, Object> decodedPayloadAsMap = GSON.fromJson(decodedPayload, Map.class);
-		String subAsString = (String) decodedPayloadAsMap.get("sub");
-		Number iatAsNumber = (Number) decodedPayloadAsMap.get("iat");
-		Number expAsNumber = (Number) decodedPayloadAsMap.get("exp");
+		// Parse payload claims
+		Map<String, Object> payload;
 
-		Set<String> missingClaims = new HashSet<>();
+		try {
+			payload = GSON.fromJson(decodedPayloadJson, Map.class);
+		} catch (RuntimeException e) {
+			return new AccountJwtResult.InvalidStructure();
+		}
+
+		String subAsString = (String) payload.get("sub");
+		Number iatAsNumber = (Number) payload.get("iat");
+		Number expAsNumber = (Number) payload.get("exp");
+
+		Set<String> missingClaims = new LinkedHashSet<>();
 
 		if (subAsString == null)
 			missingClaims.add("sub");
+
 		if (iatAsNumber == null)
 			missingClaims.add("iat");
+
 		if (expAsNumber == null)
 			missingClaims.add("exp");
 
-		if (missingClaims.size() > 0)
+		if (!missingClaims.isEmpty())
 			return new AccountJwtResult.MissingClaims(missingClaims);
 
+		UUID sub;
 		try {
-			UUID.fromString(subAsString);
+			sub = UUID.fromString(subAsString);
 		} catch (IllegalArgumentException ignored) {
 			return new AccountJwtResult.InvalidClaims(Set.of("sub"));
 		}
 
-		UUID sub = UUID.fromString(subAsString);
-		Instant iat = Instant.ofEpochSecond(iatAsNumber.longValue());
-		Instant exp = Instant.ofEpochSecond(expAsNumber.longValue());
+		Instant issuedAt = Instant.ofEpochSecond(iatAsNumber.longValue());
+		Instant expiresAt = Instant.ofEpochSecond(expAsNumber.longValue());
 
-		AccountJwt accountJwt = new AccountJwt(sub, iat, exp);
+		AccountJwt accountJwt = new AccountJwt(sub, issuedAt, expiresAt);
 
-		if (exp.isBefore(Instant.now()))
-			return new AccountJwtResult.Expired(accountJwt, exp);
+		if (expiresAt.isBefore(Instant.now()))
+			return new AccountJwtResult.Expired(accountJwt, expiresAt);
 
 		return new AccountJwtResult.Succeeded(accountJwt);
 	}
@@ -151,50 +199,69 @@ public record AccountJwt(
 		requireNonNull(expiresAt);
 		requireNonNull(privateKey);
 
-		String header = GSON.toJson(Map.of(
-				"alg", "HS512",
+		String headerJson = GSON.toJson(Map.of(
+				"alg", "EdDSA",
 				"typ", "JWT"
 		));
 
-		String payload = GSON.toJson(Map.of(
+		String payloadJson = GSON.toJson(Map.of(
 				"sub", accountId,
 				"iat", issuedAt.getEpochSecond(),
 				"exp", expiresAt.getEpochSecond()
 		));
 
-		String encodedHeader = base64Encode(header.getBytes(StandardCharsets.UTF_8));
-		String encodedPayload = base64Encode(payload.getBytes(StandardCharsets.UTF_8));
+		String encodedHeader = base64UrlEncode(headerJson.getBytes(StandardCharsets.UTF_8));
+		String encodedPayload = base64UrlEncode(payloadJson.getBytes(StandardCharsets.UTF_8));
 
-		byte[] signature = hmacSha512(format("%s.%s", encodedHeader, encodedPayload), privateKey);
-		String encodedSignature = base64Encode(signature);
+		String signingInput = format("%s.%s", encodedHeader, encodedPayload);
+
+		byte[] signatureBytes;
+
+		try {
+			signatureBytes = signEd25519(signingInput, privateKey);
+		} catch (GeneralSecurityException e) {
+			throw new IllegalArgumentException("Unable to compute Ed25519 signature", e);
+		}
+
+		String encodedSignature = base64UrlEncode(signatureBytes);
 
 		return format("%s.%s.%s", encodedHeader, encodedPayload, encodedSignature);
 	}
 
 	@Nonnull
-	private static byte[] hmacSha512(@Nonnull String string,
-																	 @Nonnull PrivateKey privateKey) {
-		requireNonNull(string);
+	private static byte[] signEd25519(@Nonnull String signingInput,
+																		@Nonnull PrivateKey privateKey) throws GeneralSecurityException {
+		requireNonNull(signingInput);
 		requireNonNull(privateKey);
 
-		try {
-			Mac hmacSha512 = Mac.getInstance("HmacSHA512");
-			SecretKeySpec secretKeySpec = new SecretKeySpec(privateKey.getEncoded(), privateKey.getAlgorithm());
-			hmacSha512.init(secretKeySpec);
-			return hmacSha512.doFinal(string.getBytes(StandardCharsets.UTF_8));
-		} catch (NoSuchAlgorithmException | InvalidKeyException e) {
-			throw new IllegalArgumentException(e);
-		}
+		Signature signature = Signature.getInstance("Ed25519");
+		signature.initSign(privateKey);
+		signature.update(signingInput.getBytes(StandardCharsets.UTF_8));
+		return signature.sign();
 	}
 
 	@Nonnull
-	private static String base64Encode(@Nonnull byte[] bytes) {
+	private static Boolean verifyEd25519(@Nonnull String signingInput,
+																			 @Nonnull byte[] signatureBytes,
+																			 @Nonnull PublicKey publicKey) throws GeneralSecurityException {
+		requireNonNull(signingInput);
+		requireNonNull(signatureBytes);
+		requireNonNull(publicKey);
+
+		Signature signature = Signature.getInstance("Ed25519");
+		signature.initVerify(publicKey);
+		signature.update(signingInput.getBytes(StandardCharsets.UTF_8));
+		return signature.verify(signatureBytes);
+	}
+
+	@Nonnull
+	private static String base64UrlEncode(@Nonnull byte[] bytes) {
 		requireNonNull(bytes);
 		return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 	}
 
 	@Nonnull
-	private static byte[] base64Decode(@Nonnull String string) {
+	private static byte[] base64UrlDecode(@Nonnull String string) {
 		requireNonNull(string);
 		return Base64.getUrlDecoder().decode(string);
 	}
