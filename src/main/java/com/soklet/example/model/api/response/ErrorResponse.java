@@ -19,6 +19,7 @@ package com.soklet.example.model.api.response;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
+import javax.annotation.concurrent.ThreadSafe;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -28,13 +29,14 @@ import static java.util.Objects.requireNonNull;
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
+@ThreadSafe
 public class ErrorResponse {
 	@Nonnull
 	private final String summary;
 	@Nonnull
 	private final List<String> generalErrors;
 	@Nonnull
-	private final Map<String, String> fieldErrors;
+	private final Map<String, List<String>> fieldErrors;
 	@Nonnull
 	private final Map<String, Object> metadata;
 
@@ -60,7 +62,7 @@ public class ErrorResponse {
 		@Nullable
 		private List<String> generalErrors;
 		@Nullable
-		private Map<String, String> fieldErrors;
+		private Map<String, List<String>> fieldErrors;
 		@Nullable
 		private Map<String, Object> metadata;
 
@@ -83,7 +85,7 @@ public class ErrorResponse {
 		}
 
 		@Nonnull
-		public Builder fieldErrors(@Nullable Map<String, String> fieldErrors) {
+		public Builder fieldErrors(@Nullable Map<String, List<String>> fieldErrors) {
 			this.fieldErrors = fieldErrors;
 			return this;
 		}
@@ -111,7 +113,7 @@ public class ErrorResponse {
 	}
 
 	@Nonnull
-	public Map<String, String> getFieldErrors() {
+	public Map<String, List<String>> getFieldErrors() {
 		return this.fieldErrors;
 	}
 

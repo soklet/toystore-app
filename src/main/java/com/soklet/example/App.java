@@ -184,7 +184,7 @@ public class App {
 	}
 
 	@Nonnull
-	protected Logger getLogger() {
+	private Logger getLogger() {
 		return this.logger;
 	}
 }

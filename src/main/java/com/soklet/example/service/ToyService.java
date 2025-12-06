@@ -23,6 +23,7 @@ import com.pyranid.Database;
 import com.pyranid.DatabaseException;
 import com.soklet.example.CurrentContext;
 import com.soklet.example.exception.ApplicationException;
+import com.soklet.example.exception.ApplicationException.ErrorCollector;
 import com.soklet.example.model.api.request.ToyCreateRequest;
 import com.soklet.example.model.api.request.ToyPurchaseRequest;
 import com.soklet.example.model.api.request.ToyUpdateRequest;
@@ -40,7 +41,6 @@ import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.YearMonth;
 import java.util.Currency;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -126,23 +126,21 @@ public class ToyService {
 		String name = request.name() == null ? "" : request.name().trim();
 		BigDecimal price = request.price();
 		Currency currency = request.currency();
-		Map<String, String> fieldErrors = new LinkedHashMap<>();
+		ErrorCollector errorCollector = new ErrorCollector();
 
 		if (name.length() == 0)
-			fieldErrors.put("name", getStrings().get("Name is required."));
+			errorCollector.addFieldError("name", getStrings().get("Name is required."));
 
 		if (price == null)
-			fieldErrors.put("price", getStrings().get("Price is required."));
+			errorCollector.addFieldError("price", getStrings().get("Price is required."));
 		else if (price.compareTo(BigDecimal.ZERO) < 0)
-			fieldErrors.put("price", getStrings().get("Price cannot be negative."));
+			errorCollector.addFieldError("price", getStrings().get("Price cannot be negative."));
 
 		if (currency == null)
-			fieldErrors.put("currency", getStrings().get("Currency is required."));
+			errorCollector.addFieldError("currency", getStrings().get("Currency is required."));
 
-		if (fieldErrors.size() > 0)
-			throw ApplicationException.withStatusCode(422)
-					.fieldErrors(fieldErrors)
-					.build();
+		if (errorCollector.hasErrors())
+			throw ApplicationException.withStatusCodeAndErrors(422, errorCollector).build();
 
 		if (getLogger().isInfoEnabled())
 			getLogger().info("Creating toy '{}', which costs {}", name, formatPriceForDisplay(price, currency));
@@ -161,7 +159,9 @@ public class ToyService {
 			// by exposing a helpful message to the caller
 			if (e.getMessage().contains("TOY_NAME_UNIQUE_IDX")) {
 				throw ApplicationException.withStatusCode(422)
-						.fieldErrors(Map.of("name", getStrings().get("There is already a toy named '{{name}}'.", Map.of("name", name))))
+						.fieldErrors(Map.of(
+								"name", List.of(getStrings().get("There is already a toy named '{{name}}'.", Map.of("name", name)))
+						))
 						.build();
 			} else {
 				// Some other problem; just bubble out
@@ -199,25 +199,22 @@ public class ToyService {
 		String creditCardNumber = request.creditCardNumber();
 		YearMonth creditCardExpiration = request.creditCardExpiration();
 		Toy toy = findToyById(request.toyId()).orElse(null);
-		String creditCardTransactionId = null;
-
-		Map<String, String> fieldErrors = new LinkedHashMap<>();
+		String creditCardTransactionId;
+		ErrorCollector errorCollector = new ErrorCollector();
 
 		if (accountId == null)
-			fieldErrors.put("accountId", getStrings().get("Account ID is required."));
+			errorCollector.addFieldError("accountId", getStrings().get("Account ID is required."));
 
 		if (creditCardNumber == null)
-			fieldErrors.put("creditCardNumber", getStrings().get("Credit card number is required."));
+			errorCollector.addFieldError("creditCardNumber", getStrings().get("Credit card number is required."));
 
 		if (creditCardExpiration == null)
-			fieldErrors.put("creditCardExpiration", getStrings().get("Credit card expiration is required."));
+			errorCollector.addFieldError("creditCardExpiration", getStrings().get("Credit card expiration is required."));
 		else if (creditCardExpiration.isBefore(YearMonth.now(getCurrentContext().getTimeZone())))
-			fieldErrors.put("creditCardExpiration", getStrings().get("Credit card is expired."));
+			errorCollector.addFieldError("creditCardExpiration", getStrings().get("Credit card is expired."));
 
-		if (fieldErrors.size() > 0)
-			throw ApplicationException.withStatusCode(422)
-					.fieldErrors(fieldErrors)
-					.build();
+		if (errorCollector.hasErrors())
+			throw ApplicationException.withStatusCodeAndErrors(422, errorCollector).build();
 
 		// Charge the card, then record the transaction.
 		// NOTE: A real system would have more thorough recordkeeping in order to detect scenarios
@@ -226,9 +223,11 @@ public class ToyService {
 		try {
 			creditCardTransactionId = getCreditCardProcessor().makePayment(creditCardNumber, toy.price(), toy.currency());
 		} catch (CreditCardPaymentException e) {
-			throw ApplicationException.withStatusCode(422)
-					.generalError(getStrings().get("We were unable to charge {{amount}} to your credit card.",
-							Map.of("amount", formatPriceForDisplay(toy.price(), toy.currency()))))
+			throw ApplicationException.withStatusCodeAndGeneralError(422,
+							getStrings().get("We were unable to charge {{amount}} to your credit card.",
+									Map.of("amount", formatPriceForDisplay(toy.price(), toy.currency()))
+							)
+					)
 					.metadata(Map.of("failureReason", e.getFailureReason()))
 					.build();
 		}

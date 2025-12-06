@@ -20,6 +20,7 @@ import com.google.inject.Inject;
 import com.lokalized.Strings;
 import com.pyranid.Database;
 import com.soklet.example.exception.ApplicationException;
+import com.soklet.example.exception.ApplicationException.ErrorCollector;
 import com.soklet.example.model.api.request.AccountAuthenticateRequest;
 import com.soklet.example.model.auth.AccountJwt;
 import com.soklet.example.model.db.Account;
@@ -32,9 +33,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.LinkedHashMap;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -86,18 +85,16 @@ public class AccountService {
 
 		String emailAddress = request.emailAddress() == null ? "" : request.emailAddress().trim();
 		String password = request.password() == null ? "" : request.password().trim();
-		Map<String, String> fieldErrors = new LinkedHashMap<>();
+		ErrorCollector errorCollector = new ErrorCollector();
 
 		if (emailAddress.length() == 0)
-			fieldErrors.put("emailAddress", getStrings().get("Email address is required."));
+			errorCollector.addFieldError("emailAddress", getStrings().get("Email address is required."));
 
 		if (password.length() == 0)
-			fieldErrors.put("password", getStrings().get("Password is required."));
+			errorCollector.addFieldError("password", getStrings().get("Password is required."));
 
-		if (fieldErrors.size() > 0)
-			throw ApplicationException.withStatusCode(422)
-					.fieldErrors(fieldErrors)
-					.build();
+		if (errorCollector.hasErrors())
+			throw ApplicationException.withStatusCodeAndErrors(422, errorCollector).build();
 
 		Account account = getDatabase().executeForObject("""
 				SELECT *

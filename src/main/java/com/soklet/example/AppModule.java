@@ -88,11 +88,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -315,41 +317,54 @@ public class AppModule extends AbstractModule {
 							// Collect error information for display to client
 							int statusCode;
 							List<String> generalErrors = new ArrayList<>();
-							Map<String, String> fieldErrors = new LinkedHashMap<>();
+							Map<String, List<String>> fieldErrors = new LinkedHashMap<>();
 							Map<String, Object> metadata = new LinkedHashMap<>();
+
+							// Unwrap CompletionExceptions
+							if (throwable instanceof CompletionException) {
+								Throwable cause = throwable.getCause();
+								if (cause != null)
+									throwable = cause;
+							}
 
 							switch (throwable) {
 								case IllegalQueryParameterException ex -> {
 									statusCode = 400;
-									generalErrors.add(strings.get("Illegal value '{{parameterValue}}' specified for query parameter '{{parameterName}}'",
+									generalErrors.add(strings.get("Illegal value '{{parameterValue}}' specified for query parameter '{{parameterName}}'.",
 											Map.of(
-													"parameterValue", ex.getQueryParameterValue().orElse(strings.get("[not provided]")),
+													"parameterValue", ex.getQueryParameterValue().orElse(strings.get("(not provided)")),
 													"parameterName", ex.getQueryParameterName()
 											)
 									));
 								}
+
 								case BadRequestException ignored -> {
 									statusCode = 400;
 									generalErrors.add(strings.get("Your request was improperly formatted."));
 								}
+
 								case AuthenticationException ignored -> {
 									statusCode = 401;
 									generalErrors.add(strings.get("You must be authenticated to perform this action."));
 								}
+
 								case AuthorizationException ignored -> {
 									statusCode = 403;
 									generalErrors.add(strings.get("You are not authorized to perform this action."));
 								}
+
 								case NotFoundException ignored -> {
 									statusCode = 404;
 									generalErrors.add(strings.get("The resource you requested was not found."));
 								}
+
 								case ApplicationException applicationException -> {
 									statusCode = applicationException.getStatusCode();
 									generalErrors.addAll(applicationException.getGeneralErrors());
 									fieldErrors.putAll(applicationException.getFieldErrors());
 									metadata.putAll(applicationException.getMetadata());
 								}
+
 								default -> {
 									statusCode = 500;
 									generalErrors.add(strings.get("An unexpected error occurred."));
@@ -357,9 +372,14 @@ public class AppModule extends AbstractModule {
 							}
 
 							// Combine all the error messages into one field for easy access by clients
+							Set<String> fieldErrorsSummary = new LinkedHashSet<>();
+
+							for (List<String> fieldErrorValues : fieldErrors.values())
+								fieldErrorsSummary.addAll(fieldErrorValues);
+
 							String summary = format("%s %s",
 									generalErrors.stream().collect(Collectors.joining(" ")),
-									fieldErrors.values().stream().collect(Collectors.joining(" "))
+									fieldErrorsSummary.stream().collect(Collectors.joining(" "))
 							).trim();
 
 							// Ensure there is always a summary

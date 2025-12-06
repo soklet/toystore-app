@@ -173,8 +173,6 @@ public class CurrentContext {
 
 	@Nonnull
 	protected String determineLoggingDescription() {
-		// Optimization: we can use 'this' directly instead of calling get()
-		// because this method is called within the context of the instance being bound.
 		Request request = this.getRequest().orElse(null);
 		Account account = this.getAccount().orElse(null);
 

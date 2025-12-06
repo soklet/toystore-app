@@ -102,6 +102,7 @@ We specify headers with preferred locale and time zone so the server knows how t
 HTTP/1.1 200 OK
 Content-Length: 640
 Content-Type: application/json;charset=UTF-8
+Date: Sun, 09 Jun 2024 13:25:27 GMT
 
 {
   "authenticationToken": "eyJhbG...c76fxc",
@@ -124,7 +125,7 @@ Content-Type: application/json;charset=UTF-8
 
 Now that we have an authentication token, add a toy to our database.
 
-Because the server knows which account is making the request, the data in the response is formatted according to the account's preferred locale  and timezone (here, `en-US` and `America/New_York`).
+Because the server knows which account is making the request, the data in the response is formatted according to the account's preferred locale and timezone (here, `en-US` and `America/New_York`).
 
 ```shell
 # Note: price is a string instead of a JSON number (float)
@@ -135,6 +136,7 @@ Because the server knows which account is making the request, the data in the re
 HTTP/1.1 200 OK
 Content-Length: 351
 Content-Type: application/json;charset=UTF-8
+Date: Sun, 09 Jun 2024 13:44:26 GMT
 
 {
   "toy": {
@@ -162,6 +164,7 @@ Let's purchase the toy that was just added.
 HTTP/1.1 200 OK
 Content-Length: 523
 Content-Type: application/json;charset=UTF-8
+Date: Sun, 09 Jun 2024 14:12:08 GMT
 
 {
   "purchase": {
@@ -193,6 +196,7 @@ Here we specify `X-Locale` and `X-Time-Zone` headers to format our response in a
 HTTP/1.1 200 OK
 Content-Length: 362
 Content-Type: application/json;charset=UTF-8
+Date: Sun, 09 Jun 2024 14:03:49 GMT
 
 {
   "toy": {
@@ -218,15 +222,20 @@ Error messages are localized as well.  Here we supply a negative `price` and for
   -H "X-Locale: pt-BR" \
   -H "X-Time-Zone: America/Sao_Paulo"
 HTTP/1.1 422 Unprocessable Content
-Content-Length: 233
+Content-Length: 261
 Content-Type: application/json;charset=UTF-8
+Date: Sun, 09 Jun 2024 14:45:17 GMT
 
 {
   "summary": "O preço não pode ser negativo. A moeda é obrigatória.",
   "generalErrors": [],
   "fieldErrors": {
-    "price": "O preço não pode ser negativo.",
-    "currency": "A moeda é obrigatória."
+    "price": [
+      "O preço não pode ser negativo."
+    ],
+    "currency": [
+      "A moeda é obrigatória."
+    ]
   },
   "metadata": {}
 }
