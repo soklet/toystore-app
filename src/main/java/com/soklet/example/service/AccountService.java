@@ -109,8 +109,9 @@ public class AccountService {
 					.build();
 
 		// Generate a JWT
-		Instant expiration = Instant.now().plus(60, ChronoUnit.MINUTES);
-		return new AccountJwt(account.accountId(), expiration);
+		Instant issuedAt = Instant.now();
+		Instant expiresAt = issuedAt.plus(60, ChronoUnit.MINUTES);
+		return new AccountJwt(account.accountId(), issuedAt, expiresAt);
 	}
 
 	@Nonnull

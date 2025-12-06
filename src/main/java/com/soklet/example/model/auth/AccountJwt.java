@@ -42,7 +42,8 @@ import static java.util.Objects.requireNonNull;
  */
 public record AccountJwt(
 		@Nonnull UUID accountId,
-		@Nonnull Instant expiration
+		@Nonnull Instant issuedAt,
+		@Nonnull Instant expiresAt
 ) {
 	@Nonnull
 	private static final Gson GSON;
@@ -53,18 +54,19 @@ public record AccountJwt(
 
 	public AccountJwt {
 		requireNonNull(accountId);
-		requireNonNull(expiration);
+		requireNonNull(issuedAt);
+		requireNonNull(expiresAt);
 	}
 
 	@Nonnull
 	public Boolean isExpired() {
-		return expiration().isBefore(Instant.now());
+		return expiresAt().isBefore(Instant.now());
 	}
 
 	@Nonnull
 	public String toStringRepresentation(@Nonnull PrivateKey privateKey) {
 		requireNonNull(privateKey);
-		return AccountJwt.toStringRepresentation(accountId(), expiration(), privateKey);
+		return AccountJwt.toStringRepresentation(accountId(), issuedAt(), expiresAt(), privateKey);
 	}
 
 	// Parsing an AccountJwt can have many outcomes.
@@ -107,6 +109,7 @@ public record AccountJwt(
 		Map<String, Object> decodedPayloadAsMap = GSON.fromJson(decodedPayload, Map.class);
 		String subAsString = (String) decodedPayloadAsMap.get("sub");
 		Number iatAsNumber = (Number) decodedPayloadAsMap.get("iat");
+		Number expAsNumber = (Number) decodedPayloadAsMap.get("exp");
 
 		Set<String> missingClaims = new HashSet<>();
 
@@ -114,6 +117,8 @@ public record AccountJwt(
 			missingClaims.add("sub");
 		if (iatAsNumber == null)
 			missingClaims.add("iat");
+		if (expAsNumber == null)
+			missingClaims.add("exp");
 
 		if (missingClaims.size() > 0)
 			return new AccountJwtResult.MissingClaims(missingClaims);
@@ -125,22 +130,25 @@ public record AccountJwt(
 		}
 
 		UUID sub = UUID.fromString(subAsString);
-		Instant iat = Instant.ofEpochMilli(iatAsNumber.longValue());
+		Instant iat = Instant.ofEpochSecond(iatAsNumber.longValue());
+		Instant exp = Instant.ofEpochSecond(expAsNumber.longValue());
 
-		AccountJwt accountJwt = new AccountJwt(sub, iat);
+		AccountJwt accountJwt = new AccountJwt(sub, iat, exp);
 
-		if (iat.isBefore(Instant.now()))
-			return new AccountJwtResult.Expired(accountJwt, iat);
+		if (exp.isBefore(Instant.now()))
+			return new AccountJwtResult.Expired(accountJwt, exp);
 
 		return new AccountJwtResult.Succeeded(accountJwt);
 	}
 
 	@Nonnull
 	public static String toStringRepresentation(@Nonnull UUID accountId,
-																							@Nonnull Instant expiration,
+																							@Nonnull Instant issuedAt,
+																							@Nonnull Instant expiresAt,
 																							@Nonnull PrivateKey privateKey) {
 		requireNonNull(accountId);
-		requireNonNull(expiration);
+		requireNonNull(issuedAt);
+		requireNonNull(expiresAt);
 		requireNonNull(privateKey);
 
 		String header = GSON.toJson(Map.of(
@@ -150,7 +158,8 @@ public record AccountJwt(
 
 		String payload = GSON.toJson(Map.of(
 				"sub", accountId,
-				"iat", expiration.toEpochMilli()
+				"iat", issuedAt.getEpochSecond(),
+				"exp", expiresAt.getEpochSecond()
 		));
 
 		String encodedHeader = base64Encode(header.getBytes(StandardCharsets.UTF_8));
