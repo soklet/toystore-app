@@ -588,7 +588,7 @@ public class AppModule extends AbstractModule {
 
 	@Override
 	protected void configure() {
-		// Tells Guice to set up assisted injection
+		// Tells Guice to set up assisted injection for factories
 		// See https://github.com/google/guice/wiki/AssistedInject
 		install(new FactoryModuleBuilder().build(AccountResponseFactory.class));
 		install(new FactoryModuleBuilder().build(ToyResponseFactory.class));

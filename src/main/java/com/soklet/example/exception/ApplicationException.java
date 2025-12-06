@@ -19,7 +19,6 @@ package com.soklet.example.exception;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
-import javax.annotation.concurrent.ThreadSafe;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,7 +33,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-@ThreadSafe
+@NotThreadSafe
 public class ApplicationException extends RuntimeException {
 	@Nonnull
 	private final Integer statusCode;
