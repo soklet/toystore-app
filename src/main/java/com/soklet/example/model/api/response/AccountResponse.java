@@ -89,6 +89,8 @@ public class AccountResponse {
 		this.timeZone = account.timeZone();
 		this.timeZoneDescription = this.timeZone.getDisplayName(TextStyle.FULL, currentLocale);
 		this.createdAt = account.createdAt();
+
+		// A real application would cache this formatter
 		this.createdAtDescription = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
 				.localizedBy(currentLocale)
 				.withZone(currentTimeZone)

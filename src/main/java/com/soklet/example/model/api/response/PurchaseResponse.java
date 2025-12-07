@@ -84,7 +84,7 @@ public class PurchaseResponse {
 		Locale currentLocale = currentContext.getLocale();
 		ZoneId currentTimeZone = currentContext.getTimeZone();
 
-		// A real application would cache this formatter in a threadsafe way, e.g. ThreadLocal<T> or Scope<T>
+		// A real application would cache this formatter in a threadsafe way
 		NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(currentLocale);
 		currencyFormatter.setCurrency(purchase.currency());
 
@@ -97,6 +97,8 @@ public class PurchaseResponse {
 		this.currencySymbol = purchase.currency().getSymbol(currentLocale);
 		this.currencyDescription = purchase.currency().getDisplayName(currentLocale);
 		this.createdAt = purchase.createdAt();
+
+		// A real application would cache this formatter
 		this.createdAtDescription = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
 				.localizedBy(currentLocale)
 				.withZone(currentTimeZone)
