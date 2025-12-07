@@ -21,7 +21,6 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,8 +83,8 @@ public class ApplicationException extends RuntimeException {
 
 		this.statusCode = builder.statusCode;
 		this.generalErrors = builder.generalErrors == null ? List.of() : Collections.unmodifiableList(new ArrayList<>(builder.generalErrors));
-		this.fieldErrors = builder.fieldErrors == null ? Map.of() : Collections.unmodifiableMap(new HashMap<>(builder.fieldErrors));
-		this.metadata = builder.metadata == null ? Map.of() : Collections.unmodifiableMap(new HashMap<>(builder.metadata));
+		this.fieldErrors = builder.fieldErrors == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(builder.fieldErrors));
+		this.metadata = builder.metadata == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(builder.metadata));
 	}
 
 	@NotThreadSafe
