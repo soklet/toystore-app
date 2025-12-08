@@ -106,8 +106,8 @@ public class App {
 
 		database.execute("""
 				CREATE TABLE role (
-					role_id VARCHAR(256) PRIMARY KEY,
-					description VARCHAR(4096) NOT NULL
+					role_id VARCHAR(64) PRIMARY KEY,
+					description VARCHAR(256) NOT NULL
 				)
 				""");
 
@@ -120,10 +120,10 @@ public class App {
 		database.execute("""
 				CREATE TABLE account (
 					account_id UUID PRIMARY KEY,
-					role_id VARCHAR(256) NOT NULL REFERENCES role(role_id),
-					name VARCHAR(1024) NOT NULL,
-					email_address VARCHAR(1024),
-					password_hash VARCHAR(1024),
+					role_id VARCHAR(64) NOT NULL REFERENCES role(role_id),
+					name VARCHAR(128) NOT NULL,
+					email_address VARCHAR(320),
+					password_hash VARCHAR(512),
 					time_zone VARCHAR(128) NOT NULL, -- e.g. 'America/New_York'
 					locale VARCHAR(8) NOT NULL, -- e.g. 'pt-BR'
 					created_at TIMESTAMP DEFAULT NOW() NOT NULL
@@ -154,7 +154,7 @@ public class App {
 		database.execute("""
 				CREATE TABLE toy (
 					toy_id UUID PRIMARY KEY,
-					name VARCHAR(4096) NOT NULL,
+					name VARCHAR(256) NOT NULL,
 					price DECIMAL(10,2) NOT NULL,
 					currency VARCHAR(8) NOT NULL,
 					created_at TIMESTAMP DEFAULT NOW() NOT NULL,
@@ -169,7 +169,7 @@ public class App {
 					toy_id UUID NOT NULL REFERENCES toy,
 					price DECIMAL(10,2) NOT NULL,
 					currency VARCHAR(8) NOT NULL,
-					credit_card_txn_id VARCHAR(1024) NOT NULL,
+					credit_card_txn_id VARCHAR(256) NOT NULL,
 					created_at TIMESTAMP DEFAULT NOW() NOT NULL
 				)
 				""");
