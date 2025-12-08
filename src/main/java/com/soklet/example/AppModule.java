@@ -210,18 +210,15 @@ public class AppModule extends AbstractModule {
 							AccountJwtResult accountJwtResult = AccountJwt.fromStringRepresentation(authenticationTokenAsString, configuration.getKeyPair().getPublic());
 
 							switch (accountJwtResult) {
-								case Succeeded(@Nonnull AccountJwt accountJwt) -> {
-									account = accountService.findAccountById(accountJwt.accountId()).orElse(null);
-								}
-								case Expired(@Nonnull AccountJwt accountJwt, @Nonnull Instant expiredAt) -> {
-									logger.debug("JWT for account ID {} expired at {}", accountJwt.accountId(), expiredAt);
-								}
-								case SignatureMismatch() -> {
-									logger.warn("JWT signature is invalid: {}", authenticationTokenAsString);
-								}
-								default -> {
-									logger.warn("JWT is invalid: {}", authenticationTokenAsString);
-								}
+								case Succeeded(@Nonnull AccountJwt accountJwt) ->
+										account = accountService.findAccountById(accountJwt.accountId()).orElse(null);
+
+								case Expired(@Nonnull AccountJwt accountJwt, @Nonnull Instant expiredAt) ->
+										logger.debug("JWT for account ID {} expired at {}", accountJwt.accountId(), expiredAt);
+
+								case SignatureMismatch() -> logger.warn("JWT signature is invalid: {}", authenticationTokenAsString);
+
+								default -> logger.warn("JWT is invalid: {}", authenticationTokenAsString);
 							}
 						}
 
@@ -410,12 +407,14 @@ public class AppModule extends AbstractModule {
 									.build();
 						}).build()
 				)
+				// Permit CORS for only the specified origins
 				.corsAuthorizer(CorsAuthorizer.withWhitelistedOrigins(configuration.getCorsWhitelistedOrigins()))
 				// Use Google Guice when Soklet needs to vend instances
 				.instanceProvider(injector::getInstance)
 				.build();
 	}
 
+	// What context is bound to the current execution scope?
 	@Nonnull
 	@Provides
 	public CurrentContext provideCurrentContext() {
@@ -461,7 +460,7 @@ public class AppModule extends AbstractModule {
 				.build();
 	}
 
-	// Provides context-specific localization
+	// Provides context-aware localization
 	@Nonnull
 	@Provides
 	@Singleton

@@ -106,7 +106,7 @@ public class App {
 
 		database.execute("""
 				CREATE TABLE role (
-					role_id VARCHAR(255) PRIMARY KEY,
+					role_id VARCHAR(256) PRIMARY KEY,
 					description VARCHAR(4096) NOT NULL
 				)
 				""");
@@ -120,12 +120,12 @@ public class App {
 		database.execute("""
 				CREATE TABLE account (
 					account_id UUID PRIMARY KEY,
-					role_id VARCHAR(255) NOT NULL REFERENCES role(role_id),
+					role_id VARCHAR(256) NOT NULL REFERENCES role(role_id),
 					name VARCHAR(1024) NOT NULL,
 					email_address VARCHAR(1024),
 					password_hash VARCHAR(1024),
-					time_zone VARCHAR(255) NOT NULL, -- e.g. 'America/New_York'
-					locale VARCHAR(255) NOT NULL, -- e.g. 'pt-BR'
+					time_zone VARCHAR(128) NOT NULL, -- e.g. 'America/New_York'
+					locale VARCHAR(8) NOT NULL, -- e.g. 'pt-BR'
 					created_at TIMESTAMP DEFAULT NOW() NOT NULL
 				)
 				""");

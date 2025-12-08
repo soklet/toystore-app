@@ -57,6 +57,8 @@ public class SensitiveValueRedactor {
 		this.sensitivePathsCache = new ConcurrentHashMap<>();
 	}
 
+	// Perform redactions by examining {@link SensitiveValue} annotations in {@code targetType}.
+	// Supports nested fields of arbitrary depth
 	@Nonnull
 	public String performRedactions(@Nonnull String json,
 																	@Nonnull Class<?> targetType) {
