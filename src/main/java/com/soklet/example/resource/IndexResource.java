@@ -23,10 +23,14 @@ import com.soklet.annotation.GET;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -45,24 +49,27 @@ public class IndexResource {
 
 	@Nonnull
 	@GET("/")
-	public MarshaledResponse helloWorld() {
-		// TODO: load an HTML page from disk that acts as a simple UI for making API calls + an SSE listener
+	public MarshaledResponse demoPage() throws IOException {
+		Path demoPageFile = Path.of("web/demo.html");
+
+		if (!Files.isRegularFile(demoPageFile))
+			throw new IllegalStateException(format("Unable to load demo page file from %s", demoPageFile.toAbsolutePath()));
+
+		byte[] demoPageFileContents = Files.readAllBytes(demoPageFile);
 
 		// By returning MarshaledResponse instead of Response,
 		// we are saying "I already know how to turn my response into bytes,
 		// so please don't perform extra processing on it (e.g. turn it into JSON)"
 		return MarshaledResponse.withStatusCode(200)
-				.headers(Map.of("Content-Type", Set.of("text/plain;charset=UTF-8")))
-				.body(getStrings().get("Hello, world!").getBytes(StandardCharsets.UTF_8))
+				.headers(Map.of("Content-Type", Set.of("text/html;charset=UTF-8")))
+				.body(demoPageFileContents)
 				.build();
 	}
 
 	@Nonnull
 	@GET("/health-check")
 	public MarshaledResponse healthCheck() {
-		// By returning MarshaledResponse instead of Response,
-		// we are saying "I already know how to turn my response into bytes,
-		// so please don't perform extra processing on it (e.g. turn it into JSON)"
+		// Simple "OK" response
 		return MarshaledResponse.withStatusCode(200)
 				.headers(Map.of("Content-Type", Set.of("text/plain;charset=UTF-8")))
 				.body(getStrings().get("OK").getBytes(StandardCharsets.UTF_8))

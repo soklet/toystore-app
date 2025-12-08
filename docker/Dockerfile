@@ -41,6 +41,7 @@ RUN mvn dependency:go-offline -B
 COPY src/main /app/src/main
 COPY strings /app/strings
 COPY config /app/config
+COPY web /app/web
 
 # Build (skip dependency download since we did it above)
 RUN mvn compile && \
