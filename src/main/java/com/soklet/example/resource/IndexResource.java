@@ -46,12 +46,26 @@ public class IndexResource {
 	@Nonnull
 	@GET("/")
 	public MarshaledResponse helloWorld() {
+		// TODO: load an HTML page from disk that acts as a simple UI for making API calls + an SSE listener
+
 		// By returning MarshaledResponse instead of Response,
 		// we are saying "I already know how to turn my response into bytes,
 		// so please don't perform extra processing on it (e.g. turn it into JSON)"
 		return MarshaledResponse.withStatusCode(200)
 				.headers(Map.of("Content-Type", Set.of("text/plain;charset=UTF-8")))
 				.body(getStrings().get("Hello, world!").getBytes(StandardCharsets.UTF_8))
+				.build();
+	}
+
+	@Nonnull
+	@GET("/health-check")
+	public MarshaledResponse healthCheck() {
+		// By returning MarshaledResponse instead of Response,
+		// we are saying "I already know how to turn my response into bytes,
+		// so please don't perform extra processing on it (e.g. turn it into JSON)"
+		return MarshaledResponse.withStatusCode(200)
+				.headers(Map.of("Content-Type", Set.of("text/plain;charset=UTF-8")))
+				.body(getStrings().get("OK").getBytes(StandardCharsets.UTF_8))
 				.build();
 	}
 

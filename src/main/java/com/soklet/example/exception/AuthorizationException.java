@@ -20,6 +20,8 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
+ * Exception thrown when the authenticated account required to perform an operation does not meet security criteria (e.g. wrong role, doesn't own the data, ...)
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @NotThreadSafe

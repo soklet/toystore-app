@@ -24,6 +24,8 @@ import java.util.Currency;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * Example interface for performing credit card transactions.
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 public interface CreditCardProcessor {

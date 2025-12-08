@@ -32,6 +32,8 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * Keeps track of context: which request/account/time zone/locale/etc. is applied to the current thread of execution?
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe

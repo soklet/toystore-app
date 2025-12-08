@@ -25,6 +25,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * Does this Resource Method require authorization, and if so, which roles are needed, if any?
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @Target(ElementType.METHOD)

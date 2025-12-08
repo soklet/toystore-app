@@ -20,6 +20,8 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
+ * Exception thrown when a requested resource does not exist in the system.
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @NotThreadSafe

@@ -66,6 +66,7 @@ import com.soklet.example.service.AccountService;
 import com.soklet.example.util.CreditCardProcessor;
 import com.soklet.example.util.DefaultCreditCardProcessor;
 import com.soklet.example.util.PasswordManager;
+import com.soklet.example.util.SensitiveValueRedactor;
 import com.soklet.exception.BadRequestException;
 import com.soklet.exception.IllegalQueryParameterException;
 import org.hsqldb.jdbc.JDBCDataSource;
@@ -129,12 +130,14 @@ public class AppModule extends AbstractModule {
 																					@Nonnull Configuration configuration,
 																					@Nonnull Database database,
 																					@Nonnull AccountService accountService,
+																					@Nonnull SensitiveValueRedactor sensitiveValueRedactor,
 																					@Nonnull Strings strings,
 																					@Nonnull Gson gson) {
 		requireNonNull(injector);
 		requireNonNull(configuration);
 		requireNonNull(database);
 		requireNonNull(accountService);
+		requireNonNull(sensitiveValueRedactor);
 		requireNonNull(strings);
 		requireNonNull(gson);
 
@@ -274,7 +277,9 @@ public class AppModule extends AbstractModule {
 						if (requestBodyAsString == null)
 							return Optional.empty();
 
-						logger.debug("Request body:\n{}", requestBodyAsString);
+						// Log out the request body, taking care to redact any fields marked with the @SensitiveValue annotation
+						if (logger.isDebugEnabled())
+							logger.debug("Request body:\n{}", sensitiveValueRedactor.performRedactions(requestBodyAsString, parameter.getType()));
 
 						// Use Gson to turn the request body JSON into a Java type
 						return Optional.of(gson.fromJson(requestBodyAsString, requestBodyType));
@@ -417,6 +422,7 @@ public class AppModule extends AbstractModule {
 		return CurrentContext.get();
 	}
 
+	// Provides a way to talk to a relational database
 	@Nonnull
 	@Provides
 	@Singleton
@@ -455,6 +461,7 @@ public class AppModule extends AbstractModule {
 				.build();
 	}
 
+	// Provides context-specific localization
 	@Nonnull
 	@Provides
 	@Singleton
@@ -475,11 +482,9 @@ public class AppModule extends AbstractModule {
 	@Provides
 	@Singleton
 	public PasswordManager providePasswordManager() {
-		// Because this is a sample system, we choose fast but less secure values.
-		// Real systems should increase per comments below.
 		return PasswordManager.withHashAlgorithm("PBKDF2WithHmacSHA512")
-				.iterations(5_000) // OWASP 2023 recommends 210_000 instead
-				.saltLength(16) // Larger value is recommended, e.g. 64
+				.iterations(210_000)
+				.saltLength(64)
 				.keyLength(512)
 				.build();
 	}
@@ -491,6 +496,7 @@ public class AppModule extends AbstractModule {
 		return new DefaultCreditCardProcessor();
 	}
 
+	// Supports "complex" types to/from JSON: Locale, ZoneId, Instant, YearMonth
 	@Nonnull
 	@Provides
 	@Singleton

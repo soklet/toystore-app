@@ -21,6 +21,8 @@ import javax.annotation.Nonnull;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * Maps to the {@code role} table in the database.
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 public record Role(

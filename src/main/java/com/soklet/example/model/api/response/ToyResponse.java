@@ -37,6 +37,8 @@ import java.util.UUID;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * Public-facing representation of a {@link Toy}.
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe

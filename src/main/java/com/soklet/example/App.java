@@ -40,11 +40,13 @@ import java.util.UUID;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * Encapsulates the entire system in a single reusable type.
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe
 public class App {
-	public static void main(@Nullable String[] args) throws Exception {
+	static void main() throws Exception {
 		String environment = System.getenv("APP_ENVIRONMENT");
 
 		if (environment == null)

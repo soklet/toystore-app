@@ -49,6 +49,8 @@ import java.util.UUID;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * Business logic for toys.
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe
@@ -97,7 +99,8 @@ public class ToyService {
 		if (query.length() == 0)
 			return findToys();
 
-		// Naïve "LIKE" search
+		// Naïve "LIKE" search.
+		// Avoids SQL injection by using parameterized query with "?"
 		return getDatabase().queryForList("""
 				  SELECT *
 				  FROM toy
@@ -176,7 +179,7 @@ public class ToyService {
 	public Boolean updateToy(@Nonnull ToyUpdateRequest request) {
 		requireNonNull(request);
 
-		// TODO: validation
+		// Not shown: validation similar to createToy(ToyCreateRequest) above
 
 		return getDatabase().execute("""
 				UPDATE toy

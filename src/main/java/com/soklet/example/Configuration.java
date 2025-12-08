@@ -45,12 +45,12 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * Encapsulates system-wide configuration.
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe
 public class Configuration {
-	@Nonnull
-	private static final String DEFAULT_ENVIRONMENT;
 	@Nonnull
 	private static final Locale DEFAULT_LOCALE;
 	@Nonnull
@@ -59,7 +59,6 @@ public class Configuration {
 	private static final Gson GSON;
 
 	static {
-		DEFAULT_ENVIRONMENT = "local";
 		DEFAULT_LOCALE = Locale.US;
 		DEFAULT_TIME_ZONE = ZoneId.of("UTC");
 		GSON = new GsonBuilder().disableHtmlEscaping().create();
@@ -77,10 +76,6 @@ public class Configuration {
 	private final KeyPair keyPair;
 	@Nonnull
 	private final Set<String> corsWhitelistedOrigins;
-
-	public Configuration() {
-		this(DEFAULT_ENVIRONMENT);
-	}
 
 	public Configuration(@Nonnull String environment) {
 		requireNonNull(environment);

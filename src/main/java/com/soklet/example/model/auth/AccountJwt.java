@@ -36,6 +36,10 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * Encapsulates a JWT which securely carries information about an authenticated account.
+ * <p>
+ * Note: real systems that issue different kinds of JWTs should decouple generic JWT behavior from account claims.
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 public record AccountJwt(
@@ -116,7 +120,7 @@ public record AccountJwt(
 			decodedHeaderJson = new String(base64UrlDecode(encodedHeader), StandardCharsets.UTF_8);
 			decodedPayloadJson = new String(base64UrlDecode(encodedPayload), StandardCharsets.UTF_8);
 			signatureBytes = base64UrlDecode(encodedSignature);
-		} catch (RuntimeException e) {
+		} catch (Exception e) {
 			// Bad base64, etc.
 			return new AccountJwtResult.InvalidStructure();
 		}
@@ -126,7 +130,7 @@ public record AccountJwt(
 
 		try {
 			header = GSON.fromJson(decodedHeaderJson, Map.class);
-		} catch (RuntimeException e) {
+		} catch (Exception e) {
 			return new AccountJwtResult.InvalidStructure();
 		}
 
@@ -153,7 +157,7 @@ public record AccountJwt(
 
 		try {
 			signatureValid = verifyEd25519(signingInput, signatureBytes, publicKey);
-		} catch (GeneralSecurityException | RuntimeException e) {
+		} catch (Exception e) {
 			return new AccountJwtResult.InvalidStructure();
 		}
 
@@ -165,7 +169,7 @@ public record AccountJwt(
 
 		try {
 			payload = GSON.fromJson(decodedPayloadJson, Map.class);
-		} catch (RuntimeException e) {
+		} catch (Exception e) {
 			return new AccountJwtResult.InvalidStructure();
 		}
 
@@ -191,7 +195,7 @@ public record AccountJwt(
 
 		try {
 			sub = UUID.fromString(subAsString);
-		} catch (IllegalArgumentException ignored) {
+		} catch (Exception ignored) {
 			return new AccountJwtResult.InvalidClaims(Set.of("sub"));
 		}
 
@@ -236,7 +240,7 @@ public record AccountJwt(
 
 		try {
 			signatureBytes = signEd25519(signingInput, privateKey);
-		} catch (GeneralSecurityException e) {
+		} catch (Exception e) {
 			throw new IllegalArgumentException("Unable to compute Ed25519 signature", e);
 		}
 
@@ -254,6 +258,7 @@ public record AccountJwt(
 		Signature signature = Signature.getInstance("Ed25519");
 		signature.initSign(privateKey);
 		signature.update(signingInput.getBytes(StandardCharsets.UTF_8));
+
 		return signature.sign();
 	}
 
@@ -268,6 +273,7 @@ public record AccountJwt(
 		Signature signature = Signature.getInstance("Ed25519");
 		signature.initVerify(publicKey);
 		signature.update(signingInput.getBytes(StandardCharsets.UTF_8));
+
 		return signature.verify(signatureBytes);
 	}
 

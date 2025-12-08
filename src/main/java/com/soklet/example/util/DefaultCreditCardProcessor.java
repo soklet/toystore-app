@@ -25,6 +25,8 @@ import java.util.UUID;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * Toy implementation of a {@link CreditCardProcessor}.
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe

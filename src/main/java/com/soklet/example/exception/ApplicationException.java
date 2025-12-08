@@ -30,6 +30,16 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * An application-specific exception which can be effectively serialized for client consumption.
+ * <p>
+ * Supports the following:
+ * <ul>
+ *   <li>HTTP status code</li>
+ *   <li>General errors</li>
+ *   <li>Field-specific errors</li>
+ *   <li>Arbitrary bag of metadata</li>
+ * </ul>
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @NotThreadSafe

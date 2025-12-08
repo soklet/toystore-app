@@ -14,16 +14,19 @@
  * limitations under the License.
  */
 
-package com.soklet.example.model.api.request;
+package com.soklet.example.annotation;
 
-import com.soklet.example.annotation.SensitiveValue;
-
-import javax.annotation.Nullable;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
+ * Used to mark fields as sensitive, e.g. "don't log this".
+ * Useful for request body types that contain passwords, credit card numbers, etc.
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record AccountAuthenticateRequest(
-		@Nullable String emailAddress,
-		@Nullable @SensitiveValue String password
-) {}
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.RECORD_COMPONENT)
+public @interface SensitiveValue {}

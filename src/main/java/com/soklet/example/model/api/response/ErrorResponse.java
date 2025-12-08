@@ -27,6 +27,8 @@ import java.util.Map;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * Public-facing representation of an exception that bubbled out of the system.
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe

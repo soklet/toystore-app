@@ -32,6 +32,8 @@ import javax.annotation.concurrent.ThreadSafe;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * Contains Account-related Resource Methods.
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe

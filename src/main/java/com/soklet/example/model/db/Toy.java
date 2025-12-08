@@ -25,6 +25,8 @@ import java.util.UUID;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * Maps to the {@code toy} table in the database.
+ *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 public record Toy(

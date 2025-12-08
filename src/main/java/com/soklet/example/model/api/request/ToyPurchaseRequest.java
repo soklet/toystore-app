@@ -16,6 +16,8 @@
 
 package com.soklet.example.model.api.request;
 
+import com.soklet.example.annotation.SensitiveValue;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.time.YearMonth;
@@ -29,8 +31,8 @@ import static java.util.Objects.requireNonNull;
 public record ToyPurchaseRequest(
 		@Nullable UUID toyId,
 		@Nullable UUID accountId,
-		@Nullable String creditCardNumber,
-		@Nullable YearMonth creditCardExpiration
+		@Nullable @SensitiveValue String creditCardNumber,
+		@Nullable @SensitiveValue YearMonth creditCardExpiration
 ) {
 	@Nonnull
 	public ToyPurchaseRequest withToyId(@Nullable UUID toyId) {
