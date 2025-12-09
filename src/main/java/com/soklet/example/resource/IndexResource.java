@@ -20,6 +20,8 @@ import com.google.inject.Inject;
 import com.lokalized.Strings;
 import com.soklet.MarshaledResponse;
 import com.soklet.annotation.GET;
+import com.soklet.annotation.PathParameter;
+import com.soklet.example.exception.NotFoundException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -27,6 +29,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Set;
 
@@ -49,20 +52,20 @@ public class IndexResource {
 
 	@Nonnull
 	@GET("/")
-	public MarshaledResponse demoPage() throws IOException {
-		Path demoPageFile = Path.of("web/demo.html");
+	public MarshaledResponse indexPage() throws IOException {
+		Path indexPageFile = Path.of("web/index.html");
 
-		if (!Files.isRegularFile(demoPageFile))
-			throw new IllegalStateException(format("Unable to load demo page file from %s", demoPageFile.toAbsolutePath()));
+		if (!Files.isRegularFile(indexPageFile))
+			throw new IllegalStateException(format("Unable to load index page from %s", indexPageFile.toAbsolutePath()));
 
-		byte[] demoPageFileContents = Files.readAllBytes(demoPageFile);
+		byte[] indexPageFileContents = Files.readAllBytes(indexPageFile);
 
 		// By returning MarshaledResponse instead of Response,
 		// we are saying "I already know how to turn my response into bytes,
 		// so please don't perform extra processing on it (e.g. turn it into JSON)"
 		return MarshaledResponse.withStatusCode(200)
 				.headers(Map.of("Content-Type", Set.of("text/html;charset=UTF-8")))
-				.body(demoPageFileContents)
+				.body(indexPageFileContents)
 				.build();
 	}
 
@@ -76,8 +79,42 @@ public class IndexResource {
 				.build();
 	}
 
+	@GET("/static/{staticFilePath*}")
+	public MarshaledResponse staticFile(@Nonnull @PathParameter String staticFilePath) throws IOException {
+		String contentType = "application/octet-stream";
+
+		if (staticFilePath.endsWith(".js"))
+			contentType = "text/js;charset=UTF-8";
+		else if (staticFilePath.endsWith(".css"))
+			contentType = "text/css;charset=UTF-8";
+
+		return MarshaledResponse.withStatusCode(200)
+				.headers(Map.of("Content-Type", Set.of(contentType)))
+				.body(safelyReadUserProvidedPath(staticFilePath, Paths.get("web/static")))
+				.build();
+	}
+
 	@Nonnull
-	protected Strings getStrings() {
+	private byte[] safelyReadUserProvidedPath(@Nonnull String userProvidedPath,
+																						@Nonnull Path sandboxDirectory) throws IOException {
+		requireNonNull(userProvidedPath);
+		requireNonNull(sandboxDirectory);
+
+		// Resolve the user-supplied path relative to the public directory sandbox, prevents attacks like "../../etc/password" as user-entered filename
+		Path realSandboxDirectory = sandboxDirectory.toRealPath();
+		Path resolvedPath = realSandboxDirectory.resolve(userProvidedPath).normalize();
+
+		if (!resolvedPath.startsWith(realSandboxDirectory))
+			throw new SecurityException(format("Illegal attempt to access a file outside of %s (user-provided filename was %s)", sandboxDirectory, userProvidedPath));
+
+		if (!Files.exists(resolvedPath) || !Files.isRegularFile(resolvedPath))
+			throw new NotFoundException(format("Unable to resolve file in public directory at %s (user-provided filename was %s)", resolvedPath.toAbsolutePath(), userProvidedPath));
+
+		return Files.readAllBytes(resolvedPath);
+	}
+
+	@Nonnull
+	private Strings getStrings() {
 		return this.strings;
 	}
 }
