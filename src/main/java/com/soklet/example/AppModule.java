@@ -437,6 +437,15 @@ public class AppModule extends AbstractModule {
 				.build();
 	}
 
+	// Explicitly provide this so it can be injected directly, e.g. to ToyService for broadcasting Server-Sent Events
+	@Nonnull
+	@Provides
+	@Singleton
+	public ServerSentEventServer provideServerSentEventServer(@Nonnull SokletConfig sokletConfig) {
+		requireNonNull(sokletConfig);
+		return sokletConfig.getServerSentEventServer().get();
+	}
+
 	// What context is bound to the current execution scope?
 	@Nonnull
 	@Provides

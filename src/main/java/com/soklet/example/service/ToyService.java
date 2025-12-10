@@ -16,11 +16,17 @@
 
 package com.soklet.example.service;
 
+import com.google.gson.Gson;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.lokalized.Strings;
 import com.pyranid.Database;
 import com.pyranid.DatabaseException;
+import com.pyranid.TransactionResult;
+import com.soklet.ResourcePath;
+import com.soklet.ServerSentEvent;
+import com.soklet.ServerSentEventBroadcaster;
+import com.soklet.ServerSentEventServer;
 import com.soklet.example.CurrentContext;
 import com.soklet.example.exception.ApplicationException;
 import com.soklet.example.exception.ApplicationException.ErrorCollector;
@@ -58,7 +64,11 @@ public class ToyService {
 	@Nonnull
 	private final Provider<CurrentContext> currentContextProvider;
 	@Nonnull
+	private final ServerSentEventServer serverSentEventServer;
+	@Nonnull
 	private final CreditCardProcessor creditCardProcessor;
+	@Nonnull
+	private final Gson gson;
 	@Nonnull
 	private final Database database;
 	@Nonnull
@@ -68,16 +78,22 @@ public class ToyService {
 
 	@Inject
 	public ToyService(@Nonnull Provider<CurrentContext> currentContextProvider,
+										@Nonnull ServerSentEventServer serverSentEventServer,
 										@Nonnull CreditCardProcessor creditCardProcessor,
+										@Nonnull Gson gson,
 										@Nonnull Database database,
 										@Nonnull Strings strings) {
 		requireNonNull(currentContextProvider);
+		requireNonNull(serverSentEventServer);
 		requireNonNull(creditCardProcessor);
+		requireNonNull(gson);
 		requireNonNull(database);
 		requireNonNull(strings);
 
 		this.currentContextProvider = currentContextProvider;
+		this.serverSentEventServer = serverSentEventServer;
 		this.creditCardProcessor = creditCardProcessor;
+		this.gson = gson;
 		this.database = database;
 		this.strings = strings;
 		this.logger = LoggerFactory.getLogger(getClass());
@@ -157,6 +173,10 @@ public class ToyService {
 						currency
 					) VALUES (?,?,?,?)
 					""", toyId, name, price, currency);
+
+			broadcastServerSentEvent(ServerSentEvent.withEvent("toy-created")
+					.data(getGson().toJson(Map.of("toyId", toyId)))
+					.build());
 		} catch (DatabaseException e) {
 			// If this is a unique constraint violation on the 'name' field, handle it specially
 			// by exposing a helpful message to the caller
@@ -179,19 +199,38 @@ public class ToyService {
 	public Boolean updateToy(@Nonnull ToyUpdateRequest request) {
 		requireNonNull(request);
 
+		UUID toyId = request.toyId();
+		String name = request.name() == null ? "" : request.name().trim();
+		BigDecimal price = request.price();
+		Currency currency = request.currency();
+
 		// Not shown: validation similar to createToy(ToyCreateRequest) above
 
-		return getDatabase().execute("""
+		boolean updated = getDatabase().execute("""
 				UPDATE toy
 				SET name=?, price=?, currency=?
 				WHERE toy_id=?
-				""", request.name(), request.price(), request.currency(), request.toyId()) > 0;
+				""", name, price, currency, toyId) > 0;
+
+		if (updated)
+			broadcastServerSentEvent(ServerSentEvent.withEvent("toy-updated")
+					.data(getGson().toJson(Map.of("toyId", toyId)))
+					.build());
+
+		return updated;
 	}
 
 	@Nonnull
 	public Boolean deleteToy(@Nonnull UUID toyId) {
 		requireNonNull(toyId);
-		return getDatabase().execute("DELETE FROM toy WHERE toy_id=?", toyId) > 0;
+		boolean deleted = getDatabase().execute("DELETE FROM toy WHERE toy_id=?", toyId) > 0;
+
+		if (deleted)
+			broadcastServerSentEvent(ServerSentEvent.withEvent("toy-deleted")
+					.data(getGson().toJson(Map.of("toyId", toyId)))
+					.build());
+
+		return deleted;
 	}
 
 	@Nonnull
@@ -248,6 +287,13 @@ public class ToyService {
 				) VALUES (?,?,?,?,?,?)
 				""", purchaseId, accountId, toy.toyId(), toy.price(), toy.currency(), creditCardTransactionId);
 
+		broadcastServerSentEvent(ServerSentEvent.withEvent("toy-purchased")
+				.data(getGson().toJson(Map.of(
+						"toyId", toy.toyId(),
+						"purchaseId", purchaseId
+				)))
+				.build());
+
 		return purchaseId;
 	}
 
@@ -263,9 +309,24 @@ public class ToyService {
 				""", Purchase.class, purchaseId);
 	}
 
+	private void broadcastServerSentEvent(@Nonnull ServerSentEvent serverSentEvent) {
+		requireNonNull(serverSentEvent);
+
+		// Once this transaction successfully commits, fire off a Server-Sent Event to inform listeners.
+		// Note: distributed systems would put the Server-Sent Event on an event bus so each node can consume and broadcast to its own SSE connections
+		getDatabase().currentTransaction().get().addPostTransactionOperation((TransactionResult transactionResult) -> {
+			if (transactionResult == TransactionResult.COMMITTED) {
+				ResourcePath resourcePath = ResourcePath.withPath("/toys/event-source");
+				ServerSentEventBroadcaster serverSentEventBroadcaster = getServerSentEventServer().acquireBroadcaster(resourcePath).get();
+				getLogger().debug("Performing SSE Broadcast on {} with {}...", resourcePath.getPath(), serverSentEvent);
+				serverSentEventBroadcaster.broadcastEvent(serverSentEvent);
+			}
+		});
+	}
+
 	@Nonnull
-	protected String formatPriceForDisplay(@Nonnull BigDecimal price,
-																				 @Nonnull Currency currency) {
+	private String formatPriceForDisplay(@Nonnull BigDecimal price,
+																			 @Nonnull Currency currency) {
 		requireNonNull(price);
 		requireNonNull(currency);
 
@@ -275,27 +336,37 @@ public class ToyService {
 	}
 
 	@Nonnull
-	protected CurrentContext getCurrentContext() {
+	private CurrentContext getCurrentContext() {
 		return this.currentContextProvider.get();
 	}
 
 	@Nonnull
-	protected CreditCardProcessor getCreditCardProcessor() {
+	private ServerSentEventServer getServerSentEventServer() {
+		return this.serverSentEventServer;
+	}
+
+	@Nonnull
+	private CreditCardProcessor getCreditCardProcessor() {
 		return this.creditCardProcessor;
 	}
 
 	@Nonnull
-	protected Database getDatabase() {
+	private Gson getGson() {
+		return this.gson;
+	}
+
+	@Nonnull
+	private Database getDatabase() {
 		return this.database;
 	}
 
 	@Nonnull
-	protected Strings getStrings() {
+	private Strings getStrings() {
 		return this.strings;
 	}
 
 	@Nonnull
-	protected Logger getLogger() {
+	private Logger getLogger() {
 		return this.logger;
 	}
 }
