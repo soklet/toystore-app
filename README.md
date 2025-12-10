@@ -11,7 +11,7 @@ This app showcases how you might build a real production backend using [Soklet](
 
 Feature highlights include:
 
-* Authentication (PBKDF2 using HMAC-SHA512 for password hashing, Ed25519 keypairs for digital signatures)
+* Authentication (PBKDF2 using HMAC-SHA512 for password hashing, Ed25519 keypair for digital signatures)
 * Role-based authorization
 * Dependency injection via [Google Guice](https://github.com/google/guice)
 * Relational database integration via [Pyranid](https://www.pyranid.com)
