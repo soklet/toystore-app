@@ -240,8 +240,8 @@ public class ToyResourceTests {
 
 	@Nonnull
 	private String acquireAuthenticationToken(@Nonnull App app,
-																							@Nonnull String emailAddress,
-																							@Nonnull String password) {
+																						@Nonnull String emailAddress,
+																						@Nonnull String password) {
 		requireNonNull(app);
 		requireNonNull(emailAddress);
 		requireNonNull(password);
