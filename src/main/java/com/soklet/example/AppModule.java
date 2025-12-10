@@ -49,6 +49,7 @@ import com.soklet.ServerSentEventServer;
 import com.soklet.Soklet;
 import com.soklet.SokletConfig;
 import com.soklet.example.annotation.AuthorizationRequired;
+import com.soklet.example.annotation.SuppressRequestLogging;
 import com.soklet.example.exception.ApplicationException;
 import com.soklet.example.exception.AuthenticationException;
 import com.soklet.example.exception.AuthorizationException;
@@ -153,7 +154,8 @@ public class AppModule extends AbstractModule {
 					@Override
 					public void didStartRequestHandling(@Nonnull Request request,
 																							@Nullable ResourceMethod resourceMethod) {
-						logger.debug("Received {} {}", request.getHttpMethod(), request.getRawPathAndQuery());
+						if (shouldPerformRequestLogging(resourceMethod))
+							logger.debug("Received {} {}", request.getHttpMethod(), request.getRawPathAndQuery());
 					}
 
 					@Override
@@ -162,18 +164,22 @@ public class AppModule extends AbstractModule {
 																							 @Nonnull MarshaledResponse marshaledResponse,
 																							 @Nonnull Duration processingDuration,
 																							 @Nonnull List<Throwable> throwables) {
-						logger.debug(format("Finished processing %s %s (HTTP %d) in %.2fms", request.getHttpMethod(),
-								request.getRawPathAndQuery(), marshaledResponse.getStatusCode(), processingDuration.toNanos() / 1000000.0));
+						if (shouldPerformRequestLogging(resourceMethod))
+							logger.debug(format("Finished processing %s %s (HTTP %d) in %.2fms", request.getHttpMethod(),
+									request.getRawPathAndQuery(), marshaledResponse.getStatusCode(), processingDuration.toNanos() / 1000000.0));
+					}
+
+					@Nonnull
+					private Boolean shouldPerformRequestLogging(@Nullable ResourceMethod resourceMethod) {
+						if (resourceMethod == null)
+							return true;
+
+						return !resourceMethod.getMethod().isAnnotationPresent(SuppressRequestLogging.class);
 					}
 
 					@Override
 					public void willStartSoklet(@Nonnull Soklet soklet) {
 						logger.debug("Toystore app starting in {} environment...", configuration.getEnvironment());
-					}
-
-					@Override
-					public void didStartSoklet(@Nonnull Soklet soklet) {
-						logger.debug("Toystore app started.");
 					}
 
 					@Override

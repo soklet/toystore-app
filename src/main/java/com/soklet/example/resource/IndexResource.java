@@ -21,6 +21,7 @@ import com.lokalized.Strings;
 import com.soklet.MarshaledResponse;
 import com.soklet.annotation.GET;
 import com.soklet.annotation.PathParameter;
+import com.soklet.example.annotation.SuppressRequestLogging;
 import com.soklet.example.exception.NotFoundException;
 
 import javax.annotation.Nonnull;
@@ -70,6 +71,7 @@ public class IndexResource {
 	}
 
 	@Nonnull
+	@SuppressRequestLogging // Custom annotation to ignore standard request logging to reduce log noise
 	@GET("/health-check")
 	public MarshaledResponse healthCheck() {
 		// Simple "OK" response

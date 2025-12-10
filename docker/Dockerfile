@@ -2,57 +2,40 @@
 # docker build . --file docker/Dockerfile --tag soklet/toystore
 
 # To run:
-# docker run -it -e APP_ENVIRONMENT="local" -p "8080:8080" soklet/toystore
+# docker run -it -e APP_ENVIRONMENT="local" -p 8080:8080 -p 8081:8081 soklet/toystore
 
-# JDK 25
-FROM amazoncorretto:25
-
+# Build stage
+FROM amazoncorretto:25 AS builder
 ARG MAVEN_VERSION=3.9.11
-ARG MAVEN_BASE=apache-maven-${MAVEN_VERSION}
+RUN yum install -y tar gzip && \
+    curl -fsSL https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
+    | tar -xzC /opt
+ENV PATH="${PATH}:/opt/apache-maven-${MAVEN_VERSION}/bin"
 
-# Let port 8080 be available to the outside world
-EXPOSE 8080
-
-ENV APP_RUNNING_IN_DOCKER=true
-
-# 1. Prepare Maven
-# We assume the file docker/apache-maven-3.9.11-bin.tar.gz exists locally
-RUN yum install -y tar gzip
-COPY docker/${MAVEN_BASE}-bin.tar.gz /tmp/maven.tar.gz
-
-# Extract using standard tar command
-RUN tar -xzf /tmp/maven.tar.gz -C /opt && \
-    rm /tmp/maven.tar.gz
-
-ENV PATH="${PATH}:/opt/${MAVEN_BASE}/bin"
-
-# 2. Prepare dependencies (Layer Caching Strategy)
-RUN mkdir -p /app
 WORKDIR /app
-
-# Copy ONLY the POM first
-COPY pom.xml /app
-
-# Download dependencies/plugins.
-# This layer will be CACHED unless pom.xml changes.
+COPY pom.xml .
 RUN mvn dependency:go-offline -B
+COPY src/main src/main
+RUN mvn compile && mvn dependency:copy-dependencies
 
-# 3. Copy source and build
-COPY src/main /app/src/main
-COPY strings /app/strings
-COPY config /app/config
-COPY web /app/web
+# Runtime stage
+FROM amazoncorretto:25
+RUN yum clean all
+WORKDIR /app
+COPY --from=builder /app/target/classes target/classes
+COPY --from=builder /app/target/dependency target/dependency
+COPY strings strings
+COPY config config
+COPY web web
 
-# Build (skip dependency download since we did it above)
-RUN mvn compile && \
-    mvn dependency:copy-dependencies
-
-# Unprivileged user for runtime
+EXPOSE 8080 8081
 USER 1000
 
-# Run app
-CMD ["/bin/sh", "-c", "java -Xms128m -Xmx512m \
-    -cp \"target/classes:target/dependency/*\" \
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health-check || exit 1
+
+CMD ["sh", "-c", "exec java -Xms128m -Xmx512m \
+    -cp 'target/classes:target/dependency/*' \
     --sun-misc-unsafe-memory-access=allow \
     --enable-native-access=ALL-UNNAMED \
     --add-opens java.base/java.time=ALL-UNNAMED \
