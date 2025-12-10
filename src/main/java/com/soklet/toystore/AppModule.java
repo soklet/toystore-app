@@ -36,6 +36,7 @@ import com.pyranid.StatementContext;
 import com.pyranid.StatementLog;
 import com.pyranid.StatementLogger;
 import com.soklet.CorsAuthorizer;
+import com.soklet.HttpMethod;
 import com.soklet.LifecycleInterceptor;
 import com.soklet.LogEvent;
 import com.soklet.MarshaledResponse;
@@ -48,6 +49,8 @@ import com.soklet.Server;
 import com.soklet.ServerSentEventServer;
 import com.soklet.Soklet;
 import com.soklet.SokletConfig;
+import com.soklet.exception.BadRequestException;
+import com.soklet.exception.IllegalQueryParameterException;
 import com.soklet.toystore.annotation.AuthorizationRequired;
 import com.soklet.toystore.annotation.SuppressRequestLogging;
 import com.soklet.toystore.exception.ApplicationException;
@@ -70,8 +73,6 @@ import com.soklet.toystore.util.CreditCardProcessor;
 import com.soklet.toystore.util.DefaultCreditCardProcessor;
 import com.soklet.toystore.util.PasswordManager;
 import com.soklet.toystore.util.SensitiveValueRedactor;
-import com.soklet.exception.BadRequestException;
-import com.soklet.exception.IllegalQueryParameterException;
 import org.hsqldb.jdbc.JDBCDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -154,7 +155,7 @@ public class AppModule extends AbstractModule {
 					@Override
 					public void didStartRequestHandling(@Nonnull Request request,
 																							@Nullable ResourceMethod resourceMethod) {
-						if (shouldPerformRequestLogging(resourceMethod))
+						if (shouldPerformRequestLogging(request, resourceMethod))
 							logger.debug("Received {} {}", request.getHttpMethod(), request.getRawPathAndQuery());
 					}
 
@@ -164,16 +165,25 @@ public class AppModule extends AbstractModule {
 																							 @Nonnull MarshaledResponse marshaledResponse,
 																							 @Nonnull Duration processingDuration,
 																							 @Nonnull List<Throwable> throwables) {
-						if (shouldPerformRequestLogging(resourceMethod))
+						if (shouldPerformRequestLogging(request, resourceMethod))
 							logger.debug(format("Finished processing %s %s (HTTP %d) in %.2fms", request.getHttpMethod(),
 									request.getRawPathAndQuery(), marshaledResponse.getStatusCode(), processingDuration.toNanos() / 1000000.0));
 					}
 
 					@Nonnull
-					private Boolean shouldPerformRequestLogging(@Nullable ResourceMethod resourceMethod) {
+					private Boolean shouldPerformRequestLogging(@Nonnull Request request,
+																											@Nullable ResourceMethod resourceMethod) {
+						requireNonNull(request);
+
+						// Special OPTIONS * requests are generally health checks and should not be logged
+						if (request.getHttpMethod() == HttpMethod.OPTIONS && request.getPath().equals("*"))
+							return false;
+
+						// 404? Log it...
 						if (resourceMethod == null)
 							return true;
 
+						// ...and log everything else, unless the Resource Method is decorated with our custom annotation
 						return !resourceMethod.getMethod().isAnnotationPresent(SuppressRequestLogging.class);
 					}
 
