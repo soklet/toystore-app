@@ -97,6 +97,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -460,9 +461,10 @@ public class AppModule extends AbstractModule {
 	public Database provideDatabase(@Nonnull Injector injector) {
 		requireNonNull(injector);
 
-		// Example in-memory datasource for HSQLDB
+		// Example in-memory datasource for HSQLDB.
+		// Each App instance gets its own isolated database to support parallel test execution in the same JVM instance
 		JDBCDataSource dataSource = new JDBCDataSource();
-		dataSource.setUrl("jdbc:hsqldb:mem:example");
+		dataSource.setUrl(format("jdbc:hsqldb:mem:%s", UUID.randomUUID()));
 		dataSource.setUser("sa");
 		dataSource.setPassword("");
 
@@ -551,7 +553,7 @@ public class AppModule extends AbstractModule {
 					}
 				})
 				// Support `ZoneId` type for handling timezones
-				.registerTypeAdapter(ZoneId.class, new TypeAdapter<ZoneId>() {
+				.registerTypeHierarchyAdapter(ZoneId.class, new TypeAdapter<ZoneId>() {
 					@Override
 					public void write(@Nonnull JsonWriter jsonWriter,
 														@Nonnull ZoneId zoneId) throws IOException {

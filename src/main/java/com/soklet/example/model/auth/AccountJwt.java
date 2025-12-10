@@ -98,6 +98,7 @@ public record AccountJwt(
 	 * Parses and verifies an AccountJwt from its string representation using the given Ed25519 public key.
 	 */
 	@Nonnull
+	@SuppressWarnings("unchecked")
 	public static AccountJwtResult fromStringRepresentation(@Nonnull String string,
 																													@Nonnull PublicKey publicKey) {
 		requireNonNull(string);
