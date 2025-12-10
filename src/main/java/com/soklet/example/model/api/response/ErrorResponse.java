@@ -48,7 +48,7 @@ public class ErrorResponse {
 		return new Builder(summary);
 	}
 
-	protected ErrorResponse(@Nonnull Builder builder) {
+	private ErrorResponse(@Nonnull Builder builder) {
 		requireNonNull(builder);
 
 		this.summary = requireNonNull(builder.summary);
@@ -68,7 +68,7 @@ public class ErrorResponse {
 		@Nullable
 		private Map<String, Object> metadata;
 
-		protected Builder(@Nonnull String summary) {
+		private Builder(@Nonnull String summary) {
 			requireNonNull(summary);
 			this.summary = summary;
 		}

@@ -117,22 +117,22 @@ public class AccountService {
 	}
 
 	@Nonnull
-	protected PasswordManager getPasswordManager() {
+	private PasswordManager getPasswordManager() {
 		return this.passwordManager;
 	}
 
 	@Nonnull
-	protected Database getDatabase() {
+	private Database getDatabase() {
 		return this.database;
 	}
 
 	@Nonnull
-	protected Strings getStrings() {
+	private Strings getStrings() {
 		return this.strings;
 	}
 
 	@Nonnull
-	protected Logger getLogger() {
+	private Logger getLogger() {
 		return this.logger;
 	}
 }

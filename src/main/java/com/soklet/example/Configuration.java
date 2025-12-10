@@ -97,7 +97,7 @@ public class Configuration {
 	}
 
 	@Nonnull
-	protected KeyPair loadKeyPair(@Nonnull ConfigFile.ConfigKeyPair configKeyPair) {
+	private KeyPair loadKeyPair(@Nonnull ConfigFile.ConfigKeyPair configKeyPair) {
 		requireNonNull(configKeyPair);
 		requireNonNull(configKeyPair.algorithm());
 		requireNonNull(configKeyPair.publicKey());
@@ -121,7 +121,7 @@ public class Configuration {
 	}
 
 	@Nonnull
-	protected ConfigFile loadConfigFileForEnvironment(@Nonnull String environment) {
+	private ConfigFile loadConfigFileForEnvironment(@Nonnull String environment) {
 		Path configFile = Path.of(format("config/%s/settings.json", environment));
 
 		if (!Files.isRegularFile(configFile))

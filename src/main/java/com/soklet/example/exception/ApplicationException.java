@@ -86,8 +86,8 @@ public class ApplicationException extends RuntimeException {
 		return builder;
 	}
 
-	protected ApplicationException(@Nonnull String message,
-																 @Nonnull Builder builder) {
+	private ApplicationException(@Nonnull String message,
+															 @Nonnull Builder builder) {
 		super(requireNonNull(message));
 		requireNonNull(builder);
 
@@ -147,7 +147,7 @@ public class ApplicationException extends RuntimeException {
 		@Nullable
 		private Map<String, Object> metadata;
 
-		protected Builder(@Nonnull Integer statusCode) {
+		private Builder(@Nonnull Integer statusCode) {
 			requireNonNull(statusCode);
 			this.statusCode = statusCode;
 		}

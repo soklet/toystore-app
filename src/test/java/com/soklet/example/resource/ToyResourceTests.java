@@ -239,7 +239,7 @@ public class ToyResourceTests {
 	}
 
 	@Nonnull
-	protected String acquireAuthenticationToken(@Nonnull App app,
+	private String acquireAuthenticationToken(@Nonnull App app,
 																							@Nonnull String emailAddress,
 																							@Nonnull String password) {
 		requireNonNull(app);

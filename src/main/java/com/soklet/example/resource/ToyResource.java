@@ -173,22 +173,22 @@ public class ToyResource {
 	}
 
 	@Nonnull
-	protected ToyService getToyService() {
+	private ToyService getToyService() {
 		return this.toyService;
 	}
 
 	@Nonnull
-	protected ToyResponseFactory getToyResponseFactory() {
+	private ToyResponseFactory getToyResponseFactory() {
 		return this.toyResponseFactory;
 	}
 
 	@Nonnull
-	protected PurchaseResponseFactory getPurchaseResponseFactory() {
+	private PurchaseResponseFactory getPurchaseResponseFactory() {
 		return this.purchaseResponseFactory;
 	}
 
 	@Nonnull
-	protected CurrentContext getCurrentContext() {
+	private CurrentContext getCurrentContext() {
 		return this.currentContextProvider.get();
 	}
 }

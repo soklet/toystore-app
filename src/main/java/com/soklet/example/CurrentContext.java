@@ -174,7 +174,7 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	protected String determineLoggingDescription() {
+	private String determineLoggingDescription() {
 		Request request = this.getRequest().orElse(null);
 		Account account = this.getAccount().orElse(null);
 
@@ -185,7 +185,7 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	protected Locale determineLocale(@Nonnull Builder builder) {
+	private Locale determineLocale(@Nonnull Builder builder) {
 		requireNonNull(builder);
 
 		// If an explicit locale was specified, use it
@@ -222,7 +222,7 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	protected ZoneId determineTimeZone(@Nonnull Builder builder) {
+	private ZoneId determineTimeZone(@Nonnull Builder builder) {
 		requireNonNull(builder);
 
 		// If an explicit time zone was specified, use it

@@ -77,12 +77,12 @@ public class AccountResource {
 	}
 
 	@Nonnull
-	protected AccountService getAccountService() {
+	private AccountService getAccountService() {
 		return this.accountService;
 	}
 
 	@Nonnull
-	protected AccountResponseFactory getAccountResponseFactory() {
+	private AccountResponseFactory getAccountResponseFactory() {
 		return this.accountResponseFactory;
 	}
 }
