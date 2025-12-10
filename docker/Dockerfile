@@ -1,8 +1,8 @@
 # To build:
 # docker build . --file docker/Dockerfile --tag soklet/toystore
 
-# To run:
-# docker run -it -e APP_ENVIRONMENT="local" -p 8080:8080 -p 8081:8081 soklet/toystore
+# To run (use Ctrl+C to stop):
+# docker run -e APP_ENVIRONMENT="local" -p 8080:8080 -p 8081:8081 soklet/toystore
 
 # Build stage
 FROM amazoncorretto:25 AS builder
@@ -20,6 +20,7 @@ RUN mvn compile && mvn dependency:copy-dependencies
 
 # Runtime stage
 FROM amazoncorretto:25
+ENV APP_RUNNING_IN_DOCKER=true
 RUN yum clean all
 WORKDIR /app
 COPY --from=builder /app/target/classes target/classes
@@ -41,4 +42,4 @@ CMD ["sh", "-c", "exec java -Xms128m -Xmx512m \
     --add-opens java.base/java.time=ALL-UNNAMED \
     --add-opens java.base/java.util=ALL-UNNAMED \
     --add-opens java.base/java.lang=ALL-UNNAMED \
-    com.soklet.example.App"]
+    com.soklet.toystore.App"]
