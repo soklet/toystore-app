@@ -45,6 +45,8 @@ import com.soklet.ResourceMethod;
 import com.soklet.Response;
 import com.soklet.ResponseMarshaler;
 import com.soklet.Server;
+import com.soklet.ServerSentEventServer;
+import com.soklet.Soklet;
 import com.soklet.SokletConfig;
 import com.soklet.example.annotation.AuthorizationRequired;
 import com.soklet.example.exception.ApplicationException;
@@ -141,7 +143,8 @@ public class AppModule extends AbstractModule {
 		requireNonNull(strings);
 		requireNonNull(gson);
 
-		return SokletConfig.withServer(Server.withPort(configuration.getPort()).host("0.0.0.0").build())
+		return SokletConfig.withServer(Server.withPort(configuration.getPort()).build())
+				.serverSentEventServer(ServerSentEventServer.withPort(configuration.getServerSentEventPort()).build())
 				.lifecycleInterceptor(new LifecycleInterceptor() {
 					@Nonnull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.example.LifecycleInterceptor");
@@ -163,13 +166,33 @@ public class AppModule extends AbstractModule {
 					}
 
 					@Override
-					public void didStartServer(@Nonnull Server server) {
-						logger.debug("Server started in {} environment on port {}", configuration.getEnvironment(), configuration.getPort());
+					public void willStartSoklet(@Nonnull Soklet soklet) {
+						logger.debug("Toystore app starting in {} environment...", configuration.getEnvironment());
 					}
 
 					@Override
-					public void didStopServer(@Nonnull Server server) {
-						logger.debug("Server stopped.");
+					public void didStartSoklet(@Nonnull Soklet soklet) {
+						logger.debug("Toystore app started.");
+					}
+
+					@Override
+					public void willStopSoklet(@Nonnull Soklet soklet) {
+						logger.debug("Toystore app stopping...");
+					}
+
+					@Override
+					public void didStopSoklet(@Nonnull Soklet soklet) {
+						logger.debug("Toystore app stopped.");
+					}
+
+					@Override
+					public void didStartServer(@Nonnull Server server) {
+						logger.debug("Server started on port {}", configuration.getPort());
+					}
+
+					@Override
+					public void didStartServerSentEventServer(@Nonnull ServerSentEventServer serverSentEventServer) {
+						logger.debug("Server-Sent Event server started on port {}", configuration.getServerSentEventPort());
 					}
 
 					@Override

@@ -63,7 +63,7 @@ import static java.util.Objects.requireNonNull;
 public class ToyResourceTests {
 	@Test
 	public void testCreateToy() {
-		App app = new App(new Configuration());
+		App app = new App(new Configuration("local"));
 		Gson gson = app.getInjector().getInstance(Gson.class);
 		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
 
@@ -118,7 +118,7 @@ public class ToyResourceTests {
 		// Run the entire app, but use a special credit card processor that declines in certain scenarios.
 		// Our app is using Guice for Dependency Injection, which enables these kinds of "surgical" overrides.
 		// See https://github.com/google/guice/wiki/GettingStarted for details.
-		App app = new App(new Configuration(), new AbstractModule() {
+		App app = new App(new Configuration("local"), new AbstractModule() {
 			@Nonnull
 			@Provides
 			@Singleton

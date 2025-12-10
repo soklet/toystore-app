@@ -1,5 +1,6 @@
 {
   "port": 8080,
+  "serverSentEventPort": 8081,
   "corsWhitelistedOrigins": [],
   "keyPair": {
     "algorithm": "Ed25519",

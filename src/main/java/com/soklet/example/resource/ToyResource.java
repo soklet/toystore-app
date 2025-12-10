@@ -18,6 +18,7 @@ package com.soklet.example.resource;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.soklet.HandshakeResult;
 import com.soklet.annotation.DELETE;
 import com.soklet.annotation.GET;
 import com.soklet.annotation.POST;
@@ -25,6 +26,7 @@ import com.soklet.annotation.PUT;
 import com.soklet.annotation.PathParameter;
 import com.soklet.annotation.QueryParameter;
 import com.soklet.annotation.RequestBody;
+import com.soklet.annotation.ServerSentEventSource;
 import com.soklet.example.CurrentContext;
 import com.soklet.example.annotation.AuthorizationRequired;
 import com.soklet.example.exception.NotFoundException;
@@ -161,6 +163,13 @@ public class ToyResource {
 		Purchase purchase = getToyService().findPurchaseById(purchaseId).get();
 
 		return new PurchaseResponseHolder(getPurchaseResponseFactory().create(purchase));
+	}
+
+	@Nonnull
+	@AuthorizationRequired(RoleId.ADMINISTRATOR)
+	@ServerSentEventSource("/toys/event-source")
+	public HandshakeResult toysEventSource() {
+		return HandshakeResult.accept();
 	}
 
 	@Nonnull

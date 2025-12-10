@@ -18,7 +18,6 @@ package com.soklet.example;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.soklet.example.Configuration.ConfigFile.ConfigKeyPair;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -73,6 +72,8 @@ public class Configuration {
 	@Nonnull
 	private final Integer port;
 	@Nonnull
+	private final Integer serverSentEventPort;
+	@Nonnull
 	private final KeyPair keyPair;
 	@Nonnull
 	private final Set<String> corsWhitelistedOrigins;
@@ -86,6 +87,7 @@ public class Configuration {
 		this.runningInDocker = "true".equalsIgnoreCase(System.getenv("APP_RUNNING_IN_DOCKER"));
 		this.stopOnKeypress = !this.runningInDocker;
 		this.port = requireNonNull(configFile.port());
+		this.serverSentEventPort = requireNonNull(configFile.serverSentEventPort());
 		this.corsWhitelistedOrigins = configFile.corsWhitelistedOrigins() == null ? Set.of() : configFile.corsWhitelistedOrigins();
 		this.keyPair = loadKeyPair(configFile.keyPair());
 
@@ -95,7 +97,7 @@ public class Configuration {
 	}
 
 	@Nonnull
-	protected KeyPair loadKeyPair(@Nonnull ConfigKeyPair configKeyPair) {
+	protected KeyPair loadKeyPair(@Nonnull ConfigFile.ConfigKeyPair configKeyPair) {
 		requireNonNull(configKeyPair);
 		requireNonNull(configKeyPair.algorithm());
 		requireNonNull(configKeyPair.publicKey());
@@ -132,17 +134,31 @@ public class Configuration {
 		}
 	}
 
-	// Record that maps to the config/{environment/settings.json file format
-	protected record ConfigFile(
-			Integer port,
-			Set<String> corsWhitelistedOrigins,
-			ConfigKeyPair keyPair
+	// Record that maps to the config/{environment}/settings.json file format
+	private record ConfigFile(
+			@Nonnull Integer port,
+			@Nonnull Integer serverSentEventPort,
+			@Nonnull Set<String> corsWhitelistedOrigins,
+			@Nonnull ConfigKeyPair keyPair
 	) {
-		protected record ConfigKeyPair(
-				String algorithm,
-				String publicKey,
-				String privateKey
-		) {}
+		public ConfigFile {
+			requireNonNull(port);
+			requireNonNull(serverSentEventPort);
+			requireNonNull(corsWhitelistedOrigins);
+			requireNonNull(keyPair);
+		}
+
+		private record ConfigKeyPair(
+				@Nonnull String algorithm,
+				@Nonnull String publicKey,
+				@Nonnull String privateKey
+		) {
+			public ConfigKeyPair {
+				requireNonNull(algorithm);
+				requireNonNull(publicKey);
+				requireNonNull(privateKey);
+			}
+		}
 	}
 
 	@Nonnull
@@ -173,6 +189,11 @@ public class Configuration {
 	@Nonnull
 	public Integer getPort() {
 		return this.port;
+	}
+
+	@Nonnull
+	public Integer getServerSentEventPort() {
+		return this.serverSentEventPort;
 	}
 
 	@Nonnull
