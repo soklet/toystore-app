@@ -11,8 +11,8 @@ This app showcases how you might build a real production backend using [Soklet](
 
 Feature highlights include:
 
-* Authentication and role-based authorization
-* Basic CRUD operations
+* Authentication (PBKDF2 using HMAC-SHA512 for password hashing, Ed25519 keypairs for digital signatures)
+* Role-based authorization
 * Dependency injection via [Google Guice](https://github.com/google/guice)
 * Relational database integration via [Pyranid](https://www.pyranid.com)
 * Context-awareness via [ScopedValue (JEP 506)](https://openjdk.org/jeps/506)
@@ -38,7 +38,7 @@ First, clone the Git repository and set your working directory.
 
 #### With Docker
 
-This is the easiest way to run the Toy Store App.  You don't need anything on your machine other than [Docker](https://www.docker.com).  The app will run in its own sandboxed Java 23 Docker Container.
+This is the easiest way to run the Toy Store App.  You don't need anything on your machine other than [Docker](https://www.docker.com).  The app will run in its own sandboxed Java 25 Docker Container.
 
 [The Dockerfile is viewable here](https://github.com/soklet/toystore-app/blob/main/docker/Dockerfile) if you are curious about how it works.
 
@@ -54,7 +54,7 @@ You likely will want to have your app run inside of a Docker Container using thi
 
 ```shell
 # Press Ctrl+C to stop the interactive container session
-% docker run -it -p "8080:8080" -e APP_ENVIRONMENT="local" soklet/toystore    
+% docker run -e APP_ENVIRONMENT="local" -p 8080:8080 -p 8081:8081 soklet/toystore    
 ```
 
 ##### **Test**
@@ -64,13 +64,14 @@ You likely will want to have your app run inside of a Docker Container using thi
 HTTP/1.1 200 OK
 Content-Length: 13
 Content-Type: text/plain; charset=UTF-8
+Date: Sun, 21 Mar 2024 16:19:01 GMT
 
 Hello, world!
 ```
 
 #### Without Docker
 
-The Toy Store App requires [Apache Maven](https://maven.apache.org/) (you can skip Maven if you prefer to run directly through your IDE) and JDK 21+. If you need a JDK, [Amazon Corretto](https://aws.amazon.com/corretto/) is a free-to-use-commercially, production-ready distribution of [OpenJDK](https://openjdk.org/) that includes long-term support.
+The Toy Store App requires [Apache Maven](https://maven.apache.org/) (you can skip Maven if you prefer to run directly through your IDE) and JDK 25+. If you need a JDK, [Amazon Corretto](https://aws.amazon.com/corretto/) is a free-to-use-commercially, production-ready distribution of [OpenJDK](https://openjdk.org/) that includes long-term support.
 
 ##### **Build**
 
