@@ -7,7 +7,7 @@
 
 ### Soklet Toy Store App
 
-This app showcases how you might build a real production backend using [Soklet](https://www.soklet.com) (a virtual-threaded Java HTTP server with zero dependencies).
+This app showcases how you might build a real production backend using [Soklet](https://www.soklet.com) (a virtual-threaded Java HTTP + SSE server with zero dependencies).
 
 Feature highlights include:
 
@@ -240,6 +240,33 @@ Date: Sun, 09 Jun 2024 14:45:17 GMT
   },
   "metadata": {}
 }
+```
+
+#### Server-Sent Events
+
+Clients can listen on `/toys/event-source` for toy-related Server-Sent Events.
+
+Note that the standard Toy Store plumbing - authentication/authorization, transactions, etc. - automatically applies as you would expect for SSE Event Sources.
+
+Here we use `netcat` to listen from the console:
+
+```shell
+% echo -ne 'GET /toys/event-source HTTP/1.1\r\nHost: localhost\r\nX-Authentication-Token: eyJhbG...c76fxc\r\nX-Locale: pt-BR\r\nX-Time-Zone: America/Sao_Paulo\r\n\r\n' | netcat localhost 8081
+
+HTTP/1.1 200 OK
+Content-Type: text/event-stream; charset=UTF-8
+Cache-Control: no-cache
+Cache-Control: no-transform
+Connection: keep-alive
+X-Accel-Buffering: no
+Date: Sun, 09 Jun 2024 15:33:09 GMT
+
+:
+
+event: toy-created
+data: {
+data:   "toyId": "c61fbaed-0e8b-426c-96ea-533d3fd0b6ec"
+data: }
 ```
 
 ### Learning More
