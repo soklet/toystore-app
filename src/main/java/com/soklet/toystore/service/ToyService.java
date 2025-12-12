@@ -27,6 +27,7 @@ import com.soklet.ResourcePath;
 import com.soklet.ServerSentEvent;
 import com.soklet.ServerSentEventBroadcaster;
 import com.soklet.ServerSentEventServer;
+import com.soklet.toystore.Configuration;
 import com.soklet.toystore.CurrentContext;
 import com.soklet.toystore.exception.ApplicationException;
 import com.soklet.toystore.exception.ApplicationException.ErrorCollector;
@@ -48,11 +49,14 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.Currency;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
@@ -186,9 +190,17 @@ public class ToyService {
 					) VALUES (?,?,?,?)
 					""", toyId, name, price, currency);
 
-			broadcastServerSentEvent(ServerSentEvent.withEvent("toy-created")
-					.data(getGson().toJson(Map.of("toy", getToyResponseFactory().create(findToyById(toyId).get()))))
-					.build());
+			Toy toyToBroadcast = findToyById(toyId).get();
+
+			broadcastServerSentEvent((@Nonnull BroadcastKey broadcastKey) -> {
+				CurrentContext clientCurrentContext = CurrentContext.with(broadcastKey.locale(), broadcastKey.timeZone()).build();
+
+				return clientCurrentContext.run(() ->
+						ServerSentEvent.withEvent("toy-created")
+								.data(getGson().toJson(Map.of("toy", getToyResponseFactory().create(toyToBroadcast))))
+								.build()
+				);
+			});
 		} catch (DatabaseException e) {
 			// If this is a unique constraint violation on the 'name' field, handle it specially
 			// by exposing a helpful message to the caller
@@ -224,10 +236,19 @@ public class ToyService {
 				WHERE toy_id=?
 				""", name, price, currency, toyId) > 0;
 
-		if (updated)
-			broadcastServerSentEvent(ServerSentEvent.withEvent("toy-updated")
-					.data(getGson().toJson(Map.of("toy", getToyResponseFactory().create(findToyById(toyId).get()))))
-					.build());
+		if (updated) {
+			Toy toyToBroadcast = findToyById(toyId).get();
+
+			broadcastServerSentEvent((@Nonnull BroadcastKey broadcastKey) -> {
+				CurrentContext clientCurrentContext = CurrentContext.with(broadcastKey.locale(), broadcastKey.timeZone()).build();
+
+				return clientCurrentContext.run(() ->
+						ServerSentEvent.withEvent("toy-updated")
+								.data(getGson().toJson(Map.of("toy", getToyResponseFactory().create(toyToBroadcast))))
+								.build()
+				);
+			});
+		}
 
 		return updated;
 	}
@@ -243,10 +264,17 @@ public class ToyService {
 
 		boolean deleted = getDatabase().execute("DELETE FROM toy WHERE toy_id=?", toyId) > 0;
 
-		if (deleted)
-			broadcastServerSentEvent(ServerSentEvent.withEvent("toy-deleted")
-					.data(getGson().toJson(Map.of("toy", getToyResponseFactory().create(toy))))
-					.build());
+		if (deleted) {
+			broadcastServerSentEvent((@Nonnull BroadcastKey broadcastKey) -> {
+				CurrentContext clientCurrentContext = CurrentContext.with(broadcastKey.locale(), broadcastKey.timeZone()).build();
+
+				return clientCurrentContext.run(() ->
+						ServerSentEvent.withEvent("toy-deleted")
+								.data(getGson().toJson(Map.of("toy", getToyResponseFactory().create(toy))))
+								.build()
+				);
+			});
+		}
 
 		return deleted;
 	}
@@ -305,12 +333,20 @@ public class ToyService {
 				) VALUES (?,?,?,?,?,?)
 				""", purchaseId, accountId, toy.toyId(), toy.price(), toy.currency(), creditCardTransactionId);
 
-		broadcastServerSentEvent(ServerSentEvent.withEvent("toy-purchased")
-				.data(getGson().toJson(Map.of(
-						"toy", getToyResponseFactory().create(toy),
-						"purchase", getPurchaseResponseFactory().create(findPurchaseById(purchaseId).get())
-				)))
-				.build());
+		Purchase purchaseToBroadcast = findPurchaseById(purchaseId).get();
+
+		broadcastServerSentEvent((@Nonnull BroadcastKey broadcastKey) -> {
+			CurrentContext clientCurrentContext = CurrentContext.with(broadcastKey.locale(), broadcastKey.timeZone()).build();
+
+			return clientCurrentContext.run(() ->
+					ServerSentEvent.withEvent("toy-purchased")
+							.data(getGson().toJson(Map.of(
+									"toy", getToyResponseFactory().create(toy),
+									"purchase", getPurchaseResponseFactory().create(purchaseToBroadcast)
+							)))
+							.build()
+			);
+		});
 
 		return purchaseId;
 	}
@@ -327,8 +363,8 @@ public class ToyService {
 				""", Purchase.class, purchaseId);
 	}
 
-	private void broadcastServerSentEvent(@Nonnull ServerSentEvent serverSentEvent) {
-		requireNonNull(serverSentEvent);
+	private void broadcastServerSentEvent(@Nonnull Function<BroadcastKey, ServerSentEvent> serverSentEventProvider) {
+		requireNonNull(serverSentEventProvider);
 
 		// Once this transaction successfully commits, fire off a Server-Sent Event to inform listeners.
 		// Note: distributed systems would put the Server-Sent Event on an event bus so each node can consume and broadcast to its own SSE connections
@@ -336,10 +372,42 @@ public class ToyService {
 			if (transactionResult == TransactionResult.COMMITTED) {
 				ResourcePath resourcePath = ResourcePath.withPath("/toys/event-source");
 				ServerSentEventBroadcaster serverSentEventBroadcaster = getServerSentEventServer().acquireBroadcaster(resourcePath).get();
-				getLogger().debug("Performing SSE Broadcast on {} with {}...", resourcePath.getPath(), serverSentEvent);
-				serverSentEventBroadcaster.broadcastEvent(serverSentEvent);
+
+				// Instead of broadcasting the same message to everyone via #broadcastEvent(ServerSentEvent), we create separate broadcasts
+				// based on client-specific context.  For example, we should broadcast Brazilian Portuguese to clients who had pt-BR locale
+				// at SSE handshake time.
+
+				// First, define how we convert an SSE connection's client context object (if available) into a BroadcastKey
+				Function<Object, BroadcastKey> broadcastKeySelector = (@Nullable Object clientContext) -> {
+					CurrentContext currentContext = (CurrentContext) clientContext;
+
+					if (currentContext == null)
+						return new BroadcastKey(Configuration.getDefaultLocale(), Configuration.getDefaultTimeZone());
+
+					return new BroadcastKey(currentContext.getLocale(), currentContext.getTimeZone());
+				};
+
+				// Then, define how we convert that BroadcastKey into a Server-Sent Event
+				Function<BroadcastKey, ServerSentEvent> serverSentEventGenerator = (@Nonnull BroadcastKey broadcastKey) -> {
+					ServerSentEvent serverSentEvent = serverSentEventProvider.apply(broadcastKey);
+					getLogger().debug("Performing SSE Broadcast on {} with {}...", resourcePath.getPath(), serverSentEvent);
+					return serverSentEvent;
+				};
+
+				// With those two methods, we can now efficiently broadcast the event to all locale/timezone combinations
+				serverSentEventBroadcaster.broadcastEvent(broadcastKeySelector, serverSentEventGenerator);
 			}
 		});
+	}
+
+	private record BroadcastKey(
+			@Nonnull Locale locale,
+			@Nonnull ZoneId timeZone
+	) {
+		public BroadcastKey {
+			requireNonNull(locale);
+			requireNonNull(timeZone);
+		}
 	}
 
 	@Nonnull

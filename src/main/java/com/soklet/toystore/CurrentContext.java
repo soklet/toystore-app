@@ -27,6 +27,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.time.ZoneId;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -132,16 +133,25 @@ public class CurrentContext {
 
 	public void run(@Nonnull Runnable runnable) {
 		requireNonNull(runnable);
+		run(() -> {
+			runnable.run();
+			return null;
+		});
+	}
+
+	@Nullable
+	public <T> T run(@Nonnull Supplier<T> supplier) {
+		requireNonNull(supplier);
 
 		// Capture the previous MDC value to restore it later
 		String previousMdc = MDC.get("CURRENT_CONTEXT");
 
 		// Create the binding for the new scope
-		ScopedValue.where(CURRENT_CONTEXT_SCOPED_VALUE, this).run(() -> {
+		return ScopedValue.where(CURRENT_CONTEXT_SCOPED_VALUE, this).call(() -> {
 			try {
 				// Apply new logging context
 				MDC.put("CURRENT_CONTEXT", determineLoggingDescription());
-				runnable.run();
+				return supplier.get();
 			} finally {
 				// Restore previous logging context (or clear if we were at the root)
 				if (previousMdc != null) {

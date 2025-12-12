@@ -169,7 +169,10 @@ public class ToyResource {
 	@AuthorizationRequired(RoleId.ADMINISTRATOR)
 	@ServerSentEventSource("/toys/event-source")
 	public HandshakeResult toysEventSource() {
-		return HandshakeResult.accept();
+		// Accept the handshake and store off current context so we can appropriately localize later when broadcasting
+		return HandshakeResult.acceptWithDefaults()
+				.clientContext(getCurrentContext())
+				.build();
 	}
 
 	@Nonnull
