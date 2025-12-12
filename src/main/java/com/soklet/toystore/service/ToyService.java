@@ -33,6 +33,8 @@ import com.soklet.toystore.exception.ApplicationException.ErrorCollector;
 import com.soklet.toystore.model.api.request.ToyCreateRequest;
 import com.soklet.toystore.model.api.request.ToyPurchaseRequest;
 import com.soklet.toystore.model.api.request.ToyUpdateRequest;
+import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseFactory;
+import com.soklet.toystore.model.api.response.ToyResponse.ToyResponseFactory;
 import com.soklet.toystore.model.db.Purchase;
 import com.soklet.toystore.model.db.Toy;
 import com.soklet.toystore.util.CreditCardProcessor;
@@ -68,6 +70,10 @@ public class ToyService {
 	@Nonnull
 	private final CreditCardProcessor creditCardProcessor;
 	@Nonnull
+	private final ToyResponseFactory toyResponseFactory;
+	@Nonnull
+	private final PurchaseResponseFactory purchaseResponseFactory;
+	@Nonnull
 	private final Gson gson;
 	@Nonnull
 	private final Database database;
@@ -80,12 +86,16 @@ public class ToyService {
 	public ToyService(@Nonnull Provider<CurrentContext> currentContextProvider,
 										@Nonnull ServerSentEventServer serverSentEventServer,
 										@Nonnull CreditCardProcessor creditCardProcessor,
+										@Nonnull ToyResponseFactory toyResponseFactory,
+										@Nonnull PurchaseResponseFactory purchaseResponseFactory,
 										@Nonnull Gson gson,
 										@Nonnull Database database,
 										@Nonnull Strings strings) {
 		requireNonNull(currentContextProvider);
 		requireNonNull(serverSentEventServer);
 		requireNonNull(creditCardProcessor);
+		requireNonNull(toyResponseFactory);
+		requireNonNull(purchaseResponseFactory);
 		requireNonNull(gson);
 		requireNonNull(database);
 		requireNonNull(strings);
@@ -93,6 +103,8 @@ public class ToyService {
 		this.currentContextProvider = currentContextProvider;
 		this.serverSentEventServer = serverSentEventServer;
 		this.creditCardProcessor = creditCardProcessor;
+		this.toyResponseFactory = toyResponseFactory;
+		this.purchaseResponseFactory = purchaseResponseFactory;
 		this.gson = gson;
 		this.database = database;
 		this.strings = strings;
@@ -175,7 +187,7 @@ public class ToyService {
 					""", toyId, name, price, currency);
 
 			broadcastServerSentEvent(ServerSentEvent.withEvent("toy-created")
-					.data(getGson().toJson(Map.of("toyId", toyId)))
+					.data(getGson().toJson(Map.of("toy", getToyResponseFactory().create(findToyById(toyId).get()))))
 					.build());
 		} catch (DatabaseException e) {
 			// If this is a unique constraint violation on the 'name' field, handle it specially
@@ -214,7 +226,7 @@ public class ToyService {
 
 		if (updated)
 			broadcastServerSentEvent(ServerSentEvent.withEvent("toy-updated")
-					.data(getGson().toJson(Map.of("toyId", toyId)))
+					.data(getGson().toJson(Map.of("toy", getToyResponseFactory().create(findToyById(toyId).get()))))
 					.build());
 
 		return updated;
@@ -223,11 +235,17 @@ public class ToyService {
 	@Nonnull
 	public Boolean deleteToy(@Nonnull UUID toyId) {
 		requireNonNull(toyId);
+
+		Toy toy = findToyById(toyId).orElse(null);
+
+		if (toy == null)
+			return false;
+
 		boolean deleted = getDatabase().execute("DELETE FROM toy WHERE toy_id=?", toyId) > 0;
 
 		if (deleted)
 			broadcastServerSentEvent(ServerSentEvent.withEvent("toy-deleted")
-					.data(getGson().toJson(Map.of("toyId", toyId)))
+					.data(getGson().toJson(Map.of("toy", getToyResponseFactory().create(toy))))
 					.build());
 
 		return deleted;
@@ -289,8 +307,8 @@ public class ToyService {
 
 		broadcastServerSentEvent(ServerSentEvent.withEvent("toy-purchased")
 				.data(getGson().toJson(Map.of(
-						"toyId", toy.toyId(),
-						"purchaseId", purchaseId
+						"toy", getToyResponseFactory().create(toy),
+						"purchase", getPurchaseResponseFactory().create(findPurchaseById(purchaseId).get())
 				)))
 				.build());
 
@@ -348,6 +366,16 @@ public class ToyService {
 	@Nonnull
 	private CreditCardProcessor getCreditCardProcessor() {
 		return this.creditCardProcessor;
+	}
+
+	@Nonnull
+	private ToyResponseFactory getToyResponseFactory() {
+		return this.toyResponseFactory;
+	}
+
+	@Nonnull
+	private PurchaseResponseFactory getPurchaseResponseFactory() {
+		return this.purchaseResponseFactory;
 	}
 
 	@Nonnull
