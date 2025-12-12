@@ -21,10 +21,8 @@ import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 import com.soklet.toystore.CurrentContext;
 import com.soklet.toystore.model.db.Purchase;
-import com.soklet.toystore.model.db.Role.RoleId;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
@@ -33,8 +31,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
-import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
@@ -62,7 +58,7 @@ public class PurchaseResponse {
 	private final String currencySymbol;
 	@Nonnull
 	private final String currencyDescription;
-	@Nullable
+	@Nonnull
 	private final String creditCardTransactionId;
 	@Nonnull
 	private final Instant createdAt;
@@ -98,6 +94,7 @@ public class PurchaseResponse {
 		this.currencyCode = purchase.currency().getCurrencyCode();
 		this.currencySymbol = purchase.currency().getSymbol(currentLocale);
 		this.currencyDescription = purchase.currency().getDisplayName(currentLocale);
+		this.creditCardTransactionId = purchase.creditCardTransactionId();
 		this.createdAt = purchase.createdAt();
 
 		// A real application would cache this formatter
@@ -105,14 +102,6 @@ public class PurchaseResponse {
 				.localizedBy(currentLocale)
 				.withZone(currentTimeZone)
 				.format(purchase.createdAt());
-
-		// Only expose credit card transaction ID if caller is admin or employee
-		RoleId roleId = currentContext.getAccount().get().roleId();
-
-		if (Set.of(RoleId.ADMINISTRATOR, RoleId.EMPLOYEE).contains(roleId))
-			this.creditCardTransactionId = purchase.creditCardTransactionId();
-		else
-			this.creditCardTransactionId = null;
 	}
 
 	public record PurchaseResponseHolder(
@@ -164,8 +153,8 @@ public class PurchaseResponse {
 	}
 
 	@Nonnull
-	public Optional<String> getCreditCardTransactionId() {
-		return Optional.ofNullable(this.creditCardTransactionId);
+	public String getCreditCardTransactionId() {
+		return this.creditCardTransactionId;
 	}
 
 	@Nonnull
