@@ -66,6 +66,8 @@ import com.soklet.toystore.model.auth.AccountJwt.AccountJwtResult;
 import com.soklet.toystore.model.auth.AccountJwt.AccountJwtResult.Expired;
 import com.soklet.toystore.model.auth.AccountJwt.AccountJwtResult.SignatureMismatch;
 import com.soklet.toystore.model.auth.AccountJwt.AccountJwtResult.Succeeded;
+import com.soklet.toystore.model.auth.ServerSentEventContextJwt;
+import com.soklet.toystore.model.auth.ServerSentEventContextJwt.ServerSentEventContextJwtResult;
 import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.model.db.Role.RoleId;
 import com.soklet.toystore.service.AccountService;
@@ -621,14 +623,44 @@ public class AppModule extends AbstractModule {
 					@Override
 					@Nullable
 					public AccountJwt read(@Nonnull JsonReader jsonReader) throws IOException {
-						AccountJwtResult accountJwtResult = AccountJwt.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPublic());
+						AccountJwtResult result = AccountJwt.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPublic());
 
-						switch (accountJwtResult) {
-							case Succeeded(@Nonnull AccountJwt accountJwt) -> {
+						switch (result) {
+							case AccountJwtResult.Succeeded(@Nonnull AccountJwt accountJwt) -> {
 								return accountJwt;
 							}
-							case Expired(@Nonnull AccountJwt accountJwt, @Nonnull Instant expiredAt) -> {
+							case AccountJwtResult.Expired(@Nonnull AccountJwt accountJwt, @Nonnull Instant expiredAt) -> {
 								return accountJwt;
+							}
+							default -> {
+								return null;
+							}
+						}
+					}
+				})
+				// Convert our custom ServerSentEventContextJwt to and from a JSON string
+				.registerTypeAdapter(ServerSentEventContextJwt.class, new TypeAdapter<ServerSentEventContextJwt>() {
+					@Override
+					public void write(@Nonnull JsonWriter jsonWriter,
+														@Nonnull ServerSentEventContextJwt serverSentEventContextJwt) throws IOException {
+						jsonWriter.value(serverSentEventContextJwt.toStringRepresentation(configuration.getKeyPair().getPrivate()));
+					}
+
+					@Override
+					@Nullable
+					public ServerSentEventContextJwt read(@Nonnull JsonReader jsonReader) throws IOException {
+						ServerSentEventContextJwtResult result = ServerSentEventContextJwt.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPublic());
+
+						switch (result) {
+							case ServerSentEventContextJwtResult.Succeeded(
+									@Nonnull ServerSentEventContextJwt serverSentEventContextJwt
+							) -> {
+								return serverSentEventContextJwt;
+							}
+							case ServerSentEventContextJwtResult.Expired(
+									@Nonnull ServerSentEventContextJwt serverSentEventContextJwt, @Nonnull Instant expiredAt
+							) -> {
+								return serverSentEventContextJwt;
 							}
 							default -> {
 								return null;
