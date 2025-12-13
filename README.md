@@ -259,13 +259,36 @@ Cache-Control: no-cache
 Cache-Control: no-transform
 Connection: keep-alive
 X-Accel-Buffering: no
-Date: Sun, 09 Jun 2024 15:33:09 GMT
+Date: Fri, 12 Dec 2025 22:19:01 GMT
 
 :
 
-event: toy-created
+event: toy-purchased
 data: {
-data:   "toyId": "c61fbaed-0e8b-426c-96ea-533d3fd0b6ec"
+data:   "toy": {
+data:     "toyId": "036bd776-3ad2-4b0b-9f58-63aff05946aa",
+data:     "name": "teddy",
+data:     "price": 10.25,
+data:     "priceDescription": "£ 10,25",
+data:     "currencyCode": "GBP",
+data:     "currencySymbol": "£",
+data:     "currencyDescription": "Libra esterlina",
+data:     "createdAt": "2025-12-12T22:19:00.421502Z",
+data:     "createdAtDescription": "12 de dez. de 2025 19:19"
+data:   },
+data:   "purchase": {
+data:     "purchaseId": "036bd776-3ad2-4b0b-9f58-63aff05946aa",
+data:     "accountId": "08d0ba3e-b19c-4317-a146-583860fcb5fd",
+data:     "toyId": "036bd776-3ad2-4b0b-9f58-63aff05946aa",
+data:     "price": 10.25,
+data:     "priceDescription": "£ 10,25",
+data:     "currencyCode": "GBP",
+data:     "currencySymbol": "£",
+data:     "currencyDescription": "Libra esterlina",
+data:     "creditCardTransactionId": "b86de979-d080-496c-9df8-116e401b4379",
+data:     "createdAt": "2025-12-12T22:19:35.679794Z",
+data:     "createdAtDescription": "12 de dez. de 2025 19:19"
+data:   }
 data: }
 ```
 
