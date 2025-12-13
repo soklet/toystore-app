@@ -47,6 +47,7 @@ public record AccountJwt(
 		@Nonnull Instant issuedAt,
 		@Nonnull Instant expiresAt
 ) {
+	// Manage our own internal GSON instance because our needs are simple - no need to inject one
 	@Nonnull
 	private static final Gson GSON;
 

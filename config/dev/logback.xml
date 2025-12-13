@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration>
+<configuration statusListenerClass="ch.qos.logback.core.status.NopStatusListener">
 	<!-- This is to make bridged java.util.logging calls performant -->
 	<contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
 		<resetJUL>true</resetJUL>
 	</contextListener>
+
+	<!-- Redact sensitive data (e.g. JWTs) from log messages -->
+	<conversionRule conversionWord="msg" class="com.soklet.toystore.util.LoggingRedactor"/>
 
 	<appender name="standard" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder>
@@ -13,7 +16,7 @@
 
 	<logger name="com.soklet.toystore" level="DEBUG" />
 
-	<root level="DEBUG">
+	<root level="INFO">
 		<appender-ref ref="standard" />
 	</root>
 </configuration>

@@ -78,7 +78,7 @@ public class SensitiveValueRedactor {
 
 			return getGson().toJson(element);
 		} catch (JsonSyntaxException | IllegalStateException e) {
-			return "[redacted - malformed JSON]";
+			return "[REDACTED - malformed JSON]";
 		}
 	}
 
