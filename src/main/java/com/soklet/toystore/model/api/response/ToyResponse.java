@@ -21,6 +21,8 @@ import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 import com.soklet.toystore.CurrentContext;
 import com.soklet.toystore.model.db.Toy;
+import com.soklet.toystore.util.Formatter;
+import com.soklet.toystore.util.Formatter.DateTimeFormatterConfig;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -70,18 +72,20 @@ public class ToyResponse {
 
 	@AssistedInject
 	public ToyResponse(@Nonnull Provider<CurrentContext> currentContextProvider,
+										 @Nonnull Formatter formatter,
 										 @Assisted @Nonnull Toy toy) {
 		requireNonNull(currentContextProvider);
+		requireNonNull(formatter);
 		requireNonNull(toy);
 
 		// Tailor our response based on current context
 		CurrentContext currentContext = currentContextProvider.get();
 		Locale currentLocale = currentContext.getLocale();
 		ZoneId currentTimeZone = currentContext.getTimeZone();
-
-		// A real application would cache this formatter in a threadsafe way
-		NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(currentLocale);
-		currencyFormatter.setCurrency(toy.currency());
+		NumberFormat currencyFormatter = formatter.currencyFormatter(currentLocale, toy.currency());
+		DateTimeFormatter dateTimeFormatter = formatter.dateTimeFormatter(
+				new DateTimeFormatterConfig(currentLocale, currentTimeZone, FormatStyle.MEDIUM, FormatStyle.SHORT)
+		);
 
 		this.toyId = toy.toyId();
 		this.name = toy.name();
@@ -91,12 +95,7 @@ public class ToyResponse {
 		this.currencySymbol = toy.currency().getSymbol(currentLocale);
 		this.currencyDescription = toy.currency().getDisplayName(currentLocale);
 		this.createdAt = toy.createdAt();
-
-		// A real application would cache this formatter
-		this.createdAtDescription = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-				.localizedBy(currentLocale)
-				.withZone(currentTimeZone)
-				.format(toy.createdAt());
+		this.createdAtDescription = dateTimeFormatter.format(toy.createdAt());
 	}
 
 	public record ToyResponseHolder(

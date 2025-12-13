@@ -16,8 +16,6 @@
 
 package com.soklet.toystore.resource;
 
-import com.google.inject.Inject;
-import com.lokalized.Strings;
 import com.soklet.MarshaledResponse;
 import com.soklet.annotation.GET;
 import com.soklet.annotation.PathParameter;
@@ -42,15 +40,6 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class IndexResource {
-	@Nonnull
-	private final Strings strings;
-
-	@Inject
-	public IndexResource(@Nonnull Strings strings) {
-		requireNonNull(strings);
-		this.strings = strings;
-	}
-
 	@Nonnull
 	@GET("/")
 	public MarshaledResponse indexPage() throws IOException {
@@ -77,7 +66,7 @@ public class IndexResource {
 		// Simple "OK" response
 		return MarshaledResponse.withStatusCode(200)
 				.headers(Map.of("Content-Type", Set.of("text/plain;charset=UTF-8")))
-				.body(getStrings().get("OK").getBytes(StandardCharsets.UTF_8))
+				.body("OK".getBytes(StandardCharsets.UTF_8))
 				.build();
 	}
 
@@ -113,10 +102,5 @@ public class IndexResource {
 			throw new NotFoundException(format("Unable to resolve file in public directory at %s (user-provided filename was %s)", resolvedPath.toAbsolutePath(), userProvidedPath));
 
 		return Files.readAllBytes(resolvedPath);
-	}
-
-	@Nonnull
-	private Strings getStrings() {
-		return this.strings;
 	}
 }
