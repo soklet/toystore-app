@@ -22,6 +22,7 @@ import com.google.inject.assistedinject.AssistedInject;
 import com.soklet.toystore.CurrentContext;
 import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.model.db.Role.RoleId;
+import com.soklet.toystore.util.Formatter;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -73,14 +74,19 @@ public class AccountResponse {
 
 	@AssistedInject
 	public AccountResponse(@Nonnull Provider<CurrentContext> currentContextProvider,
+												 @Nonnull Formatter formatter,
 												 @Assisted @Nonnull Account account) {
 		requireNonNull(currentContextProvider);
+		requireNonNull(formatter);
 		requireNonNull(account);
 
 		// Tailor our response based on current context
 		CurrentContext currentContext = currentContextProvider.get();
 		Locale currentLocale = currentContext.getLocale();
 		ZoneId currentTimeZone = currentContext.getTimeZone();
+		DateTimeFormatter dateTimeFormatter = formatter.dateTimeFormatter(
+				new Formatter.DateTimeFormatterConfig(currentLocale, currentTimeZone, FormatStyle.MEDIUM, FormatStyle.SHORT)
+		);
 
 		this.accountId = account.accountId();
 		this.roleId = account.roleId();
@@ -91,12 +97,7 @@ public class AccountResponse {
 		this.timeZone = account.timeZone();
 		this.timeZoneDescription = this.timeZone.getDisplayName(TextStyle.FULL, currentLocale);
 		this.createdAt = account.createdAt();
-
-		// A real application would cache this formatter
-		this.createdAtDescription = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-				.localizedBy(currentLocale)
-				.withZone(currentTimeZone)
-				.format(account.createdAt());
+		this.createdAtDescription = dateTimeFormatter.format(account.createdAt());
 	}
 
 	@Nonnull

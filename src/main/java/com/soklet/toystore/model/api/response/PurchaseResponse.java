@@ -21,6 +21,7 @@ import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 import com.soklet.toystore.CurrentContext;
 import com.soklet.toystore.model.db.Purchase;
+import com.soklet.toystore.util.Formatter;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -73,18 +74,20 @@ public class PurchaseResponse {
 
 	@AssistedInject
 	public PurchaseResponse(@Nonnull Provider<CurrentContext> currentContextProvider,
+													@Nonnull Formatter formatter,
 													@Assisted @Nonnull Purchase purchase) {
 		requireNonNull(currentContextProvider);
+		requireNonNull(formatter);
 		requireNonNull(purchase);
 
 		// Tailor our response based on current context
 		CurrentContext currentContext = currentContextProvider.get();
 		Locale currentLocale = currentContext.getLocale();
 		ZoneId currentTimeZone = currentContext.getTimeZone();
-
-		// A real application would cache this formatter in a threadsafe way
-		NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(currentLocale);
-		currencyFormatter.setCurrency(purchase.currency());
+		NumberFormat currencyFormatter = formatter.currencyFormatter(currentLocale, purchase.currency());
+		DateTimeFormatter dateTimeFormatter = formatter.dateTimeFormatter(
+				new Formatter.DateTimeFormatterConfig(currentLocale, currentTimeZone, FormatStyle.MEDIUM, FormatStyle.SHORT)
+		);
 
 		this.purchaseId = purchase.toyId();
 		this.accountId = purchase.accountId();
@@ -96,12 +99,7 @@ public class PurchaseResponse {
 		this.currencyDescription = purchase.currency().getDisplayName(currentLocale);
 		this.creditCardTransactionId = purchase.creditCardTransactionId();
 		this.createdAt = purchase.createdAt();
-
-		// A real application would cache this formatter
-		this.createdAtDescription = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-				.localizedBy(currentLocale)
-				.withZone(currentTimeZone)
-				.format(purchase.createdAt());
+		this.createdAtDescription = dateTimeFormatter.format(purchase.createdAt());
 	}
 
 	public record PurchaseResponseHolder(
