@@ -94,10 +94,8 @@ public class AccountResource {
 
 	@Nonnull
 	@AuthorizationRequired
-	@POST("/accounts/sse-context")
-	public ServerSentEventContextResponseHolder acquireServerSentEventContext(@Nonnull @RequestBody AccountAuthenticateRequest request) {
-		requireNonNull(request);
-
+	@POST("/accounts/sse-context-token")
+	public ServerSentEventContextResponseHolder acquireServerSentEventContextToken() {
 		CurrentContext currentContext = getCurrentContext();
 		Account account = currentContext.getAccount().get();
 		Instant issuedAt = Instant.now();

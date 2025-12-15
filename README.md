@@ -248,10 +248,31 @@ Clients can listen on `/toys/event-source` for toy-related Server-Sent Events.
 
 Note that the standard Toy Store plumbing - authentication/authorization, transactions, etc. - automatically applies as you would expect for SSE Event Sources.
 
-Here we use `netcat` to listen from the console:
+Server-Sent Events, per spec, do not support custom headers, so we package up authentication and locale/timezone information into a short-lived token that is safe to pass to our _Event Source Method_ as a query parameter (this mitigates replay attacks that would be possible if we were to pass the long-lived Access Token instead).
+
+First, we ask for a short-lived, cryptographically-signed SSE Context Token for the authenticated account:
 
 ```shell
-% echo -ne 'GET /toys/event-source HTTP/1.1\r\nHost: localhost\r\nX-Access-Token: eyJhbG...c76fxc\r\nX-Locale: pt-BR\r\nX-Time-Zone: America/Sao_Paulo\r\n\r\n' | netcat localhost 8081
+% curl -i -X POST 'http://localhost:8080/accounts/sse-context-token' \
+  -H "X-Access-Token: eyJhbG...c76fxc" \
+  -H "X-Locale: pt-BR" \
+  -H "X-Time-Zone: America/Sao_Paulo"
+HTTP/1.1 200 OK
+Content-Length: 351
+Content-Type: application/json;charset=UTF-8
+Date: Sun, 09 Jun 2024 13:44:26 GMT
+
+{
+  "serverSentEventContextToken": "eyJ...KDA"
+}
+```
+
+In-browser, you'd use a standard JS [`Event Source`](https://html.spec.whatwg.org/multipage/server-sent-events.html#eventsource) to subscribe to Server-Sent Events.
+
+Here, we use `netcat` to listen from the console:
+
+```shell
+% echo -ne 'GET /toys/event-source?X-Server-Sent-Event-Context-Token=eyJ...KDA HTTP/1.1\r\nHost: localhost\r\n\r\n' | netcat localhost 8081
 
 HTTP/1.1 200 OK
 Content-Type: text/event-stream; charset=UTF-8
