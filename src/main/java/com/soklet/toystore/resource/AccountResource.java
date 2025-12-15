@@ -26,8 +26,8 @@ import com.soklet.toystore.annotation.AuthorizationRequired;
 import com.soklet.toystore.model.api.request.AccountAuthenticateRequest;
 import com.soklet.toystore.model.api.response.AccountResponse;
 import com.soklet.toystore.model.api.response.AccountResponse.AccountResponseFactory;
-import com.soklet.toystore.model.auth.AccountJwt;
-import com.soklet.toystore.model.auth.ServerSentEventContextJwt;
+import com.soklet.toystore.model.auth.AccessToken;
+import com.soklet.toystore.model.auth.ServerSentEventContextToken;
 import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.service.AccountService;
 
@@ -75,15 +75,15 @@ public class AccountResource {
 		requireNonNull(request);
 
 		// Authenticate the email/password, and pull the account information from the JWT assertion
-		AccountJwt accountJwt = getAccountService().authenticateAccount(request);
-		Account account = getAccountService().findAccountById(accountJwt.accountId()).get();
+		AccessToken accessToken = getAccountService().authenticateAccount(request);
+		Account account = getAccountService().findAccountById(accessToken.accountId()).get();
 
 		// Return both account data and a JWT that authenticates it to the client
-		return new AccountAuthenticateReponseHolder(accountJwt, getAccountResponseFactory().create(account));
+		return new AccountAuthenticateReponseHolder(accessToken, getAccountResponseFactory().create(account));
 	}
 
 	public record AccountAuthenticateReponseHolder(
-			@Nonnull AccountJwt authenticationToken,
+			@Nonnull AccessToken authenticationToken,
 			@Nonnull AccountResponse account
 	) {
 		public AccountAuthenticateReponseHolder {
@@ -103,7 +103,7 @@ public class AccountResource {
 		Instant issuedAt = Instant.now();
 		Instant expiresAt = issuedAt.plus(getConfiguration().getServerSentEventContextExpiration());
 
-		ServerSentEventContextJwt serverSentEventContextJwt = new ServerSentEventContextJwt(
+		ServerSentEventContextToken serverSentEventContextToken = new ServerSentEventContextToken(
 				account.accountId(),
 				currentContext.getLocale(),
 				currentContext.getTimeZone(),
@@ -111,11 +111,11 @@ public class AccountResource {
 				expiresAt
 		);
 
-		return new ServerSentEventContextResponseHolder(serverSentEventContextJwt);
+		return new ServerSentEventContextResponseHolder(serverSentEventContextToken);
 	}
 
 	public record ServerSentEventContextResponseHolder(
-			@Nonnull ServerSentEventContextJwt serverSentEventContextToken
+			@Nonnull ServerSentEventContextToken serverSentEventContextToken
 	) {
 		public ServerSentEventContextResponseHolder {
 			requireNonNull(serverSentEventContextToken);

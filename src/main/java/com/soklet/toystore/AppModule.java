@@ -61,10 +61,10 @@ import com.soklet.toystore.model.api.response.AccountResponse.AccountResponseFac
 import com.soklet.toystore.model.api.response.ErrorResponse;
 import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseFactory;
 import com.soklet.toystore.model.api.response.ToyResponse.ToyResponseFactory;
-import com.soklet.toystore.model.auth.AccountJwt;
-import com.soklet.toystore.model.auth.AccountJwt.AccountJwtResult;
-import com.soklet.toystore.model.auth.ServerSentEventContextJwt;
-import com.soklet.toystore.model.auth.ServerSentEventContextJwt.ServerSentEventContextJwtResult;
+import com.soklet.toystore.model.auth.AccessToken;
+import com.soklet.toystore.model.auth.AccessToken.AccessTokenResult;
+import com.soklet.toystore.model.auth.ServerSentEventContextToken;
+import com.soklet.toystore.model.auth.ServerSentEventContextToken.ServerSentEventContextTokenResult;
 import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.model.db.Role.RoleId;
 import com.soklet.toystore.service.AccountService;
@@ -248,23 +248,23 @@ public class AppModule extends AbstractModule {
 						Account account = null;
 
 						// Try to pull authentication token from request headers...
-						String authenticationTokenAsString = request.getHeader("X-Authentication-Token").orElse(null);
+						String accessTokenAsString = request.getHeader("X-Access-Token").orElse(null);
 
 						// ...and if it exists, see if we can pull an account from it.
-						if (authenticationTokenAsString != null) {
-							AccountJwtResult accountJwtResult = AccountJwt.fromStringRepresentation(authenticationTokenAsString, configuration.getKeyPair().getPublic());
+						if (accessTokenAsString != null) {
+							AccessTokenResult accessTokenResult = AccessToken.fromStringRepresentation(accessTokenAsString, configuration.getKeyPair().getPublic());
 
-							switch (accountJwtResult) {
-								case AccountJwtResult.Succeeded(@Nonnull AccountJwt accountJwt) ->
-										account = accountService.findAccountById(accountJwt.accountId()).orElse(null);
+							switch (accessTokenResult) {
+								case AccessTokenResult.Succeeded(@Nonnull AccessToken accessToken) ->
+										account = accountService.findAccountById(accessToken.accountId()).orElse(null);
 
-								case AccountJwtResult.Expired(@Nonnull AccountJwt accountJwt, @Nonnull Instant expiredAt) ->
-										logger.debug("JWT for account ID {} expired at {}", accountJwt.accountId(), expiredAt);
+								case AccessTokenResult.Expired(@Nonnull AccessToken accessToken, @Nonnull Instant expiredAt) ->
+										logger.debug("JWT for account ID {} expired at {}", accessToken.accountId(), expiredAt);
 
-								case AccountJwtResult.SignatureMismatch() ->
-										logger.warn("JWT signature is invalid: {}", authenticationTokenAsString);
+								case AccessTokenResult.SignatureMismatch() ->
+										logger.warn("JWT signature is invalid: {}", accessTokenAsString);
 
-								default -> logger.warn("JWT is invalid: {}", authenticationTokenAsString);
+								default -> logger.warn("JWT is invalid: {}", accessTokenAsString);
 							}
 						}
 
@@ -275,19 +275,19 @@ public class AppModule extends AbstractModule {
 
 								// ...and if it exists, see if we can pull an account from it.
 								if (serverSentEventContextAsString != null) {
-									ServerSentEventContextJwtResult serverSentEventContextJwtResult = ServerSentEventContextJwt.fromStringRepresentation(serverSentEventContextAsString, configuration.getKeyPair().getPublic());
+									ServerSentEventContextTokenResult serverSentEventContextTokenResult = ServerSentEventContextToken.fromStringRepresentation(serverSentEventContextAsString, configuration.getKeyPair().getPublic());
 
-									switch (serverSentEventContextJwtResult) {
-										case ServerSentEventContextJwtResult.Succeeded(
-												@Nonnull ServerSentEventContextJwt serverSentEventContextJwt
-										) -> account = accountService.findAccountById(serverSentEventContextJwt.accountId()).orElse(null);
+									switch (serverSentEventContextTokenResult) {
+										case ServerSentEventContextTokenResult.Succeeded(
+												@Nonnull ServerSentEventContextToken serverSentEventContextToken
+										) -> account = accountService.findAccountById(serverSentEventContextToken.accountId()).orElse(null);
 
-										case ServerSentEventContextJwtResult.Expired(
-												@Nonnull ServerSentEventContextJwt serverSentEventContextJwt, @Nonnull Instant expiredAt
+										case ServerSentEventContextTokenResult.Expired(
+												@Nonnull ServerSentEventContextToken serverSentEventContextToken, @Nonnull Instant expiredAt
 										) ->
-												logger.debug("SSE JWT for account ID {} expired at {}", serverSentEventContextJwt.accountId(), expiredAt);
+												logger.debug("SSE JWT for account ID {} expired at {}", serverSentEventContextToken.accountId(), expiredAt);
 
-										case ServerSentEventContextJwtResult.SignatureMismatch() ->
+										case ServerSentEventContextTokenResult.SignatureMismatch() ->
 												logger.warn("SSE JWT signature is invalid: {}", serverSentEventContextAsString);
 
 										default -> logger.warn("SSE JWT is invalid: {}", serverSentEventContextAsString);
@@ -714,24 +714,24 @@ public class AppModule extends AbstractModule {
 						return YearMonth.parse(jsonReader.nextString());
 					}
 				})
-				// Convert our custom AccountJwt to and from a JSON string
-				.registerTypeAdapter(AccountJwt.class, new TypeAdapter<AccountJwt>() {
+				// Convert our custom AccessToken to and from a JSON string
+				.registerTypeAdapter(AccessToken.class, new TypeAdapter<AccessToken>() {
 					@Override
 					public void write(@Nonnull JsonWriter jsonWriter,
-														@Nonnull AccountJwt accountJwt) throws IOException {
+														@Nonnull AccessToken accountJwt) throws IOException {
 						jsonWriter.value(accountJwt.toStringRepresentation(configuration.getKeyPair().getPrivate()));
 					}
 
 					@Override
 					@Nullable
-					public AccountJwt read(@Nonnull JsonReader jsonReader) throws IOException {
-						AccountJwtResult result = AccountJwt.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPublic());
+					public AccessToken read(@Nonnull JsonReader jsonReader) throws IOException {
+						AccessTokenResult result = AccessToken.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPublic());
 
 						switch (result) {
-							case AccountJwtResult.Succeeded(@Nonnull AccountJwt accountJwt) -> {
+							case AccessTokenResult.Succeeded(@Nonnull AccessToken accountJwt) -> {
 								return accountJwt;
 							}
-							case AccountJwtResult.Expired(@Nonnull AccountJwt accountJwt, @Nonnull Instant expiredAt) -> {
+							case AccessTokenResult.Expired(@Nonnull AccessToken accountJwt, @Nonnull Instant expiredAt) -> {
 								return accountJwt;
 							}
 							default -> {
@@ -740,27 +740,27 @@ public class AppModule extends AbstractModule {
 						}
 					}
 				})
-				// Convert our custom ServerSentEventContextJwt to and from a JSON string
-				.registerTypeAdapter(ServerSentEventContextJwt.class, new TypeAdapter<ServerSentEventContextJwt>() {
+				// Convert our custom ServerSentEventContextToken to and from a JSON string
+				.registerTypeAdapter(ServerSentEventContextToken.class, new TypeAdapter<ServerSentEventContextToken>() {
 					@Override
 					public void write(@Nonnull JsonWriter jsonWriter,
-														@Nonnull ServerSentEventContextJwt serverSentEventContextJwt) throws IOException {
+														@Nonnull ServerSentEventContextToken serverSentEventContextJwt) throws IOException {
 						jsonWriter.value(serverSentEventContextJwt.toStringRepresentation(configuration.getKeyPair().getPrivate()));
 					}
 
 					@Override
 					@Nullable
-					public ServerSentEventContextJwt read(@Nonnull JsonReader jsonReader) throws IOException {
-						ServerSentEventContextJwtResult result = ServerSentEventContextJwt.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPublic());
+					public ServerSentEventContextToken read(@Nonnull JsonReader jsonReader) throws IOException {
+						ServerSentEventContextTokenResult result = ServerSentEventContextToken.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPublic());
 
 						switch (result) {
-							case ServerSentEventContextJwtResult.Succeeded(
-									@Nonnull ServerSentEventContextJwt serverSentEventContextJwt
+							case ServerSentEventContextTokenResult.Succeeded(
+									@Nonnull ServerSentEventContextToken serverSentEventContextJwt
 							) -> {
 								return serverSentEventContextJwt;
 							}
-							case ServerSentEventContextJwtResult.Expired(
-									@Nonnull ServerSentEventContextJwt serverSentEventContextJwt, @Nonnull Instant expiredAt
+							case ServerSentEventContextTokenResult.Expired(
+									@Nonnull ServerSentEventContextToken serverSentEventContextJwt, @Nonnull Instant expiredAt
 							) -> {
 								return serverSentEventContextJwt;
 							}

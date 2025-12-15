@@ -33,7 +33,7 @@ import com.soklet.toystore.model.api.request.ToyCreateRequest;
 import com.soklet.toystore.model.api.response.ErrorResponse;
 import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseHolder;
 import com.soklet.toystore.model.api.response.ToyResponse.ToyResponseHolder;
-import com.soklet.toystore.model.auth.AccountJwt;
+import com.soklet.toystore.model.auth.AccessToken;
 import com.soklet.toystore.service.AccountService;
 import com.soklet.toystore.util.CreditCardProcessor;
 import com.soklet.toystore.util.CreditCardProcessor.CreditCardPaymentFailureReason;
@@ -79,7 +79,7 @@ public class ToyResourceTests {
 			String requestBodyJson = gson.toJson(new ToyCreateRequest(name, price, currency));
 
 			Request request = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("X-Authentication-Token", Set.of(authenticationToken)))
+					.headers(Map.of("X-Access-Token", Set.of(authenticationToken)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -97,7 +97,7 @@ public class ToyResourceTests {
 
 			// Try to create the same toy again and verify that the backend prevents it
 			request = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("X-Authentication-Token", Set.of(authenticationToken)))
+					.headers(Map.of("X-Access-Token", Set.of(authenticationToken)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -160,7 +160,7 @@ public class ToyResourceTests {
 			String requestBodyJson = gson.toJson(new ToyCreateRequest(name, price, currency));
 
 			Request request = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("X-Authentication-Token", Set.of(authenticationToken)))
+					.headers(Map.of("X-Access-Token", Set.of(authenticationToken)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -176,7 +176,7 @@ public class ToyResourceTests {
 
 			// Now, try to purchase the expensive toy and verify that the backend indicates a CC decline
 			request = Request.withPath(HttpMethod.POST, format("/toys/%s/purchase", expensiveToyId))
-					.headers(Map.of("X-Authentication-Token", Set.of(authenticationToken)))
+					.headers(Map.of("X-Access-Token", Set.of(authenticationToken)))
 					.body(gson.toJson(Map.of(
 							"creditCardNumber", "4111111111111111",
 							"creditCardExpiration", "2030-01"
@@ -203,7 +203,7 @@ public class ToyResourceTests {
 			requestBodyJson = gson.toJson(new ToyCreateRequest(name, price, currency));
 
 			request = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("X-Authentication-Token", Set.of(authenticationToken)))
+					.headers(Map.of("X-Access-Token", Set.of(authenticationToken)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -219,7 +219,7 @@ public class ToyResourceTests {
 
 			// Now, try to purchase the cheap toy and verify that we don't get declined
 			request = Request.withPath(HttpMethod.POST, format("/toys/%s/purchase", cheapToyId))
-					.headers(Map.of("X-Authentication-Token", Set.of(authenticationToken)))
+					.headers(Map.of("X-Access-Token", Set.of(authenticationToken)))
 					.body(gson.toJson(Map.of(
 							"creditCardNumber", "4111111111111111",
 							"creditCardExpiration", "2030-01"
@@ -254,8 +254,8 @@ public class ToyResourceTests {
 		CurrentContext.with(Locale.US, ZoneId.of("America/New_York")).build().run(() -> {
 			// Ask the backend for an authentication token
 			AccountAuthenticateRequest accountAuthenticateRequest = new AccountAuthenticateRequest(emailAddress, password);
-			AccountJwt accountJwt = accountService.authenticateAccount(accountAuthenticateRequest);
-			String authenticationToken = accountJwt.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate());
+			AccessToken accessToken = accountService.authenticateAccount(accountAuthenticateRequest);
+			String authenticationToken = accessToken.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate());
 
 			// "Warp" the token outside the closure so it can be returned
 			holder.set(authenticationToken);

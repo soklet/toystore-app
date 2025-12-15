@@ -26,10 +26,8 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.util.Base64;
 import java.util.LinkedHashSet;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -38,21 +36,12 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Encapsulates a JWT which securely carries information about the context that should be used when performing an SSE handshake.
- * <p>
- * The reason we have this:
- * <ul>
- *   <li>SSE spec does not permit specifying headers, so we must pass authentication information via query parameter</li>
- *   <li>We don't want to send our normal "long lived" access token as a query parameter - this must be short to prevent replay attacks, e.g. 30 seconds</li>
- *   <li>We want to capture any other data that might normally be passed via headers, e.g. explicit locale/timezone preferences</li>
- * </ul>
+ * Encapsulates a JWT which securely carries information about an authenticated account.
  *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-public record ServerSentEventContextJwt(
+public record AccessToken(
 		@Nonnull UUID accountId,
-		@Nonnull Locale locale,
-		@Nonnull ZoneId timeZone,
 		@Nonnull Instant issuedAt,
 		@Nonnull Instant expiresAt
 ) {
@@ -64,10 +53,8 @@ public record ServerSentEventContextJwt(
 		GSON = new GsonBuilder().disableHtmlEscaping().create();
 	}
 
-	public ServerSentEventContextJwt {
+	public AccessToken {
 		requireNonNull(accountId);
-		requireNonNull(locale);
-		requireNonNull(timeZone);
 		requireNonNull(issuedAt);
 		requireNonNull(expiresAt);
 	}
@@ -83,44 +70,42 @@ public record ServerSentEventContextJwt(
 	@Nonnull
 	public String toStringRepresentation(@Nonnull PrivateKey privateKey) {
 		requireNonNull(privateKey);
-		return ServerSentEventContextJwt.toStringRepresentation(accountId(), locale(), timeZone(), issuedAt(), expiresAt(), privateKey);
+		return AccessToken.toStringRepresentation(accountId(), issuedAt(), expiresAt(), privateKey);
 	}
 
-	// Parsing a ServerSentEventContextJwt can have many outcomes.
-	public sealed interface ServerSentEventContextJwtResult {
-		record Succeeded(
-				@Nonnull ServerSentEventContextJwt serverSentEventContextJwt) implements ServerSentEventContextJwtResult {}
+	// Parsing an AccessToken can have many outcomes.
+	public sealed interface AccessTokenResult {
+		record Succeeded(@Nonnull AccessToken accessToken) implements AccessTokenResult {}
 
-		record InvalidStructure() implements ServerSentEventContextJwtResult {}
+		record InvalidStructure() implements AccessTokenResult {}
 
-		record SignatureMismatch() implements ServerSentEventContextJwtResult {}
+		record SignatureMismatch() implements AccessTokenResult {}
 
-		record Expired(@Nonnull ServerSentEventContextJwt serverSentEventContextJwt,
-									 @Nonnull Instant expiredAt) implements ServerSentEventContextJwtResult {}
+		record Expired(@Nonnull AccessToken accessToken, @Nonnull Instant expiredAt) implements AccessTokenResult {}
 
-		record MissingHeaders(@Nonnull Set<String> headers) implements ServerSentEventContextJwtResult {}
+		record MissingHeaders(@Nonnull Set<String> headers) implements AccessTokenResult {}
 
-		record InvalidHeaders(@Nonnull Set<String> headers) implements ServerSentEventContextJwtResult {}
+		record InvalidHeaders(@Nonnull Set<String> headers) implements AccessTokenResult {}
 
-		record MissingClaims(@Nonnull Set<String> claims) implements ServerSentEventContextJwtResult {}
+		record MissingClaims(@Nonnull Set<String> claims) implements AccessTokenResult {}
 
-		record InvalidClaims(@Nonnull Set<String> claims) implements ServerSentEventContextJwtResult {}
+		record InvalidClaims(@Nonnull Set<String> claims) implements AccessTokenResult {}
 	}
 
 	/**
-	 * Parses and verifies an ServerSentEventContextJwt from its string representation using the given Ed25519 public key.
+	 * Parses and verifies an AccessToken from its string representation using the given Ed25519 public key.
 	 */
 	@Nonnull
 	@SuppressWarnings("unchecked")
-	public static ServerSentEventContextJwtResult fromStringRepresentation(@Nonnull String string,
-																																				 @Nonnull PublicKey publicKey) {
+	public static AccessTokenResult fromStringRepresentation(@Nonnull String string,
+																													 @Nonnull PublicKey publicKey) {
 		requireNonNull(string);
 		requireNonNull(publicKey);
 
 		String[] components = string.trim().split("\\.");
 
 		if (components.length != 3)
-			return new ServerSentEventContextJwtResult.InvalidStructure();
+			return new AccessTokenResult.InvalidStructure();
 
 		String encodedHeader = components[0];
 		String encodedPayload = components[1];
@@ -136,7 +121,7 @@ public record ServerSentEventContextJwt(
 			signatureBytes = base64UrlDecode(encodedSignature);
 		} catch (Exception e) {
 			// Bad base64, etc.
-			return new ServerSentEventContextJwtResult.InvalidStructure();
+			return new AccessTokenResult.InvalidStructure();
 		}
 
 		// Verify header alg
@@ -145,7 +130,7 @@ public record ServerSentEventContextJwt(
 		try {
 			header = GSON.fromJson(decodedHeaderJson, Map.class);
 		} catch (Exception e) {
-			return new ServerSentEventContextJwtResult.InvalidStructure();
+			return new AccessTokenResult.InvalidStructure();
 		}
 
 		// Validate required headers
@@ -160,10 +145,10 @@ public record ServerSentEventContextJwt(
 			invalidHeaders.add("alg");
 
 		if (!missingHeaders.isEmpty())
-			return new ServerSentEventContextJwtResult.MissingHeaders(missingHeaders);
+			return new AccessTokenResult.MissingHeaders(missingHeaders);
 
 		if (!invalidHeaders.isEmpty())
-			return new ServerSentEventContextJwtResult.InvalidHeaders(invalidHeaders);
+			return new AccessTokenResult.InvalidHeaders(invalidHeaders);
 
 		// Verify signature
 		String signingInput = format("%s.%s", encodedHeader, encodedPayload);
@@ -172,11 +157,11 @@ public record ServerSentEventContextJwt(
 		try {
 			signatureValid = verifyEd25519(signingInput, signatureBytes, publicKey);
 		} catch (Exception e) {
-			return new ServerSentEventContextJwtResult.InvalidStructure();
+			return new AccessTokenResult.InvalidStructure();
 		}
 
 		if (!signatureValid)
-			return new ServerSentEventContextJwtResult.SignatureMismatch();
+			return new AccessTokenResult.SignatureMismatch();
 
 		// Parse payload claims
 		Map<String, Object> payload;
@@ -184,12 +169,10 @@ public record ServerSentEventContextJwt(
 		try {
 			payload = GSON.fromJson(decodedPayloadJson, Map.class);
 		} catch (Exception e) {
-			return new ServerSentEventContextJwtResult.InvalidStructure();
+			return new AccessTokenResult.InvalidStructure();
 		}
 
 		String subAsString = (String) payload.get("sub");
-		String localeAsString = (String) payload.get("locale");
-		String timezoneAsString = (String) payload.get("tz");
 		Number iatAsNumber = (Number) payload.get("iat");
 		Number expAsNumber = (Number) payload.get("exp");
 
@@ -197,65 +180,39 @@ public record ServerSentEventContextJwt(
 
 		if (subAsString == null)
 			missingClaims.add("sub");
-		if (localeAsString == null)
-			missingClaims.add("locale");
-		if (timezoneAsString == null)
-			missingClaims.add("tz");
 		if (iatAsNumber == null)
 			missingClaims.add("iat");
 		if (expAsNumber == null)
 			missingClaims.add("exp");
 
 		if (!missingClaims.isEmpty())
-			return new ServerSentEventContextJwtResult.MissingClaims(missingClaims);
+			return new AccessTokenResult.MissingClaims(missingClaims);
 
-		UUID sub = null;
-		Locale locale = null;
-		ZoneId timeZone = null;
-		Set<String> invalidClaims = new LinkedHashSet<>(3);
+		UUID sub;
 
 		try {
 			sub = UUID.fromString(subAsString);
 		} catch (Exception ignored) {
-			invalidClaims.add("sub");
+			return new AccessTokenResult.InvalidClaims(Set.of("sub"));
 		}
-
-		try {
-			locale = Locale.forLanguageTag(localeAsString);
-		} catch (Exception ignored) {
-			invalidClaims.add("locale");
-		}
-
-		try {
-			timeZone = ZoneId.of(timezoneAsString);
-		} catch (Exception ignored) {
-			invalidClaims.add("tz");
-		}
-
-		if (!invalidClaims.isEmpty())
-			return new ServerSentEventContextJwtResult.InvalidClaims(invalidClaims);
 
 		Instant issuedAt = Instant.ofEpochSecond(iatAsNumber.longValue());
 		Instant expiresAt = Instant.ofEpochSecond(expAsNumber.longValue());
 
-		ServerSentEventContextJwt serverSentEventContextJwt = new ServerSentEventContextJwt(sub, locale, timeZone, issuedAt, expiresAt);
+		AccessToken accessToken = new AccessToken(sub, issuedAt, expiresAt);
 
 		if (expiresAt.isBefore(Instant.now()))
-			return new ServerSentEventContextJwtResult.Expired(serverSentEventContextJwt, expiresAt);
+			return new AccessTokenResult.Expired(accessToken, expiresAt);
 
-		return new ServerSentEventContextJwtResult.Succeeded(serverSentEventContextJwt);
+		return new AccessTokenResult.Succeeded(accessToken);
 	}
 
 	@Nonnull
 	public static String toStringRepresentation(@Nonnull UUID accountId,
-																							@Nonnull Locale locale,
-																							@Nonnull ZoneId timeZone,
 																							@Nonnull Instant issuedAt,
 																							@Nonnull Instant expiresAt,
 																							@Nonnull PrivateKey privateKey) {
 		requireNonNull(accountId);
-		requireNonNull(locale);
-		requireNonNull(timeZone);
 		requireNonNull(issuedAt);
 		requireNonNull(expiresAt);
 		requireNonNull(privateKey);
@@ -267,8 +224,6 @@ public record ServerSentEventContextJwt(
 
 		String payloadJson = GSON.toJson(Map.of(
 				"sub", accountId,
-				"locale", locale.toLanguageTag(),
-				"tz", timeZone.getId(),
 				"iat", issuedAt.getEpochSecond(),
 				"exp", expiresAt.getEpochSecond()
 		));
