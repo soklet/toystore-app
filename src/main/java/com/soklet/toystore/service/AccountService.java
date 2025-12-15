@@ -19,6 +19,7 @@ package com.soklet.toystore.service;
 import com.google.inject.Inject;
 import com.lokalized.Strings;
 import com.pyranid.Database;
+import com.soklet.toystore.Configuration;
 import com.soklet.toystore.exception.ApplicationException;
 import com.soklet.toystore.exception.ApplicationException.ErrorCollector;
 import com.soklet.toystore.model.api.request.AccountAuthenticateRequest;
@@ -32,7 +33,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,6 +47,8 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class AccountService {
 	@Nonnull
+	private final Configuration configuration;
+	@Nonnull
 	private final PasswordManager passwordManager;
 	@Nonnull
 	private final Database database;
@@ -56,13 +58,16 @@ public class AccountService {
 	private final Logger logger;
 
 	@Inject
-	public AccountService(@Nonnull PasswordManager passwordManager,
+	public AccountService(@Nonnull Configuration configuration,
+												@Nonnull PasswordManager passwordManager,
 												@Nonnull Database database,
 												@Nonnull Strings strings) {
+		requireNonNull(configuration);
 		requireNonNull(passwordManager);
 		requireNonNull(database);
 		requireNonNull(strings);
 
+		this.configuration = configuration;
 		this.passwordManager = passwordManager;
 		this.database = database;
 		this.strings = strings;
@@ -112,8 +117,13 @@ public class AccountService {
 
 		// Generate a JWT
 		Instant issuedAt = Instant.now();
-		Instant expiresAt = issuedAt.plus(60, ChronoUnit.MINUTES);
+		Instant expiresAt = issuedAt.plus(getConfiguration().getAuthenticationExpiration());
 		return new AccountJwt(account.accountId(), issuedAt, expiresAt);
+	}
+
+	@Nonnull
+	private Configuration getConfiguration() {
+		return this.configuration;
 	}
 
 	@Nonnull

@@ -63,9 +63,6 @@ import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseF
 import com.soklet.toystore.model.api.response.ToyResponse.ToyResponseFactory;
 import com.soklet.toystore.model.auth.AccountJwt;
 import com.soklet.toystore.model.auth.AccountJwt.AccountJwtResult;
-import com.soklet.toystore.model.auth.AccountJwt.AccountJwtResult.Expired;
-import com.soklet.toystore.model.auth.AccountJwt.AccountJwtResult.SignatureMismatch;
-import com.soklet.toystore.model.auth.AccountJwt.AccountJwtResult.Succeeded;
 import com.soklet.toystore.model.auth.ServerSentEventContextJwt;
 import com.soklet.toystore.model.auth.ServerSentEventContextJwt.ServerSentEventContextJwtResult;
 import com.soklet.toystore.model.db.Account;
@@ -227,10 +224,14 @@ public class AppModule extends AbstractModule {
 						requireNonNull(request);
 						requireNonNull(requestProcessor);
 
-						// Ensure a "current context" scope exists for all request-handling code
-						CurrentContext.withRequest(request).build().run(() -> {
-							requestProcessor.accept(request);
-						});
+						// Ensure a "current context" scope exists for all request-handling code.
+						// Pick the best-matching locale and timezone based on information we have from the request
+						CurrentContext.withRequest(request, resourceMethod)
+								.locale(determineLocale(request))
+								.timeZone(determineTimeZone(request))
+								.build().run(() -> {
+									requestProcessor.accept(request);
+								});
 					}
 
 					@Override
@@ -242,6 +243,8 @@ public class AppModule extends AbstractModule {
 						requireNonNull(responseGenerator);
 						requireNonNull(responseWriter);
 
+						Locale locale = null;
+						ZoneId timeZone = null;
 						Account account = null;
 
 						// Try to pull authentication token from request headers...
@@ -252,20 +255,53 @@ public class AppModule extends AbstractModule {
 							AccountJwtResult accountJwtResult = AccountJwt.fromStringRepresentation(authenticationTokenAsString, configuration.getKeyPair().getPublic());
 
 							switch (accountJwtResult) {
-								case Succeeded(@Nonnull AccountJwt accountJwt) ->
+								case AccountJwtResult.Succeeded(@Nonnull AccountJwt accountJwt) ->
 										account = accountService.findAccountById(accountJwt.accountId()).orElse(null);
 
-								case Expired(@Nonnull AccountJwt accountJwt, @Nonnull Instant expiredAt) ->
+								case AccountJwtResult.Expired(@Nonnull AccountJwt accountJwt, @Nonnull Instant expiredAt) ->
 										logger.debug("JWT for account ID {} expired at {}", accountJwt.accountId(), expiredAt);
 
-								case SignatureMismatch() -> logger.warn("JWT signature is invalid: {}", authenticationTokenAsString);
+								case AccountJwtResult.SignatureMismatch() ->
+										logger.warn("JWT signature is invalid: {}", authenticationTokenAsString);
 
 								default -> logger.warn("JWT is invalid: {}", authenticationTokenAsString);
 							}
 						}
 
 						if (resourceMethod != null) {
-							// See if the resource method has an @AuthorizationRequired annotation...
+							// Is this an SSE resource method?  If so, its authentication + locale/timezone information will come from a special query parameter (SSE spec does not permit request headers)...
+							if (resourceMethod.isServerSentEventSource()) {
+								String serverSentEventContextAsString = request.getQueryParameter("X-Server-Sent-Event-Context-Token").orElse(null);
+
+								// ...and if it exists, see if we can pull an account from it.
+								if (serverSentEventContextAsString != null) {
+									ServerSentEventContextJwtResult serverSentEventContextJwtResult = ServerSentEventContextJwt.fromStringRepresentation(serverSentEventContextAsString, configuration.getKeyPair().getPublic());
+
+									switch (serverSentEventContextJwtResult) {
+										case ServerSentEventContextJwtResult.Succeeded(
+												@Nonnull ServerSentEventContextJwt serverSentEventContextJwt
+										) -> account = accountService.findAccountById(serverSentEventContextJwt.accountId()).orElse(null);
+
+										case ServerSentEventContextJwtResult.Expired(
+												@Nonnull ServerSentEventContextJwt serverSentEventContextJwt, @Nonnull Instant expiredAt
+										) ->
+												logger.debug("SSE JWT for account ID {} expired at {}", serverSentEventContextJwt.accountId(), expiredAt);
+
+										case ServerSentEventContextJwtResult.SignatureMismatch() ->
+												logger.warn("SSE JWT signature is invalid: {}", serverSentEventContextAsString);
+
+										default -> logger.warn("SSE JWT is invalid: {}", serverSentEventContextAsString);
+									}
+								}
+							}
+
+							// We can now finalize the appropriate locale and timezone for this request by using hints from the authenticated account
+							if (account != null) {
+								locale = determineLocale(request, account);
+								timeZone = determineTimeZone(request, account);
+							}
+
+							// Next, see if the resource method has an @AuthorizationRequired annotation...
 							AuthorizationRequired authorizationRequired = resourceMethod.getMethod().getAnnotation(AuthorizationRequired.class);
 
 							if (authorizationRequired != null) {
@@ -282,7 +318,9 @@ public class AppModule extends AbstractModule {
 						}
 
 						// Create a new current context scope with the authenticated account (if present)
-						CurrentContext currentContext = CurrentContext.withRequest(request)
+						CurrentContext currentContext = CurrentContext.withRequest(request, resourceMethod)
+								.locale(locale)
+								.timeZone(timeZone)
 								.account(account)
 								.build();
 
@@ -296,6 +334,70 @@ public class AppModule extends AbstractModule {
 
 							responseWriter.accept(marshaledResponse);
 						});
+					}
+
+					@Nonnull
+					private Locale determineLocale(@Nonnull Request request) {
+						requireNonNull(request);
+						return determineLocale(request, null);
+					}
+
+					@Nonnull
+					private Locale determineLocale(@Nonnull Request request,
+																				 @Nullable Account account) {
+						requireNonNull(request);
+
+						// Allow clients to specify a special header which indicates preferred locale
+						String localeHeader = request.getHeader("X-Locale").orElse(null);
+
+						if (localeHeader != null) {
+							try {
+								return Locale.forLanguageTag(localeHeader);
+							} catch (Exception ignored) {
+								// Illegal locale specified, we'll just try one of our fallbacks
+							}
+						}
+
+						// Next, if there's a signed-in account, use their configured locale
+						if (account != null)
+							return account.locale();
+
+						// If that didn't work, try the request's Accept-Language header
+						if (request.getLocales().size() > 0)
+							return request.getLocales().get(0);
+
+						// Still not sure?  Fall back to a safe default
+						return Configuration.getDefaultLocale();
+					}
+
+					@Nonnull
+					private ZoneId determineTimeZone(@Nonnull Request request) {
+						requireNonNull(request);
+						return determineTimeZone(request, null);
+					}
+
+					@Nonnull
+					private ZoneId determineTimeZone(@Nonnull Request request,
+																					 @Nullable Account account) {
+						requireNonNull(request);
+
+						// Allow clients to specify a special header which indicates preferred timezone
+						String timeZoneHeader = request.getHeader("X-Time-Zone").orElse(null);
+
+						if (timeZoneHeader != null) {
+							try {
+								return ZoneId.of(timeZoneHeader);
+							} catch (Exception ignored) {
+								// Illegal timezone specified, we'll just try one of our fallbacks
+							}
+						}
+
+						// Next, if there's a signed-in account, use their configured timezone
+						if (account != null)
+							return account.timeZone();
+
+						// Still not sure?  Fall back to a safe default
+						return Configuration.getDefaultTimeZone();
 					}
 				})
 				.requestBodyMarshaler(new RequestBodyMarshaler() {

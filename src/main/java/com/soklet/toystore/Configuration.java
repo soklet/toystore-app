@@ -35,6 +35,7 @@ import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Locale;
@@ -74,6 +75,10 @@ public class Configuration {
 	@Nonnull
 	private final Integer serverSentEventPort;
 	@Nonnull
+	private final Duration authenticationExpiration;
+	@Nonnull
+	private final Duration serverSentEventContextExpiration;
+	@Nonnull
 	private final KeyPair keyPair;
 	@Nonnull
 	private final Set<String> corsWhitelistedOrigins;
@@ -88,6 +93,8 @@ public class Configuration {
 		this.stopOnKeypress = !this.runningInDocker;
 		this.port = requireNonNull(configFile.port());
 		this.serverSentEventPort = requireNonNull(configFile.serverSentEventPort());
+		this.authenticationExpiration = Duration.ofSeconds(configFile.authenticationExpirationInSeconds());
+		this.serverSentEventContextExpiration = Duration.ofSeconds(configFile.serverSentEventContextExpirationInSeconds());
 		this.corsWhitelistedOrigins = configFile.corsWhitelistedOrigins() == null ? Set.of() : configFile.corsWhitelistedOrigins();
 		this.keyPair = loadKeyPair(configFile.keyPair());
 
@@ -139,12 +146,16 @@ public class Configuration {
 			@Nonnull Integer port,
 			@Nonnull Integer serverSentEventPort,
 			@Nonnull Set<String> corsWhitelistedOrigins,
+			@Nonnull Integer authenticationExpirationInSeconds,
+			@Nonnull Integer serverSentEventContextExpirationInSeconds,
 			@Nonnull ConfigKeyPair keyPair
 	) {
 		public ConfigFile {
 			requireNonNull(port);
 			requireNonNull(serverSentEventPort);
 			requireNonNull(corsWhitelistedOrigins);
+			requireNonNull(authenticationExpirationInSeconds);
+			requireNonNull(serverSentEventContextExpirationInSeconds);
 			requireNonNull(keyPair);
 		}
 
@@ -194,6 +205,16 @@ public class Configuration {
 	@Nonnull
 	public Integer getServerSentEventPort() {
 		return this.serverSentEventPort;
+	}
+
+	@Nonnull
+	public Duration getAuthenticationExpiration() {
+		return this.authenticationExpiration;
+	}
+
+	@Nonnull
+	public Duration getServerSentEventContextExpiration() {
+		return this.serverSentEventContextExpiration;
 	}
 
 	@Nonnull

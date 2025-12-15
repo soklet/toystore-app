@@ -88,7 +88,8 @@ public record ServerSentEventContextJwt(
 
 	// Parsing a ServerSentEventContextJwt can have many outcomes.
 	public sealed interface ServerSentEventContextJwtResult {
-		record Succeeded(@Nonnull ServerSentEventContextJwt accountJwt) implements ServerSentEventContextJwtResult {}
+		record Succeeded(
+				@Nonnull ServerSentEventContextJwt serverSentEventContextJwt) implements ServerSentEventContextJwtResult {}
 
 		record InvalidStructure() implements ServerSentEventContextJwtResult {}
 
@@ -237,12 +238,12 @@ public record ServerSentEventContextJwt(
 		Instant issuedAt = Instant.ofEpochSecond(iatAsNumber.longValue());
 		Instant expiresAt = Instant.ofEpochSecond(expAsNumber.longValue());
 
-		ServerSentEventContextJwt accountJwt = new ServerSentEventContextJwt(sub, locale, timeZone, issuedAt, expiresAt);
+		ServerSentEventContextJwt serverSentEventContextJwt = new ServerSentEventContextJwt(sub, locale, timeZone, issuedAt, expiresAt);
 
 		if (expiresAt.isBefore(Instant.now()))
-			return new ServerSentEventContextJwtResult.Expired(accountJwt, expiresAt);
+			return new ServerSentEventContextJwtResult.Expired(serverSentEventContextJwt, expiresAt);
 
-		return new ServerSentEventContextJwtResult.Succeeded(accountJwt);
+		return new ServerSentEventContextJwtResult.Succeeded(serverSentEventContextJwt);
 	}
 
 	@Nonnull

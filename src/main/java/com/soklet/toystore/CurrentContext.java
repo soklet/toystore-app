@@ -17,6 +17,7 @@
 package com.soklet.toystore;
 
 import com.soklet.Request;
+import com.soklet.ResourceMethod;
 import com.soklet.toystore.model.db.Account;
 import org.slf4j.MDC;
 
@@ -46,15 +47,6 @@ public class CurrentContext {
 		CURRENT_CONTEXT_SCOPED_VALUE = ScopedValue.newInstance();
 	}
 
-	@Nullable
-	private final Request request;
-	@Nullable
-	private final Account account;
-	@Nonnull
-	private final Locale locale;
-	@Nonnull
-	private final ZoneId timeZone;
-
 	@Nonnull
 	public static CurrentContext get() {
 		if (!CURRENT_CONTEXT_SCOPED_VALUE.isBound())
@@ -71,6 +63,8 @@ public class CurrentContext {
 		private ZoneId timeZone;
 		@Nullable
 		private Request request;
+		@Nullable
+		private ResourceMethod resourceMethod;
 		@Nullable
 		private Account account;
 
@@ -95,6 +89,12 @@ public class CurrentContext {
 		}
 
 		@Nonnull
+		public Builder resourceMethod(@Nullable ResourceMethod resourceMethod) {
+			this.resourceMethod = resourceMethod;
+			return this;
+		}
+
+		@Nonnull
 		public Builder account(@Nullable Account account) {
 			this.account = account;
 			return this;
@@ -113,8 +113,9 @@ public class CurrentContext {
 	}
 
 	@Nonnull
-	public static Builder withRequest(@Nullable Request request) {
-		return new Builder().request(request);
+	public static Builder withRequest(@Nullable Request request,
+																		@Nullable ResourceMethod resourceMethod) {
+		return new Builder().request(request).resourceMethod(resourceMethod);
 	}
 
 	@Nonnull
@@ -122,13 +123,25 @@ public class CurrentContext {
 		return new Builder().account(account);
 	}
 
+	@Nonnull
+	private final Locale locale;
+	@Nonnull
+	private final ZoneId timeZone;
+	@Nullable
+	private final Request request;
+	@Nullable
+	private final ResourceMethod resourceMethod;
+	@Nullable
+	private final Account account;
+
 	private CurrentContext(@Nonnull Builder builder) {
 		requireNonNull(builder);
 
+		this.timeZone = builder.timeZone == null ? Configuration.getDefaultTimeZone() : builder.timeZone;
+		this.locale = builder.locale == null ? Configuration.getDefaultLocale() : builder.locale;
 		this.request = builder.request;
+		this.resourceMethod = builder.resourceMethod;
 		this.account = builder.account;
-		this.timeZone = determineTimeZone(builder);
-		this.locale = determineLocale(builder);
 	}
 
 	public void run(@Nonnull Runnable runnable) {
@@ -169,6 +182,11 @@ public class CurrentContext {
 	}
 
 	@Nonnull
+	public Optional<ResourceMethod> getResourceMethod() {
+		return Optional.ofNullable(this.resourceMethod);
+	}
+
+	@Nonnull
 	public Optional<Account> getAccount() {
 		return Optional.ofNullable(this.account);
 	}
@@ -192,75 +210,5 @@ public class CurrentContext {
 		String accountDescription = account == null ? "unauthenticated" : account.name();
 
 		return format("%s (%s)", requestDescription, accountDescription);
-	}
-
-	@Nonnull
-	private Locale determineLocale(@Nonnull Builder builder) {
-		requireNonNull(builder);
-
-		// If an explicit locale was specified, use it
-		if (builder.locale != null)
-			return builder.locale;
-
-		Request request = builder.request;
-
-		// If this is in the context of a web request, allow clients to specify a special header which indicates preferred locale
-		if (request != null) {
-			String localeHeader = request.getHeader("X-Locale").orElse(null);
-
-			if (localeHeader != null) {
-				try {
-					return Locale.forLanguageTag(localeHeader);
-				} catch (Exception ignored) {
-					// Illegal locale specified, we'll just try one of our fallbacks
-				}
-			}
-		}
-
-		// Next, if there's a signed-in account, use their configured locale
-		Account account = builder.account;
-
-		if (account != null)
-			return account.locale();
-
-		// If that didn't work, and we're in the context of a web request, try its Accept-Language header
-		if (request != null && request.getLocales().size() > 0)
-			return request.getLocales().get(0);
-
-		// Still not sure?  Fall back to a safe default
-		return Configuration.getDefaultLocale();
-	}
-
-	@Nonnull
-	private ZoneId determineTimeZone(@Nonnull Builder builder) {
-		requireNonNull(builder);
-
-		// If an explicit time zone was specified, use it
-		if (builder.timeZone != null)
-			return builder.timeZone;
-
-		Request request = builder.request;
-
-		// If this is in the context of a web request, allow clients to specify a special header which indicates preferred timezone
-		if (request != null) {
-			String timeZoneHeader = request.getHeader("X-Time-Zone").orElse(null);
-
-			if (timeZoneHeader != null) {
-				try {
-					return ZoneId.of(timeZoneHeader);
-				} catch (Exception ignored) {
-					// Illegal timezone specified, we'll just try one of our fallbacks
-				}
-			}
-		}
-
-		// Next, if there's a signed-in account, use their configured timezone
-		Account account = builder.account;
-
-		if (account != null)
-			return account.timeZone();
-
-		// Still not sure?  Fall back to a safe default
-		return Configuration.getDefaultTimeZone();
 	}
 }
