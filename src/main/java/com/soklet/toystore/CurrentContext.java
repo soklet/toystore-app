@@ -28,6 +28,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.time.ZoneId;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.StringJoiner;
 import java.util.function.Supplier;
 
 import static java.lang.String.format;
@@ -39,7 +40,7 @@ import static java.util.Objects.requireNonNull;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe
-public class CurrentContext {
+public final class CurrentContext {
 	@Nonnull
 	private static final ScopedValue<CurrentContext> CURRENT_CONTEXT_SCOPED_VALUE;
 
@@ -174,6 +175,20 @@ public class CurrentContext {
 				}
 			}
 		});
+	}
+
+	@Override
+	public String toString() {
+		StringJoiner joiner = new StringJoiner(", ", format("%s{", CurrentContext.class.getSimpleName()), "}");
+
+		getAccount().ifPresent(account -> joiner.add(format("accountId=%s", account.accountId())));
+
+		joiner.add(format("locale=%s", getLocale().toLanguageTag()));
+		joiner.add(format("timeZone=", getTimeZone().getId()));
+
+		getRequest().ifPresent(request -> joiner.add(format("request=%s %s", request.getHttpMethod().name(), request.getRawPath())));
+
+		return joiner.toString();
 	}
 
 	@Nonnull

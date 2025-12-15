@@ -46,6 +46,7 @@ import com.soklet.ResourceMethod;
 import com.soklet.Response;
 import com.soklet.ResponseMarshaler;
 import com.soklet.Server;
+import com.soklet.ServerSentEventConnection;
 import com.soklet.ServerSentEventServer;
 import com.soklet.Soklet;
 import com.soklet.SokletConfig;
@@ -212,6 +213,22 @@ public class AppModule extends AbstractModule {
 					}
 
 					@Override
+					public void didEstablishServerSentEventConnection(@Nonnull ServerSentEventConnection serverSentEventConnection) {
+						CurrentContext currentContext = (CurrentContext) serverSentEventConnection.getClientContext().get();
+						logger.debug("Server-Sent Event Connection ID {} established for {}. Context: {}",
+								serverSentEventConnection.getRequest().getId(), serverSentEventConnection.getRequest().getPath(), currentContext);
+					}
+
+					@Override
+					public void didTerminateServerSentEventConnection(@Nonnull ServerSentEventConnection serverSentEventConnection,
+																														@Nonnull Duration connectionDuration,
+																														@Nullable Throwable throwable) {
+						CurrentContext currentContext = (CurrentContext) serverSentEventConnection.getClientContext().get();
+						logger.debug("Server-Sent Event Connection ID {} terminated for {}. Context: {}",
+								serverSentEventConnection.getRequest().getId(), serverSentEventConnection.getRequest().getPath(), currentContext);
+					}
+
+					@Override
 					public void didReceiveLogEvent(@Nonnull LogEvent logEvent) {
 						requireNonNull(logEvent);
 						logger.warn(logEvent.getMessage(), logEvent.getThrowable().orElse(null));
@@ -260,16 +277,18 @@ public class AppModule extends AbstractModule {
 										account = accountService.findAccountById(accessToken.accountId()).orElse(null);
 
 								case AccessTokenResult.Expired(@Nonnull AccessToken accessToken, @Nonnull Instant expiredAt) ->
-										logger.debug("JWT for account ID {} expired at {}", accessToken.accountId(), expiredAt);
+										logger.debug("Access Token for account ID {} expired at {}", accessToken.accountId(), expiredAt);
 
 								case AccessTokenResult.SignatureMismatch() ->
-										logger.warn("JWT signature is invalid: {}", accessTokenAsString);
+										logger.warn("Access Token signature is invalid: {}", accessTokenAsString);
 
-								default -> logger.warn("JWT is invalid: {}", accessTokenAsString);
+								default -> logger.warn("Access Token is invalid: {}", accessTokenAsString);
 							}
 						}
 
 						if (resourceMethod != null) {
+							ServerSentEventContextToken serverSentEventContextToken = null;
+
 							// Is this an SSE resource method?  If so, its authentication + locale/timezone information will come from a special query parameter (SSE spec does not permit request headers)...
 							if (resourceMethod.isServerSentEventSource()) {
 								String serverSentEventContextAsString = request.getQueryParameter("X-Server-Sent-Event-Context-Token").orElse(null);
@@ -279,25 +298,29 @@ public class AppModule extends AbstractModule {
 									ServerSentEventContextTokenResult serverSentEventContextTokenResult = ServerSentEventContextToken.fromStringRepresentation(serverSentEventContextAsString, configuration.getKeyPair().getPublic());
 
 									switch (serverSentEventContextTokenResult) {
-										case ServerSentEventContextTokenResult.Succeeded(
-												@Nonnull ServerSentEventContextToken serverSentEventContextToken
-										) -> account = accountService.findAccountById(serverSentEventContextToken.accountId()).orElse(null);
+										case ServerSentEventContextTokenResult.Succeeded(@Nonnull ServerSentEventContextToken token) -> {
+											account = accountService.findAccountById(token.accountId()).orElse(null);
+											serverSentEventContextToken = token;
+										}
 
 										case ServerSentEventContextTokenResult.Expired(
-												@Nonnull ServerSentEventContextToken serverSentEventContextToken, @Nonnull Instant expiredAt
+												@Nonnull ServerSentEventContextToken token, @Nonnull Instant expiredAt
 										) ->
-												logger.debug("SSE JWT for account ID {} expired at {}", serverSentEventContextToken.accountId(), expiredAt);
+												logger.debug("SSE Context Token for account ID {} expired at {}", token.accountId(), expiredAt);
 
 										case ServerSentEventContextTokenResult.SignatureMismatch() ->
-												logger.warn("SSE JWT signature is invalid: {}", serverSentEventContextAsString);
+												logger.warn("SSE Context Token signature is invalid: {}", serverSentEventContextAsString);
 
-										default -> logger.warn("SSE JWT is invalid: {}", serverSentEventContextAsString);
+										default -> logger.warn("SSE Context Token is invalid: {}", serverSentEventContextAsString);
 									}
 								}
 							}
 
 							// We can now finalize the appropriate locale and timezone for this request by using hints from the authenticated account
-							if (account != null) {
+							if (serverSentEventContextToken != null) {
+								locale = serverSentEventContextToken.locale();
+								timeZone = serverSentEventContextToken.timeZone();
+							} else if (account != null) {
 								locale = determineLocale(request, account);
 								timeZone = determineTimeZone(request, account);
 							}
