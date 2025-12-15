@@ -338,8 +338,18 @@
             animation: pulse 2s infinite;
         }
 
+        .status-dot.connecting {
+            background: var(--color-primary);
+            animation: pulse 0.5s infinite;
+        }
+
         .status-dot.disconnected {
+            background: var(--color-text-muted);
+        }
+
+        .status-dot.error {
             background: var(--color-danger);
+            animation: pulse 0.3s infinite;
         }
 
         @keyframes pulse {
@@ -365,6 +375,10 @@
             border-left: 3px solid;
             background: rgba(255, 255, 255, 0.05);
             color: #e5e7eb;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: baseline;
         }
 
         .event-entry.toy-created { border-color: var(--color-event-created); }
@@ -372,6 +386,8 @@
         .event-entry.toy-deleted { border-color: var(--color-event-deleted); }
         .event-entry.toy-purchased { border-color: var(--color-event-purchased); }
         .event-entry.system { border-color: var(--color-text-muted); color: var(--color-text-muted); }
+        .event-entry.success { border-color: var(--color-success); color: var(--color-success); }
+        .event-entry.error { border-color: var(--color-danger); color: #fca5a5; }
 
         .event-time {
             opacity: 0.6;

@@ -1,4 +1,12 @@
         // ============================================================
+        // Configuration
+        // ============================================================
+        const config = {
+            apiBaseUrl: '',  // Same origin for regular API
+            sseBaseUrl: `${window.location.protocol}//${window.location.hostname}:8081`  // SSE server on port 8081
+        };
+
+        // ============================================================
         // State
         // ============================================================
         const state = {
@@ -63,7 +71,7 @@
             };
 
             if (state.authToken) {
-                headers['X-Authentication-Token'] = state.authToken;
+                headers['X-Access-Token'] = state.authToken;  // Fixed: was X-Authentication-Token
             }
 
             return headers;
@@ -142,6 +150,10 @@
         }
 
         function signOut() {
+            // Disconnect SSE if connected
+            if (state.eventSource) {
+                disconnectSSE();
+            }
             state.authToken = null;
             state.account = null;
             updateAuthUI();
@@ -275,49 +287,92 @@
             elements.sseDisconnectBtn.disabled = !connected;
         }
 
-        function connectSSE() {
+        /**
+         * Acquires a short-lived SSE context token from the server.
+         * This token embeds the account ID, locale, and timezone for the SSE connection.
+         * Per the README: SSE spec does not support custom headers, so we package up
+         * authentication and locale/timezone information into a short-lived token.
+         */
+        async function acquireSseContextToken() {
+            const response = await fetch('/accounts/sse-context-token', {
+                method: 'POST',
+                headers: getHeaders()
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.summary || 'Failed to acquire SSE context token');
+            }
+
+            const data = await response.json();
+            return data.serverSentEventContextToken;
+        }
+
+        async function connectSSE() {
+            // Check if user is authenticated
+            if (!state.authToken) {
+                addEventLogEntry('Error', 'You must sign in before connecting to SSE', 'system');
+                return;
+            }
+
+            // Close existing connection if any
             if (state.eventSource) {
                 state.eventSource.close();
-            }
-
-            // Build URL with locale/timezone as query params since SSE doesn't support custom headers
-            const params = new URLSearchParams({
-                locale: elements.locale.value,
-                timeZone: elements.timezone.value
-            });
-
-            if (state.authToken) {
-                params.set('authToken', state.authToken);
-            }
-
-            const url = `/toys/events?${params.toString()}`;
-            state.eventSource = new EventSource(url);
-
-            state.eventSource.onopen = () => {
-                updateSSEStatus(true);
-                addEventLogEntry('Connected', `Listening on ${url}`, 'system');
-            };
-
-            state.eventSource.onerror = (err) => {
-                updateSSEStatus(false);
-                addEventLogEntry('Error', 'Connection lost or failed to connect', 'system');
-                state.eventSource.close();
                 state.eventSource = null;
-            };
+            }
 
-            // Listen for specific event types
-            ['toy-created', 'toy-updated', 'toy-deleted', 'toy-purchased'].forEach(eventType => {
-                state.eventSource.addEventListener(eventType, (event) => {
-                    const data = JSON.parse(event.data);
-                    const cssClass = eventType.replace('-', '-');
-                    addEventLogEntry(eventType, JSON.stringify(data), cssClass);
+            try {
+                addEventLogEntry('Info', 'Acquiring SSE context token...', 'system');
+
+                // Step 1: Acquire a short-lived SSE context token
+                // This token includes accountId, locale, and timezone
+                const sseContextToken = await acquireSseContextToken();
+
+                // Step 2: Build SSE URL with the context token as query parameter
+                // Fixed: Use correct endpoint (/toys/event-source) and port (8081)
+                const params = new URLSearchParams({
+                    'X-Server-Sent-Event-Context-Token': sseContextToken
                 });
-            });
 
-            // Fallback for generic messages
-            state.eventSource.onmessage = (event) => {
-                addEventLogEntry('Message', event.data, 'system');
-            };
+                const url = `${config.sseBaseUrl}/toys/event-source?${params.toString()}`;
+
+                addEventLogEntry('Info', `Connecting to ${url.substring(0, 60)}...`, 'system');
+
+                state.eventSource = new EventSource(url);
+
+                state.eventSource.onopen = () => {
+                    updateSSEStatus(true);
+                    addEventLogEntry('Connected', 'Listening for toy events (create, update, delete, purchase)', 'system');
+                };
+
+                state.eventSource.onerror = (err) => {
+                    updateSSEStatus(false);
+                    addEventLogEntry('Error', 'Connection lost or failed to connect', 'system');
+                    state.eventSource.close();
+                    state.eventSource = null;
+                };
+
+                // Listen for specific event types (these match the backend's SSE event names)
+                ['toy-created', 'toy-updated', 'toy-deleted', 'toy-purchased'].forEach(eventType => {
+                    state.eventSource.addEventListener(eventType, (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            addEventLogEntry(eventType, JSON.stringify(data, null, 2), eventType);
+                        } catch (parseError) {
+                            addEventLogEntry(eventType, event.data, eventType);
+                        }
+                    });
+                });
+
+                // Fallback for generic messages (including heartbeat comments)
+                state.eventSource.onmessage = (event) => {
+                    addEventLogEntry('Message', event.data, 'system');
+                };
+
+            } catch (err) {
+                addEventLogEntry('Error', `Failed to connect: ${err.message}`, 'system');
+                updateSSEStatus(false);
+            }
         }
 
         function disconnectSSE() {
