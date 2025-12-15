@@ -243,8 +243,9 @@ public class AppModule extends AbstractModule {
 						requireNonNull(responseGenerator);
 						requireNonNull(responseWriter);
 
-						Locale locale = null;
-						ZoneId timeZone = null;
+						// Establish baseline values for locale, timezone, and account
+						Locale locale = determineLocale(request);
+						ZoneId timeZone = determineTimeZone(request);
 						Account account = null;
 
 						// Try to pull authentication token from request headers...
@@ -273,7 +274,7 @@ public class AppModule extends AbstractModule {
 							if (resourceMethod.isServerSentEventSource()) {
 								String serverSentEventContextAsString = request.getQueryParameter("X-Server-Sent-Event-Context-Token").orElse(null);
 
-								// ...and if it exists, see if we can pull an account from it.
+								// ...if the query parameter exists, see if we can pull an account from it.
 								if (serverSentEventContextAsString != null) {
 									ServerSentEventContextTokenResult serverSentEventContextTokenResult = ServerSentEventContextToken.fromStringRepresentation(serverSentEventContextAsString, configuration.getKeyPair().getPublic());
 
