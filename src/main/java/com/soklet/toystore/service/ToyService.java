@@ -117,11 +117,12 @@ public class ToyService {
 
 	@Nonnull
 	public List<Toy> findToys() {
-		return getDatabase().queryForList("""
-				  SELECT *
-				  FROM toy
-				  ORDER BY name
-				""", Toy.class);
+		return getDatabase().query("""
+						  SELECT *
+						  FROM toy
+						  ORDER BY name
+						""")
+				.fetchList(Toy.class);
 	}
 
 	@Nonnull
@@ -133,12 +134,14 @@ public class ToyService {
 
 		// Naïve "LIKE" search.
 		// Avoids SQL injection by using parameterized query with "?"
-		return getDatabase().queryForList("""
-				  SELECT *
-				  FROM toy
-				  WHERE LOWER(name) LIKE CONCAT(LOWER(?), '%')
-				  ORDER BY name
-				""", Toy.class, query);
+		return getDatabase().query("""
+						  SELECT *
+						  FROM toy
+						  WHERE LOWER(name) LIKE CONCAT(LOWER(:query), '%')
+						  ORDER BY name
+						""")
+				.bind("query", query)
+				.fetchList(Toy.class);
 	}
 
 	@Nonnull
@@ -146,11 +149,13 @@ public class ToyService {
 		if (toyId == null)
 			return Optional.empty();
 
-		return getDatabase().queryForObject("""
-				SELECT *
-				FROM toy
-				WHERE toy_id=?
-				""", Toy.class, toyId);
+		return getDatabase().query("""
+						SELECT *
+						FROM toy
+						WHERE toy_id=:toyId
+						""")
+				.bind("toyId", toyId)
+				.fetchObject(Toy.class);
 	}
 
 	@Nonnull
@@ -181,14 +186,19 @@ public class ToyService {
 			getLogger().info("Creating toy '{}', which costs {}", name, formatPriceForDisplay(price, currency));
 
 		try {
-			getDatabase().execute("""
-					INSERT INTO toy (
-						toy_id,
-						name,
-						price,
-						currency
-					) VALUES (?,?,?,?)
-					""", toyId, name, price, currency);
+			getDatabase().query("""
+							INSERT INTO toy (
+								toy_id,
+								name,
+								price,
+								currency
+							) VALUES (:toyId, :name, :price, :currency)
+							""")
+					.bind("toyId", toyId)
+					.bind("name", name)
+					.bind("price", price)
+					.bind("currency", currency)
+					.execute();
 
 			Toy toyToBroadcast = findToyById(toyId).get();
 
@@ -230,11 +240,16 @@ public class ToyService {
 
 		// Not shown: validation similar to createToy(ToyCreateRequest) above
 
-		boolean updated = getDatabase().execute("""
-				UPDATE toy
-				SET name=?, price=?, currency=?
-				WHERE toy_id=?
-				""", name, price, currency, toyId) > 0;
+		boolean updated = getDatabase().query("""
+						UPDATE toy
+						SET name=:name, price=:price, currency=:currency
+						WHERE toy_id=:toyId
+						""")
+				.bind("name", name)
+				.bind("price", price)
+				.bind("currency", currency)
+				.bind("toyId", toyId)
+				.execute() > 0;
 
 		if (updated) {
 			Toy toyToBroadcast = findToyById(toyId).get();
@@ -262,7 +277,9 @@ public class ToyService {
 		if (toy == null)
 			return false;
 
-		boolean deleted = getDatabase().execute("DELETE FROM toy WHERE toy_id=?", toyId) > 0;
+		boolean deleted = getDatabase().query("DELETE FROM toy WHERE toy_id=:toyId")
+				.bind("toyId", toyId)
+				.execute() > 0;
 
 		if (deleted) {
 			broadcastServerSentEvent((@Nonnull BroadcastKey broadcastKey) -> {
@@ -322,16 +339,23 @@ public class ToyService {
 
 		UUID purchaseId = UUID.randomUUID();
 
-		getDatabase().execute("""
-				INSERT INTO purchase (
-					purchase_id,
-					account_id,
-					toy_id,
-					price,
-					currency,
-					credit_card_txn_id
-				) VALUES (?,?,?,?,?,?)
-				""", purchaseId, accountId, toy.toyId(), toy.price(), toy.currency(), creditCardTransactionId);
+		getDatabase().query("""
+						INSERT INTO purchase (
+							purchase_id,
+							account_id,
+							toy_id,
+							price,
+							currency,
+							credit_card_txn_id
+						) VALUES (:purchaseId, :accountId, :toyId, :price, :currency, :creditCardTransactionId)
+						""")
+				.bind("purchaseId", purchaseId)
+				.bind("accountId", accountId)
+				.bind("toyId", toy.toyId())
+				.bind("price", toy.price())
+				.bind("currency", toy.currency())
+				.bind("creditCardTransactionId", creditCardTransactionId)
+				.execute();
 
 		Purchase purchaseToBroadcast = findPurchaseById(purchaseId).get();
 
@@ -356,11 +380,13 @@ public class ToyService {
 		if (purchaseId == null)
 			return Optional.empty();
 
-		return getDatabase().queryForObject("""
-				SELECT *
-				FROM purchase
-				WHERE purchase_id=?
-				""", Purchase.class, purchaseId);
+		return getDatabase().query("""
+						SELECT *
+						FROM purchase
+						WHERE purchase_id=:purchaseId
+						""")
+				.bind("purchaseId", purchaseId)
+				.fetchObject(Purchase.class);
 	}
 
 	private void broadcastServerSentEvent(@Nonnull Function<BroadcastKey, ServerSentEvent> serverSentEventProvider) {

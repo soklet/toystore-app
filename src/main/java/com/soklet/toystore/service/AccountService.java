@@ -79,11 +79,13 @@ public class AccountService {
 		if (accountId == null)
 			return Optional.empty();
 
-		return getDatabase().queryForObject("""
-				SELECT *
-				FROM account
-				WHERE account_id=?
-				""", Account.class, accountId);
+		return getDatabase().query("""
+						SELECT *
+						FROM account
+						WHERE account_id=:accountId
+						""")
+				.bind("accountId", accountId)
+				.fetchObject(Account.class);
 	}
 
 	@Nonnull
@@ -103,11 +105,14 @@ public class AccountService {
 		if (errorCollector.hasErrors())
 			throw ApplicationException.withStatusCodeAndErrors(422, errorCollector).build();
 
-		Account account = getDatabase().executeForObject("""
-				SELECT *
-				FROM account
-				WHERE email_address=?
-				""", Account.class, emailAddress.toLowerCase(Locale.US)).orElse(null);
+		Account account = getDatabase().query("""
+						SELECT *
+						FROM account
+						WHERE email_address=:emailAddress
+						""")
+				.bind("emailAddress", emailAddress.toLowerCase(Locale.US))
+				.executeForObject(Account.class)
+				.orElse(null);
 
 		// Reject if no account, or account's hashed password does not match
 		if (account == null || !getPasswordManager().verifyPassword(password, account.passwordHash()))

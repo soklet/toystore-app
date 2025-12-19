@@ -35,6 +35,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
@@ -104,20 +105,30 @@ public class App {
 		Database database = getInjector().getInstance(Database.class);
 		PasswordManager passwordManager = getInjector().getInstance(PasswordManager.class);
 
-		database.execute("""
+		database.query("""
 				CREATE TABLE role (
 					role_id VARCHAR(64) PRIMARY KEY,
 					description VARCHAR(256) NOT NULL
 				)
-				""");
+				""").execute();
 
-		database.executeBatch("INSERT INTO role (role_id, description) VALUES (?,?)", List.of(
-				List.of(RoleId.CUSTOMER, "Customer"),
-				List.of(RoleId.EMPLOYEE, "Employee"),
-				List.of(RoleId.ADMINISTRATOR, "Administrator"))
-		);
+		database.query("INSERT INTO role (role_id, description) VALUES (:roleId, :description)")
+				.executeBatch(List.of(
+						Map.of(
+								"roleId", RoleId.CUSTOMER,
+								"description", "Customer"
+						),
+						Map.of(
+								"roleId", RoleId.EMPLOYEE,
+								"description", "Employee"
+						),
+						Map.of(
+								"roleId", RoleId.ADMINISTRATOR,
+								"description", "Administrator"
+						)
+				));
 
-		database.execute("""
+		database.query("""
 				CREATE TABLE account (
 					account_id UUID PRIMARY KEY,
 					role_id VARCHAR(64) NOT NULL REFERENCES role(role_id),
@@ -128,10 +139,10 @@ public class App {
 					locale VARCHAR(8) NOT NULL, -- e.g. 'pt-BR'
 					created_at TIMESTAMP DEFAULT NOW() NOT NULL
 				)
-				""");
+				""").execute();
 
 		// Create a single administrator
-		database.execute("""
+		database.query("""
 						INSERT INTO account (
 							account_id,
 							role_id,
@@ -140,18 +151,18 @@ public class App {
 							password_hash,
 							time_zone,
 							locale
-						) VALUES (?,?,?,?,?,?,?)
-						""",
-				UUID.fromString("08d0ba3e-b19c-4317-a146-583860fcb5fd"),
-				RoleId.ADMINISTRATOR,
-				"Example Administrator",
-				"admin@soklet.com",
-				passwordManager.hashPassword("test123"),
-				ZoneId.of("America/New_York"),
-				Locale.forLanguageTag("en-US")
-		);
+						) VALUES (:accountId, :roleId, :name, :emailAddress, :passwordHash, :timeZone, :locale)
+						""")
+				.bind("accountId", UUID.fromString("08d0ba3e-b19c-4317-a146-583860fcb5fd"))
+				.bind("roleId", RoleId.ADMINISTRATOR)
+				.bind("name", "Example Administrator")
+				.bind("emailAddress", "admin@soklet.com")
+				.bind("passwordHash", passwordManager.hashPassword("test123"))
+				.bind("timeZone", ZoneId.of("America/New_York"))
+				.bind("locale", Locale.forLanguageTag("en-US"))
+				.execute();
 
-		database.execute("""
+		database.query("""
 				CREATE TABLE toy (
 					toy_id UUID PRIMARY KEY,
 					name VARCHAR(256) NOT NULL,
@@ -160,9 +171,9 @@ public class App {
 					created_at TIMESTAMP DEFAULT NOW() NOT NULL,
 					CONSTRAINT toy_name_unique_idx UNIQUE(name)
 				)
-				""");
+				""").execute();
 
-		database.execute("""
+		database.query("""
 				CREATE TABLE purchase (
 					purchase_id UUID PRIMARY KEY,
 					account_id UUID NOT NULL REFERENCES account,
@@ -172,7 +183,7 @@ public class App {
 					credit_card_txn_id VARCHAR(256) NOT NULL,
 					created_at TIMESTAMP DEFAULT NOW() NOT NULL
 				)
-				""");
+				""").execute();
 	}
 
 	@Nonnull
