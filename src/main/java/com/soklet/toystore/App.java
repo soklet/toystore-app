@@ -47,7 +47,7 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class App {
-	static void main() throws Exception {
+	public static void main(String[] args) throws Exception {
 		String environment = System.getenv("APP_ENVIRONMENT");
 
 		if (environment == null)
