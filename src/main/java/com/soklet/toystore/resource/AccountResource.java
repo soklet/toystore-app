@@ -99,7 +99,7 @@ public class AccountResource {
 		CurrentContext currentContext = getCurrentContext();
 		Account account = currentContext.getAccount().get();
 		Instant issuedAt = Instant.now();
-		Instant expiresAt = issuedAt.plus(getConfiguration().getServerSentEventContextExpiration());
+		Instant expiresAt = issuedAt.plus(getConfiguration().getServerSentEventContextTokenExpiration());
 
 		ServerSentEventContextToken serverSentEventContextToken = new ServerSentEventContextToken(
 				account.accountId(),

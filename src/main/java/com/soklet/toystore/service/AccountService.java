@@ -128,7 +128,7 @@ public class AccountService {
 
 		// Generate a JWT
 		Instant issuedAt = Instant.now();
-		Instant expiresAt = issuedAt.plus(getConfiguration().getAuthenticationExpiration());
+		Instant expiresAt = issuedAt.plus(getConfiguration().getAccessTokenExpiration());
 		return new AccessToken(account.accountId(), issuedAt, expiresAt);
 	}
 

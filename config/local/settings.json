@@ -2,8 +2,8 @@
   "port": 8080,
   "serverSentEventPort": 8081,
   "corsWhitelistedOrigins": ["http://localhost:8080", "http://127.0.0.1:8080"],
-  "authenticationExpirationInSeconds": 259200,
-  "serverSentEventContextExpirationInSeconds": 60,
+  "accessTokenExpirationInSeconds": 259200,
+  "serverSentEventContextTokenExpirationInSeconds": 60,
   "keyPair": {
     "algorithm": "Ed25519",
     "publicKey": "MCowBQYDK2VwAyEApv8tMZ0EW4t7sauPkus0aHfwosV1Lv1SAyvACucl1HY=",

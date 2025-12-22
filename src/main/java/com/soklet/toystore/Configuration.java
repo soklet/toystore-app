@@ -75,9 +75,9 @@ public class Configuration {
 	@Nonnull
 	private final Integer serverSentEventPort;
 	@Nonnull
-	private final Duration authenticationExpiration;
+	private final Duration accessTokenExpiration;
 	@Nonnull
-	private final Duration serverSentEventContextExpiration;
+	private final Duration serverSentEventContextTokenExpiration;
 	@Nonnull
 	private final KeyPair keyPair;
 	@Nonnull
@@ -93,8 +93,8 @@ public class Configuration {
 		this.stopOnKeypress = !this.runningInDocker;
 		this.port = requireNonNull(configFile.port());
 		this.serverSentEventPort = requireNonNull(configFile.serverSentEventPort());
-		this.authenticationExpiration = Duration.ofSeconds(configFile.authenticationExpirationInSeconds());
-		this.serverSentEventContextExpiration = Duration.ofSeconds(configFile.serverSentEventContextExpirationInSeconds());
+		this.accessTokenExpiration = Duration.ofSeconds(configFile.accessTokenExpirationInSeconds());
+		this.serverSentEventContextTokenExpiration = Duration.ofSeconds(configFile.serverSentEventContextTokenExpirationInSeconds());
 		this.corsWhitelistedOrigins = configFile.corsWhitelistedOrigins() == null ? Set.of() : configFile.corsWhitelistedOrigins();
 		this.keyPair = loadKeyPair(configFile.keyPair());
 
@@ -146,16 +146,16 @@ public class Configuration {
 			@Nonnull Integer port,
 			@Nonnull Integer serverSentEventPort,
 			@Nonnull Set<String> corsWhitelistedOrigins,
-			@Nonnull Integer authenticationExpirationInSeconds,
-			@Nonnull Integer serverSentEventContextExpirationInSeconds,
+			@Nonnull Integer accessTokenExpirationInSeconds,
+			@Nonnull Integer serverSentEventContextTokenExpirationInSeconds,
 			@Nonnull ConfigKeyPair keyPair
 	) {
 		public ConfigFile {
 			requireNonNull(port);
 			requireNonNull(serverSentEventPort);
 			requireNonNull(corsWhitelistedOrigins);
-			requireNonNull(authenticationExpirationInSeconds);
-			requireNonNull(serverSentEventContextExpirationInSeconds);
+			requireNonNull(accessTokenExpirationInSeconds);
+			requireNonNull(serverSentEventContextTokenExpirationInSeconds);
 			requireNonNull(keyPair);
 		}
 
@@ -208,13 +208,13 @@ public class Configuration {
 	}
 
 	@Nonnull
-	public Duration getAuthenticationExpiration() {
-		return this.authenticationExpiration;
+	public Duration getAccessTokenExpiration() {
+		return this.accessTokenExpiration;
 	}
 
 	@Nonnull
-	public Duration getServerSentEventContextExpiration() {
-		return this.serverSentEventContextExpiration;
+	public Duration getServerSentEventContextTokenExpiration() {
+		return this.serverSentEventContextTokenExpiration;
 	}
 
 	@Nonnull
