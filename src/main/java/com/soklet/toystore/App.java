@@ -38,6 +38,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.soklet.toystore.util.Normalizer.normalizeEmailAddress;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -133,13 +134,15 @@ public class App {
 					account_id UUID PRIMARY KEY,
 					role_id VARCHAR(64) NOT NULL REFERENCES role(role_id),
 					name VARCHAR(128) NOT NULL,
-					email_address VARCHAR(320),
-					password_hash VARCHAR(512),
+					email_address VARCHAR(320) NOT NULL,
+					password_hash VARCHAR(512)  NOT NULL,
 					time_zone VARCHAR(128) NOT NULL, -- e.g. 'America/New_York'
 					locale VARCHAR(8) NOT NULL, -- e.g. 'pt-BR'
 					created_at TIMESTAMP DEFAULT NOW() NOT NULL
 				)
 				""").execute();
+
+		database.query("CREATE UNIQUE INDEX account_email_address_unique_idx ON account(email_address)").execute();
 
 		// Create a single administrator
 		database.query("""
@@ -156,7 +159,7 @@ public class App {
 				.bind("accountId", UUID.fromString("08d0ba3e-b19c-4317-a146-583860fcb5fd"))
 				.bind("roleId", RoleId.ADMINISTRATOR)
 				.bind("name", "Example Administrator")
-				.bind("emailAddress", "admin@soklet.com")
+				.bind("emailAddress", normalizeEmailAddress("admin@soklet.com"))
 				.bind("passwordHash", passwordManager.hashPassword("test123"))
 				.bind("timeZone", ZoneId.of("America/New_York"))
 				.bind("locale", Locale.forLanguageTag("en-US"))
