@@ -25,9 +25,7 @@ import com.soklet.toystore.exception.ApplicationException.ErrorCollector;
 import com.soklet.toystore.model.api.request.AccountAuthenticateRequest;
 import com.soklet.toystore.model.auth.AccessToken;
 import com.soklet.toystore.model.db.Account;
-import com.soklet.toystore.util.Normalizer;
 import com.soklet.toystore.util.PasswordManager;
-import com.soklet.toystore.util.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +36,9 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.soklet.toystore.util.Normalizer.normalizeEmailAddress;
+import static com.soklet.toystore.util.Normalizer.trimAggressivelyToNull;
+import static com.soklet.toystore.util.Validator.isValidEmailAddress;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -93,13 +94,13 @@ public class AccountService {
 	public AccessToken authenticateAccount(@Nonnull AccountAuthenticateRequest request) {
 		requireNonNull(request);
 
-		String emailAddress = Normalizer.trimAggressivelyToNull(request.emailAddress());
-		String password = Normalizer.trimAggressivelyToNull(request.password());
+		String emailAddress = trimAggressivelyToNull(request.emailAddress());
+		String password = trimAggressivelyToNull(request.password());
 		ErrorCollector errorCollector = new ErrorCollector();
 
 		if (emailAddress == null)
 			errorCollector.addFieldError("emailAddress", getStrings().get("Email address is required."));
-		else if (!Validator.isValidEmailAddress(emailAddress))
+		else if (!isValidEmailAddress(emailAddress))
 			errorCollector.addFieldError("emailAddress", getStrings().get("Email address is invalid."));
 
 		if (password == null)
@@ -108,7 +109,7 @@ public class AccountService {
 		if (errorCollector.hasErrors())
 			throw ApplicationException.withStatusCodeAndErrors(422, errorCollector).build();
 
-		String normalizedEmailAddress = Normalizer.normalizeEmailAddress(emailAddress).orElseThrow();
+		String normalizedEmailAddress = normalizeEmailAddress(emailAddress).orElseThrow();
 
 		Account account = getDatabase().query("""
 						SELECT *

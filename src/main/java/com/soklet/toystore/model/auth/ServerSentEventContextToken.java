@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static com.soklet.toystore.util.Normalizer.trimAggressivelyToNull;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -117,7 +118,12 @@ public record ServerSentEventContextToken(
 		requireNonNull(string);
 		requireNonNull(publicKey);
 
-		String[] components = string.trim().split("\\.");
+		String trimmed = trimAggressivelyToNull(string);
+
+		if (trimmed == null)
+			return new ServerSentEventContextTokenResult.InvalidStructure();
+
+		String[] components = trimmed.split("\\.");
 
 		if (components.length != 3)
 			return new ServerSentEventContextTokenResult.InvalidStructure();

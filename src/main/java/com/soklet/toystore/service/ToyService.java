@@ -40,8 +40,6 @@ import com.soklet.toystore.model.db.Purchase;
 import com.soklet.toystore.model.db.Toy;
 import com.soklet.toystore.util.CreditCardProcessor;
 import com.soklet.toystore.util.CreditCardProcessor.CreditCardPaymentException;
-import com.soklet.toystore.util.Normalizer;
-import com.soklet.toystore.util.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +58,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 
+import static com.soklet.toystore.util.Normalizer.trimAggressivelyToNull;
+import static com.soklet.toystore.util.Validator.isValidCreditCardNumber;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -129,7 +129,7 @@ public class ToyService {
 
 	@Nonnull
 	public List<Toy> searchToys(@Nullable String query) {
-		query = Normalizer.trimAggressivelyToNull(query);
+		query = trimAggressivelyToNull(query);
 
 		if (query == null)
 			return findToys();
@@ -165,7 +165,7 @@ public class ToyService {
 		requireNonNull(request);
 
 		UUID toyId = UUID.randomUUID();
-		String name = Normalizer.trimAggressivelyToNull(request.name());
+		String name = trimAggressivelyToNull(request.name());
 		BigDecimal price = request.price();
 		Currency currency = request.currency();
 		ErrorCollector errorCollector = new ErrorCollector();
@@ -236,7 +236,7 @@ public class ToyService {
 		requireNonNull(request);
 
 		UUID toyId = request.toyId();
-		String name = Normalizer.trimAggressivelyToNull(request.name());
+		String name = trimAggressivelyToNull(request.name());
 		BigDecimal price = request.price();
 		Currency currency = request.currency();
 
@@ -303,7 +303,7 @@ public class ToyService {
 		requireNonNull(request);
 
 		UUID accountId = request.accountId();
-		String creditCardNumber = Normalizer.trimAggressivelyToNull(request.creditCardNumber());
+		String creditCardNumber = trimAggressivelyToNull(request.creditCardNumber());
 		YearMonth creditCardExpiration = request.creditCardExpiration();
 		Toy toy = findToyById(request.toyId()).orElse(null);
 		String creditCardTransactionId;
@@ -314,7 +314,7 @@ public class ToyService {
 
 		if (creditCardNumber == null)
 			errorCollector.addFieldError("creditCardNumber", getStrings().get("Credit card number is required."));
-		else if (!Validator.isValidCreditCardNumber(creditCardNumber))
+		else if (!isValidCreditCardNumber(creditCardNumber))
 			errorCollector.addFieldError("creditCardNumber", getStrings().get("Credit card number is invalid."));
 
 		if (creditCardExpiration == null)
