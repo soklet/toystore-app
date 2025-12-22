@@ -47,6 +47,7 @@ import com.soklet.Response;
 import com.soklet.ResponseMarshaler;
 import com.soklet.Server;
 import com.soklet.ServerSentEventConnection;
+import com.soklet.ServerSentEventConnectionTerminationReason;
 import com.soklet.ServerSentEventServer;
 import com.soklet.Soklet;
 import com.soklet.SokletConfig;
@@ -91,6 +92,7 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Currency;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -222,10 +224,12 @@ public class AppModule extends AbstractModule {
 					@Override
 					public void didTerminateServerSentEventConnection(@Nonnull ServerSentEventConnection serverSentEventConnection,
 																														@Nonnull Duration connectionDuration,
+																														@Nonnull ServerSentEventConnectionTerminationReason terminationReason,
 																														@Nullable Throwable throwable) {
 						CurrentContext currentContext = (CurrentContext) serverSentEventConnection.getClientContext().get();
-						logger.debug("Server-Sent Event Connection ID {} terminated for {}. Context: {}",
-								serverSentEventConnection.getRequest().getId(), serverSentEventConnection.getRequest().getPath(), currentContext);
+						logger.debug("Server-Sent Event Connection ID {} terminated for {} (reason: {}). Context: {}",
+								serverSentEventConnection.getRequest().getId(), serverSentEventConnection.getRequest().getPath(), terminationReason.name(),
+								currentContext);
 					}
 
 					@Override
@@ -243,9 +247,10 @@ public class AppModule extends AbstractModule {
 
 						// Ensure a "current context" scope exists for all request-handling code.
 						// Pick the best-matching locale and timezone based on information we have from the request
+						Localization localization = resolveLocalization(request, null, null);
 						CurrentContext.withRequest(request, resourceMethod)
-								.locale(determineLocale(request))
-								.timeZone(determineTimeZone(request))
+								.locale(localization.locale())
+								.timeZone(localization.timeZone())
 								.build().run(() -> {
 									requestProcessor.accept(request);
 								});
@@ -260,9 +265,7 @@ public class AppModule extends AbstractModule {
 						requireNonNull(responseGenerator);
 						requireNonNull(responseWriter);
 
-						// Establish baseline values for locale, timezone, and account
-						Locale locale = determineLocale(request);
-						ZoneId timeZone = determineTimeZone(request);
+						// Establish baseline values for account, then refine locale/timezone based on account or SSE token
 						Account account = null;
 
 						// Try to pull authentication token from request headers...
@@ -286,45 +289,35 @@ public class AppModule extends AbstractModule {
 							}
 						}
 
-						if (resourceMethod != null) {
-							ServerSentEventContextToken serverSentEventContextToken = null;
+						ServerSentEventContextToken serverSentEventContextToken = null;
 
-							// Is this an SSE resource method?  If so, its authentication + locale/timezone information will come from a special query parameter (SSE spec does not permit request headers)...
-							if (resourceMethod.isServerSentEventSource()) {
-								String serverSentEventContextAsString = request.getQueryParameter("X-Server-Sent-Event-Context-Token").orElse(null);
+						if (resourceMethod != null && resourceMethod.isServerSentEventSource()) {
+							// Is this an SSE resource method? If so, auth + locale/timezone come from a query parameter (SSE spec does not permit headers)...
+							String serverSentEventContextAsString = request.getQueryParameter("X-Server-Sent-Event-Context-Token").orElse(null);
 
-								// ...if the query parameter exists, see if we can pull an account from it.
-								if (serverSentEventContextAsString != null) {
-									ServerSentEventContextTokenResult serverSentEventContextTokenResult = ServerSentEventContextToken.fromStringRepresentation(serverSentEventContextAsString, configuration.getKeyPair().getPublic());
+							// ...if the query parameter exists, see if we can pull an account from it.
+							if (serverSentEventContextAsString != null) {
+								ServerSentEventContextTokenResult serverSentEventContextTokenResult = ServerSentEventContextToken.fromStringRepresentation(serverSentEventContextAsString, configuration.getKeyPair().getPublic());
 
-									switch (serverSentEventContextTokenResult) {
-										case ServerSentEventContextTokenResult.Succeeded(@Nonnull ServerSentEventContextToken token) -> {
-											account = accountService.findAccountById(token.accountId()).orElse(null);
-											serverSentEventContextToken = token;
-										}
-
-										case ServerSentEventContextTokenResult.Expired(
-												@Nonnull ServerSentEventContextToken token, @Nonnull Instant expiredAt
-										) ->
-												logger.debug("SSE Context Token for account ID {} expired at {}", token.accountId(), expiredAt);
-
-										case ServerSentEventContextTokenResult.SignatureMismatch() ->
-												logger.warn("SSE Context Token signature is invalid: {}", serverSentEventContextAsString);
-
-										default -> logger.warn("SSE Context Token is invalid: {}", serverSentEventContextAsString);
+								switch (serverSentEventContextTokenResult) {
+									case ServerSentEventContextTokenResult.Succeeded(@Nonnull ServerSentEventContextToken token) -> {
+										account = accountService.findAccountById(token.accountId()).orElse(null);
+										serverSentEventContextToken = token;
 									}
+
+									case ServerSentEventContextTokenResult.Expired(
+											@Nonnull ServerSentEventContextToken token, @Nonnull Instant expiredAt
+									) -> logger.debug("SSE Context Token for account ID {} expired at {}", token.accountId(), expiredAt);
+
+									case ServerSentEventContextTokenResult.SignatureMismatch() ->
+											logger.warn("SSE Context Token signature is invalid: {}", serverSentEventContextAsString);
+
+									default -> logger.warn("SSE Context Token is invalid: {}", serverSentEventContextAsString);
 								}
 							}
+						}
 
-							// We can now finalize the appropriate locale and timezone for this request by using hints from the authenticated account
-							if (serverSentEventContextToken != null) {
-								locale = serverSentEventContextToken.locale();
-								timeZone = serverSentEventContextToken.timeZone();
-							} else if (account != null) {
-								locale = determineLocale(request, account);
-								timeZone = determineTimeZone(request, account);
-							}
-
+						if (resourceMethod != null) {
 							// Next, see if the resource method has an @AuthorizationRequired annotation...
 							AuthorizationRequired authorizationRequired = resourceMethod.getMethod().getAnnotation(AuthorizationRequired.class);
 
@@ -341,10 +334,10 @@ public class AppModule extends AbstractModule {
 							}
 						}
 
-						// Create a new current context scope with the authenticated account (if present)
+						Localization localization = resolveLocalization(request, account, serverSentEventContextToken);
 						CurrentContext currentContext = CurrentContext.withRequest(request, resourceMethod)
-								.locale(locale)
-								.timeZone(timeZone)
+								.locale(localization.locale())
+								.timeZone(localization.timeZone())
 								.account(account)
 								.build();
 
@@ -422,6 +415,21 @@ public class AppModule extends AbstractModule {
 
 						// Still not sure?  Fall back to a safe default
 						return Configuration.getDefaultTimeZone();
+					}
+
+					@Nonnull
+					private Localization resolveLocalization(@Nonnull Request request,
+																									 @Nullable Account account,
+																									 @Nullable ServerSentEventContextToken serverSentEventContextToken) {
+						requireNonNull(request);
+
+						if (serverSentEventContextToken != null)
+							return new Localization(serverSentEventContextToken.locale(), serverSentEventContextToken.timeZone());
+
+						if (account != null)
+							return new Localization(determineLocale(request, account), determineTimeZone(request, account));
+
+						return new Localization(determineLocale(request), determineTimeZone(request));
 					}
 				})
 				.requestBodyMarshaler(new RequestBodyMarshaler() {
@@ -710,6 +718,25 @@ public class AppModule extends AbstractModule {
 						return ZoneId.of(jsonReader.nextString());
 					}
 				})
+				// Support `Currency` type for handling ISO currency codes
+				.registerTypeAdapter(Currency.class, new TypeAdapter<Currency>() {
+					@Override
+					public void write(@Nonnull JsonWriter jsonWriter,
+														@Nonnull Currency currency) throws IOException {
+						jsonWriter.value(currency.getCurrencyCode());
+					}
+
+					@Override
+					@Nullable
+					public Currency read(@Nonnull JsonReader jsonReader) throws IOException {
+						String code = jsonReader.nextString();
+						try {
+							return Currency.getInstance(code);
+						} catch (IllegalArgumentException ignored) {
+							return null;
+						}
+					}
+				})
 				// Use ISO formatting for Instants
 				.registerTypeAdapter(Instant.class, new TypeAdapter<Instant>() {
 					@Override
@@ -805,5 +832,14 @@ public class AppModule extends AbstractModule {
 		install(new FactoryModuleBuilder().build(AccountResponseFactory.class));
 		install(new FactoryModuleBuilder().build(ToyResponseFactory.class));
 		install(new FactoryModuleBuilder().build(PurchaseResponseFactory.class));
+	}
+
+	// Tuple to hold localization information
+	private record Localization(@Nonnull Locale locale,
+															@Nonnull ZoneId timeZone) {
+		public Localization {
+			requireNonNull(locale);
+			requireNonNull(timeZone);
+		}
 	}
 }
