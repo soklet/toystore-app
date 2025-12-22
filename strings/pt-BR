@@ -15,9 +15,11 @@
   "There is already a toy named '{{name}}'.": "Já existe um brinquedo chamado '{{name}}'.",
   "Account ID is required.": "O identificador da conta é obrigatório.",
   "Credit card number is required.": "O número do cartão de crédito é obrigatório.",
+  "Credit card number is invalid.": "O número do cartão de crédito é inválido.",
   "Credit card expiration is required.": "A expiração do cartão de crédito é obrigatória.",
   "Credit card is expired.": "O cartão de crédito expirou.",
   "We were unable to charge {{amount}} to your credit card.": "Não foi possível cobrar {{amount}} no seu cartão de crédito.",
   "Email address is required.": "É necessário um endereço de e-mail.",
+  "Email address is invalid.": "O endereço de e-mail é inválido.",
   "Password is required.": "Senha requerida."
 }

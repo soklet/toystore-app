@@ -25,7 +25,9 @@ import com.soklet.toystore.exception.ApplicationException.ErrorCollector;
 import com.soklet.toystore.model.api.request.AccountAuthenticateRequest;
 import com.soklet.toystore.model.auth.AccessToken;
 import com.soklet.toystore.model.db.Account;
+import com.soklet.toystore.util.Normalizer;
 import com.soklet.toystore.util.PasswordManager;
+import com.soklet.toystore.util.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +35,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.time.Instant;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -51,6 +52,10 @@ public class AccountService {
 	@Nonnull
 	private final PasswordManager passwordManager;
 	@Nonnull
+	private final Validator validator;
+	@Nonnull
+	private final Normalizer normalizer;
+	@Nonnull
 	private final Database database;
 	@Nonnull
 	private final Strings strings;
@@ -60,15 +65,21 @@ public class AccountService {
 	@Inject
 	public AccountService(@Nonnull Configuration configuration,
 												@Nonnull PasswordManager passwordManager,
+												@Nonnull Validator validator,
+												@Nonnull Normalizer normalizer,
 												@Nonnull Database database,
 												@Nonnull Strings strings) {
 		requireNonNull(configuration);
 		requireNonNull(passwordManager);
+		requireNonNull(validator);
+		requireNonNull(normalizer);
 		requireNonNull(database);
 		requireNonNull(strings);
 
 		this.configuration = configuration;
 		this.passwordManager = passwordManager;
+		this.validator = validator;
+		this.normalizer = normalizer;
 		this.database = database;
 		this.strings = strings;
 		this.logger = LoggerFactory.getLogger(getClass());
@@ -92,25 +103,29 @@ public class AccountService {
 	public AccessToken authenticateAccount(@Nonnull AccountAuthenticateRequest request) {
 		requireNonNull(request);
 
-		String emailAddress = request.emailAddress() == null ? "" : request.emailAddress().trim();
-		String password = request.password() == null ? "" : request.password().trim();
+		String emailAddress = getNormalizer().trimAggressivelyToNull(request.emailAddress());
+		String password = getNormalizer().trimAggressivelyToNull(request.password());
 		ErrorCollector errorCollector = new ErrorCollector();
 
-		if (emailAddress.length() == 0)
+		if (emailAddress == null)
 			errorCollector.addFieldError("emailAddress", getStrings().get("Email address is required."));
+		else if (!getValidator().isValidEmailAddress(emailAddress))
+			errorCollector.addFieldError("emailAddress", getStrings().get("Email address is invalid."));
 
-		if (password.length() == 0)
+		if (password == null)
 			errorCollector.addFieldError("password", getStrings().get("Password is required."));
 
 		if (errorCollector.hasErrors())
 			throw ApplicationException.withStatusCodeAndErrors(422, errorCollector).build();
+
+		String normalizedEmailAddress = getNormalizer().normalizeEmailAddress(emailAddress).orElseThrow();
 
 		Account account = getDatabase().query("""
 						SELECT *
 						FROM account
 						WHERE email_address=:emailAddress
 						""")
-				.bind("emailAddress", emailAddress.toLowerCase(Locale.US))
+				.bind("emailAddress", normalizedEmailAddress)
 				.executeForObject(Account.class)
 				.orElse(null);
 
@@ -134,6 +149,16 @@ public class AccountService {
 	@Nonnull
 	private PasswordManager getPasswordManager() {
 		return this.passwordManager;
+	}
+
+	@Nonnull
+	private Validator getValidator() {
+		return this.validator;
+	}
+
+	@Nonnull
+	private Normalizer getNormalizer() {
+		return this.normalizer;
 	}
 
 	@Nonnull

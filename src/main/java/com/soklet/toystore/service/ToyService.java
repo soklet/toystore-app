@@ -40,6 +40,8 @@ import com.soklet.toystore.model.db.Purchase;
 import com.soklet.toystore.model.db.Toy;
 import com.soklet.toystore.util.CreditCardProcessor;
 import com.soklet.toystore.util.CreditCardProcessor.CreditCardPaymentException;
+import com.soklet.toystore.util.Normalizer;
+import com.soklet.toystore.util.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,6 +82,10 @@ public class ToyService {
 	@Nonnull
 	private final Gson gson;
 	@Nonnull
+	private final Validator validator;
+	@Nonnull
+	private final Normalizer normalizer;
+	@Nonnull
 	private final Database database;
 	@Nonnull
 	private final Strings strings;
@@ -93,6 +99,8 @@ public class ToyService {
 										@Nonnull ToyResponseFactory toyResponseFactory,
 										@Nonnull PurchaseResponseFactory purchaseResponseFactory,
 										@Nonnull Gson gson,
+										@Nonnull Validator validator,
+										@Nonnull Normalizer normalizer,
 										@Nonnull Database database,
 										@Nonnull Strings strings) {
 		requireNonNull(currentContextProvider);
@@ -101,6 +109,8 @@ public class ToyService {
 		requireNonNull(toyResponseFactory);
 		requireNonNull(purchaseResponseFactory);
 		requireNonNull(gson);
+		requireNonNull(validator);
+		requireNonNull(normalizer);
 		requireNonNull(database);
 		requireNonNull(strings);
 
@@ -110,6 +120,8 @@ public class ToyService {
 		this.toyResponseFactory = toyResponseFactory;
 		this.purchaseResponseFactory = purchaseResponseFactory;
 		this.gson = gson;
+		this.validator = validator;
+		this.normalizer = normalizer;
 		this.database = database;
 		this.strings = strings;
 		this.logger = LoggerFactory.getLogger(getClass());
@@ -127,12 +139,12 @@ public class ToyService {
 
 	@Nonnull
 	public List<Toy> searchToys(@Nullable String query) {
-		query = query == null ? "" : query.trim();
+		query = getNormalizer().trimAggressivelyToNull(query);
 
-		if (query.length() == 0)
+		if (query == null)
 			return findToys();
 
-		// Naïve "LIKE" search.
+		// Naïve "LIKE" search (a real system would use Postgres' advanced search features or a separate search engine).
 		// Avoids SQL injection by using parameterized query with "?"
 		return getDatabase().query("""
 						  SELECT *
@@ -163,12 +175,12 @@ public class ToyService {
 		requireNonNull(request);
 
 		UUID toyId = UUID.randomUUID();
-		String name = request.name() == null ? "" : request.name().trim();
+		String name = getNormalizer().trimAggressivelyToNull(request.name());
 		BigDecimal price = request.price();
 		Currency currency = request.currency();
 		ErrorCollector errorCollector = new ErrorCollector();
 
-		if (name.length() == 0)
+		if (name == null)
 			errorCollector.addFieldError("name", getStrings().get("Name is required."));
 
 		if (price == null)
@@ -234,7 +246,7 @@ public class ToyService {
 		requireNonNull(request);
 
 		UUID toyId = request.toyId();
-		String name = request.name() == null ? "" : request.name().trim();
+		String name = getNormalizer().trimAggressivelyToNull(request.name());
 		BigDecimal price = request.price();
 		Currency currency = request.currency();
 
@@ -301,7 +313,7 @@ public class ToyService {
 		requireNonNull(request);
 
 		UUID accountId = request.accountId();
-		String creditCardNumber = request.creditCardNumber();
+		String creditCardNumber = getNormalizer().trimAggressivelyToNull(request.creditCardNumber());
 		YearMonth creditCardExpiration = request.creditCardExpiration();
 		Toy toy = findToyById(request.toyId()).orElse(null);
 		String creditCardTransactionId;
@@ -312,6 +324,8 @@ public class ToyService {
 
 		if (creditCardNumber == null)
 			errorCollector.addFieldError("creditCardNumber", getStrings().get("Credit card number is required."));
+		else if (!getValidator().isValidCreditCardNumber(creditCardNumber))
+			errorCollector.addFieldError("creditCardNumber", getStrings().get("Credit card number is invalid."));
 
 		if (creditCardExpiration == null)
 			errorCollector.addFieldError("creditCardExpiration", getStrings().get("Credit card expiration is required."));
@@ -426,6 +440,9 @@ public class ToyService {
 		});
 	}
 
+	// Key used for unique SSE broadcasts.
+	// If there are 1000 SSE connections and 999 are `en-US` in `America/New_York`, then there are only 2 keys
+	// (meaning we only need to compute 2 payloads, not 1000).
 	private record BroadcastKey(
 			@Nonnull Locale locale,
 			@Nonnull ZoneId timeZone
@@ -475,6 +492,16 @@ public class ToyService {
 	@Nonnull
 	private Gson getGson() {
 		return this.gson;
+	}
+
+	@Nonnull
+	private Normalizer getNormalizer() {
+		return this.normalizer;
+	}
+
+	@Nonnull
+	private Validator getValidator() {
+		return this.validator;
 	}
 
 	@Nonnull
