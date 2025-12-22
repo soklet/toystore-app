@@ -82,10 +82,6 @@ public class ToyService {
 	@Nonnull
 	private final Gson gson;
 	@Nonnull
-	private final Validator validator;
-	@Nonnull
-	private final Normalizer normalizer;
-	@Nonnull
 	private final Database database;
 	@Nonnull
 	private final Strings strings;
@@ -99,8 +95,6 @@ public class ToyService {
 										@Nonnull ToyResponseFactory toyResponseFactory,
 										@Nonnull PurchaseResponseFactory purchaseResponseFactory,
 										@Nonnull Gson gson,
-										@Nonnull Validator validator,
-										@Nonnull Normalizer normalizer,
 										@Nonnull Database database,
 										@Nonnull Strings strings) {
 		requireNonNull(currentContextProvider);
@@ -109,8 +103,6 @@ public class ToyService {
 		requireNonNull(toyResponseFactory);
 		requireNonNull(purchaseResponseFactory);
 		requireNonNull(gson);
-		requireNonNull(validator);
-		requireNonNull(normalizer);
 		requireNonNull(database);
 		requireNonNull(strings);
 
@@ -120,8 +112,6 @@ public class ToyService {
 		this.toyResponseFactory = toyResponseFactory;
 		this.purchaseResponseFactory = purchaseResponseFactory;
 		this.gson = gson;
-		this.validator = validator;
-		this.normalizer = normalizer;
 		this.database = database;
 		this.strings = strings;
 		this.logger = LoggerFactory.getLogger(getClass());
@@ -139,7 +129,7 @@ public class ToyService {
 
 	@Nonnull
 	public List<Toy> searchToys(@Nullable String query) {
-		query = getNormalizer().trimAggressivelyToNull(query);
+		query = Normalizer.trimAggressivelyToNull(query);
 
 		if (query == null)
 			return findToys();
@@ -175,7 +165,7 @@ public class ToyService {
 		requireNonNull(request);
 
 		UUID toyId = UUID.randomUUID();
-		String name = getNormalizer().trimAggressivelyToNull(request.name());
+		String name = Normalizer.trimAggressivelyToNull(request.name());
 		BigDecimal price = request.price();
 		Currency currency = request.currency();
 		ErrorCollector errorCollector = new ErrorCollector();
@@ -246,7 +236,7 @@ public class ToyService {
 		requireNonNull(request);
 
 		UUID toyId = request.toyId();
-		String name = getNormalizer().trimAggressivelyToNull(request.name());
+		String name = Normalizer.trimAggressivelyToNull(request.name());
 		BigDecimal price = request.price();
 		Currency currency = request.currency();
 
@@ -313,7 +303,7 @@ public class ToyService {
 		requireNonNull(request);
 
 		UUID accountId = request.accountId();
-		String creditCardNumber = getNormalizer().trimAggressivelyToNull(request.creditCardNumber());
+		String creditCardNumber = Normalizer.trimAggressivelyToNull(request.creditCardNumber());
 		YearMonth creditCardExpiration = request.creditCardExpiration();
 		Toy toy = findToyById(request.toyId()).orElse(null);
 		String creditCardTransactionId;
@@ -324,7 +314,7 @@ public class ToyService {
 
 		if (creditCardNumber == null)
 			errorCollector.addFieldError("creditCardNumber", getStrings().get("Credit card number is required."));
-		else if (!getValidator().isValidCreditCardNumber(creditCardNumber))
+		else if (!Validator.isValidCreditCardNumber(creditCardNumber))
 			errorCollector.addFieldError("creditCardNumber", getStrings().get("Credit card number is invalid."));
 
 		if (creditCardExpiration == null)
@@ -492,16 +482,6 @@ public class ToyService {
 	@Nonnull
 	private Gson getGson() {
 		return this.gson;
-	}
-
-	@Nonnull
-	private Normalizer getNormalizer() {
-		return this.normalizer;
-	}
-
-	@Nonnull
-	private Validator getValidator() {
-		return this.validator;
 	}
 
 	@Nonnull

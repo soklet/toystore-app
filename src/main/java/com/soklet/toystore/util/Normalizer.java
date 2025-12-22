@@ -16,9 +16,6 @@
 
 package com.soklet.toystore.util;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -26,16 +23,13 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-import static java.util.Objects.requireNonNull;
-
 /**
- *
+ * Utilities for normalizing user-supplied input.
  *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-@Singleton
 @ThreadSafe
-public class Normalizer {
+public final class Normalizer {
 	@Nonnull
 	private static final Pattern HEAD_WHITESPACE_PATTERN;
 	@Nonnull
@@ -47,19 +41,10 @@ public class Normalizer {
 	}
 
 	@Nonnull
-	private final Validator validator;
-
-	@Inject
-	public Normalizer(@Nonnull Validator validator) {
-		requireNonNull(validator);
-		this.validator = validator;
-	}
-
-	@Nonnull
-	public Optional<String> normalizeEmailAddress(@Nullable String emailAddress) {
+	public static Optional<String> normalizeEmailAddress(@Nullable String emailAddress) {
 		emailAddress = trimAggressivelyToNull(emailAddress);
 
-		if (!getValidator().isValidEmailAddress(emailAddress))
+		if (!Validator.isValidEmailAddress(emailAddress))
 			return Optional.empty();
 
 		return Optional.of(emailAddress.toLowerCase(Locale.ROOT));
@@ -69,7 +54,7 @@ public class Normalizer {
 	 * A "stronger" version of {@link String#trim()} which discards any kind of whitespace or invisible separator.
 	 */
 	@Nonnull
-	public Optional<String> trimAggressively(@Nullable String string) {
+	public static Optional<String> trimAggressively(@Nullable String string) {
 		if (string == null)
 			return Optional.empty();
 
@@ -84,12 +69,11 @@ public class Normalizer {
 	}
 
 	@Nullable
-	public String trimAggressivelyToNull(@Nullable String string) {
+	public static String trimAggressivelyToNull(@Nullable String string) {
 		return trimAggressively(string).orElse(null);
 	}
 
-	@Nonnull
-	private Validator getValidator() {
-		return this.validator;
+	private Normalizer() {
+		// Non-instantiable
 	}
 }

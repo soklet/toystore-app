@@ -16,21 +16,18 @@
 
 package com.soklet.toystore.util;
 
-import com.google.inject.Singleton;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.regex.Pattern;
 
 /**
- *
+ * Utilities for validating user-supplied input.
  *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
-@Singleton
 @ThreadSafe
-public class Validator {
+public final class Validator {
 	private static final int EMAIL_ADDRESS_MAX_LENGTH;
 	private static final int EMAIL_ADDRESS_MAX_LOCAL_PART_LENGTH;
 	private static final int EMAIL_ADDRESS_MAX_DOMAIN_LENGTH;
@@ -46,13 +43,13 @@ public class Validator {
 	}
 
 	@Nonnull
-	public Boolean isValidEmailAddress(@Nullable String emailAddress) {
+	public static Boolean isValidEmailAddress(@Nullable String emailAddress) {
 		if (emailAddress == null)
 			return false;
 
-		String trimmed = emailAddress.trim();
+		String trimmed = Normalizer.trimAggressivelyToNull(emailAddress);
 
-		if (trimmed.length() == 0 || trimmed.length() > EMAIL_ADDRESS_MAX_LENGTH)
+		if (trimmed == null || trimmed.length() > EMAIL_ADDRESS_MAX_LENGTH)
 			return false;
 
 		if (trimmed.chars().anyMatch(Character::isWhitespace))
@@ -91,13 +88,13 @@ public class Validator {
 	}
 
 	@Nonnull
-	public Boolean isValidCreditCardNumber(@Nullable String creditCardNumber) {
+	public static Boolean isValidCreditCardNumber(@Nullable String creditCardNumber) {
 		if (creditCardNumber == null)
 			return false;
 
-		String trimmed = creditCardNumber.trim();
+		String trimmed = Normalizer.trimAggressivelyToNull(creditCardNumber);
 
-		if (trimmed.length() == 0)
+		if (trimmed == null)
 			return false;
 
 		// Basic Luhn check
@@ -136,5 +133,9 @@ public class Validator {
 		}
 
 		return sum % 10 == 0;
+	}
+
+	private Validator() {
+		// Non-instantiable
 	}
 }

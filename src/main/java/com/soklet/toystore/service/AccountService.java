@@ -52,10 +52,6 @@ public class AccountService {
 	@Nonnull
 	private final PasswordManager passwordManager;
 	@Nonnull
-	private final Validator validator;
-	@Nonnull
-	private final Normalizer normalizer;
-	@Nonnull
 	private final Database database;
 	@Nonnull
 	private final Strings strings;
@@ -65,21 +61,15 @@ public class AccountService {
 	@Inject
 	public AccountService(@Nonnull Configuration configuration,
 												@Nonnull PasswordManager passwordManager,
-												@Nonnull Validator validator,
-												@Nonnull Normalizer normalizer,
 												@Nonnull Database database,
 												@Nonnull Strings strings) {
 		requireNonNull(configuration);
 		requireNonNull(passwordManager);
-		requireNonNull(validator);
-		requireNonNull(normalizer);
 		requireNonNull(database);
 		requireNonNull(strings);
 
 		this.configuration = configuration;
 		this.passwordManager = passwordManager;
-		this.validator = validator;
-		this.normalizer = normalizer;
 		this.database = database;
 		this.strings = strings;
 		this.logger = LoggerFactory.getLogger(getClass());
@@ -103,13 +93,13 @@ public class AccountService {
 	public AccessToken authenticateAccount(@Nonnull AccountAuthenticateRequest request) {
 		requireNonNull(request);
 
-		String emailAddress = getNormalizer().trimAggressivelyToNull(request.emailAddress());
-		String password = getNormalizer().trimAggressivelyToNull(request.password());
+		String emailAddress = Normalizer.trimAggressivelyToNull(request.emailAddress());
+		String password = Normalizer.trimAggressivelyToNull(request.password());
 		ErrorCollector errorCollector = new ErrorCollector();
 
 		if (emailAddress == null)
 			errorCollector.addFieldError("emailAddress", getStrings().get("Email address is required."));
-		else if (!getValidator().isValidEmailAddress(emailAddress))
+		else if (!Validator.isValidEmailAddress(emailAddress))
 			errorCollector.addFieldError("emailAddress", getStrings().get("Email address is invalid."));
 
 		if (password == null)
@@ -118,7 +108,7 @@ public class AccountService {
 		if (errorCollector.hasErrors())
 			throw ApplicationException.withStatusCodeAndErrors(422, errorCollector).build();
 
-		String normalizedEmailAddress = getNormalizer().normalizeEmailAddress(emailAddress).orElseThrow();
+		String normalizedEmailAddress = Normalizer.normalizeEmailAddress(emailAddress).orElseThrow();
 
 		Account account = getDatabase().query("""
 						SELECT *
@@ -149,16 +139,6 @@ public class AccountService {
 	@Nonnull
 	private PasswordManager getPasswordManager() {
 		return this.passwordManager;
-	}
-
-	@Nonnull
-	private Validator getValidator() {
-		return this.validator;
-	}
-
-	@Nonnull
-	private Normalizer getNormalizer() {
-		return this.normalizer;
 	}
 
 	@Nonnull
