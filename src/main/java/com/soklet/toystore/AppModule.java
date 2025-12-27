@@ -37,17 +37,18 @@ import com.pyranid.StatementLog;
 import com.pyranid.StatementLogger;
 import com.soklet.CorsAuthorizer;
 import com.soklet.HttpMethod;
-import com.soklet.LifecycleInterceptor;
+import com.soklet.LifecycleObserver;
 import com.soklet.LogEvent;
 import com.soklet.MarshaledResponse;
 import com.soklet.Request;
 import com.soklet.RequestBodyMarshaler;
+import com.soklet.RequestInterceptor;
 import com.soklet.ResourceMethod;
 import com.soklet.Response;
 import com.soklet.ResponseMarshaler;
 import com.soklet.Server;
 import com.soklet.ServerSentEventConnection;
-import com.soklet.ServerSentEventConnectionTerminationReason;
+import com.soklet.ServerSentEventConnection.TerminationReason;
 import com.soklet.ServerSentEventServer;
 import com.soklet.Soklet;
 import com.soklet.SokletConfig;
@@ -150,9 +151,9 @@ public class AppModule extends AbstractModule {
 
 		return SokletConfig.withServer(Server.withPort(configuration.getPort()).build())
 				.serverSentEventServer(ServerSentEventServer.withPort(configuration.getServerSentEventPort()).build())
-				.lifecycleInterceptor(new LifecycleInterceptor() {
+				.lifecycleObserver(new LifecycleObserver() {
 					@Nonnull
-					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.LifecycleInterceptor");
+					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.LifecycleObserver");
 
 					@Override
 					public void didStartRequestHandling(@Nonnull Request request,
@@ -224,7 +225,7 @@ public class AppModule extends AbstractModule {
 					@Override
 					public void didTerminateServerSentEventConnection(@Nonnull ServerSentEventConnection serverSentEventConnection,
 																														@Nonnull Duration connectionDuration,
-																														@Nonnull ServerSentEventConnectionTerminationReason terminationReason,
+																														@Nonnull TerminationReason terminationReason,
 																														@Nullable Throwable throwable) {
 						CurrentContext currentContext = (CurrentContext) serverSentEventConnection.getClientContext().get();
 						logger.debug("Server-Sent Event Connection ID {} terminated for {} (reason: {}). Context: {}",
@@ -237,6 +238,10 @@ public class AppModule extends AbstractModule {
 						requireNonNull(logEvent);
 						logger.warn(logEvent.getMessage(), logEvent.getThrowable().orElse(null));
 					}
+				})
+				.requestInterceptor(new RequestInterceptor() {
+					@Nonnull
+					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.RequestInterceptor");
 
 					@Override
 					public void wrapRequest(@Nonnull Request request,

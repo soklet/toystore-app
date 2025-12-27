@@ -184,7 +184,7 @@ public final class CurrentContext {
 		getAccount().ifPresent(account -> joiner.add(format("accountId=%s", account.accountId())));
 
 		joiner.add(format("locale=%s", getLocale().toLanguageTag()));
-		joiner.add(format("timeZone=", getTimeZone().getId()));
+		joiner.add(format("timeZone=%s", getTimeZone().getId()));
 
 		getRequest().ifPresent(request -> joiner.add(format("request=%s %s", request.getHttpMethod().name(), request.getRawPath())));
 
