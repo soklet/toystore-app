@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-package com.soklet.toystore.util;
+package com.soklet.toystore.mock;
+
+import com.soklet.toystore.util.CreditCardProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -25,12 +29,19 @@ import java.util.UUID;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Toy implementation of a {@link CreditCardProcessor}.
+ * Mock implementation of {@link CreditCardProcessor} which pretends to process a credit-card transaction.
  *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe
-public class DefaultCreditCardProcessor implements CreditCardProcessor {
+public class MockCreditCardProcessor implements CreditCardProcessor {
+	@Nonnull
+	private final Logger logger;
+
+	public MockCreditCardProcessor() {
+		this.logger = LoggerFactory.getLogger(getClass());
+	}
+
 	@Nonnull
 	@Override
 	public String makePayment(@Nonnull String creditCardNumber,
@@ -40,6 +51,8 @@ public class DefaultCreditCardProcessor implements CreditCardProcessor {
 		requireNonNull(amount);
 		requireNonNull(currency);
 
+		getLogger().info("Performing CC transaction for card number that begins with {}...", creditCardNumber.substring(0, 4));
+
 		// Pretend to do some work
 		try {
 			Thread.sleep(250L);
@@ -48,5 +61,10 @@ public class DefaultCreditCardProcessor implements CreditCardProcessor {
 		}
 
 		return UUID.randomUUID().toString();
+	}
+
+	@Nonnull
+	private Logger getLogger() {
+		return this.logger;
 	}
 }

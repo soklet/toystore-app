@@ -72,7 +72,7 @@ import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.model.db.Role.RoleId;
 import com.soklet.toystore.service.AccountService;
 import com.soklet.toystore.util.CreditCardProcessor;
-import com.soklet.toystore.util.DefaultCreditCardProcessor;
+import com.soklet.toystore.mock.MockCreditCardProcessor;
 import com.soklet.toystore.util.PasswordManager;
 import com.soklet.toystore.util.SensitiveValueRedactor;
 import org.hsqldb.jdbc.JDBCDataSource;
@@ -683,7 +683,7 @@ public class AppModule extends AbstractModule {
 	@Provides
 	@Singleton
 	public CreditCardProcessor provideCreditCardProcessor() {
-		return new DefaultCreditCardProcessor();
+		return new MockCreditCardProcessor();
 	}
 
 	// Supports "complex" types to/from JSON: Locale, ZoneId, Instant, YearMonth
