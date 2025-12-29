@@ -27,13 +27,15 @@ import com.soklet.toystore.model.api.request.AccountAuthenticateRequest;
 import com.soklet.toystore.model.api.response.AccountResponse;
 import com.soklet.toystore.model.api.response.AccountResponse.AccountResponseFactory;
 import com.soklet.toystore.model.auth.AccessToken;
-import com.soklet.toystore.model.auth.ServerSentEventContextToken;
+import com.soklet.toystore.model.auth.AccessToken.Audience;
+import com.soklet.toystore.model.auth.AccessToken.Scope;
 import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.service.AccountService;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.time.Instant;
+import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 
@@ -101,22 +103,22 @@ public class AccountResource {
 		Instant issuedAt = Instant.now();
 		Instant expiresAt = issuedAt.plus(getConfiguration().getServerSentEventContextTokenExpiration());
 
-		ServerSentEventContextToken serverSentEventContextToken = new ServerSentEventContextToken(
+		AccessToken serverSentEventContextToken = new AccessToken(
 				account.accountId(),
-				currentContext.getLocale(),
-				currentContext.getTimeZone(),
 				issuedAt,
-				expiresAt
+				expiresAt,
+				Audience.SSE,
+				Set.of(Scope.SSE_HANDSHAKE)
 		);
 
 		return new ServerSentEventContextResponseHolder(serverSentEventContextToken);
 	}
 
 	public record ServerSentEventContextResponseHolder(
-			@Nonnull ServerSentEventContextToken serverSentEventContextToken
+			@Nonnull AccessToken accessToken
 	) {
 		public ServerSentEventContextResponseHolder {
-			requireNonNull(serverSentEventContextToken);
+			requireNonNull(accessToken);
 		}
 	}
 

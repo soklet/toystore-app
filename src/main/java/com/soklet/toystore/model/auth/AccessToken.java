@@ -29,6 +29,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -44,7 +45,9 @@ import static java.util.Objects.requireNonNull;
 public record AccessToken(
 		@Nonnull UUID accountId,
 		@Nonnull Instant issuedAt,
-		@Nonnull Instant expiresAt
+		@Nonnull Instant expiresAt,
+		@Nonnull Audience audience,
+		@Nonnull Set<Scope> scopes
 ) {
 	// Manage our own internal GSON instance because our needs are simple - no need to inject one
 	@Nonnull
@@ -58,20 +61,63 @@ public record AccessToken(
 		requireNonNull(accountId);
 		requireNonNull(issuedAt);
 		requireNonNull(expiresAt);
+		requireNonNull(audience);
+		requireNonNull(scopes);
 	}
 
-	@Nonnull
-	public Boolean isExpired() {
-		return expiresAt().isBefore(Instant.now());
+	public enum Audience {
+		API("api"),
+		SSE("sse");
+
+		@Nonnull
+		private final String wireValue;
+
+		Audience(@Nonnull String wireValue) {
+			requireNonNull(wireValue);
+			this.wireValue = wireValue;
+		}
+
+		@Nonnull
+		public String getWireValue() {
+			return this.wireValue;
+		}
+
+		@Nonnull
+		public static Optional<Audience> fromWireValue(@Nonnull String value) {
+			for (Audience audience : values())
+				if (audience.getWireValue().equals(value))
+					return Optional.of(audience);
+
+			return Optional.empty();
+		}
 	}
 
-	/**
-	 * Encodes this JWT to a string representation and signs it using Ed25519.
-	 */
-	@Nonnull
-	public String toStringRepresentation(@Nonnull PrivateKey privateKey) {
-		requireNonNull(privateKey);
-		return AccessToken.toStringRepresentation(accountId(), issuedAt(), expiresAt(), privateKey);
+	public enum Scope {
+		API_READ("api:read"),
+		API_WRITE("api:write"),
+		SSE_HANDSHAKE("sse:handshake");
+
+		@Nonnull
+		private final String wireValue;
+
+		Scope(@Nonnull String wireValue) {
+			requireNonNull(wireValue);
+			this.wireValue = wireValue;
+		}
+
+		@Nonnull
+		public String getWireValue() {
+			return this.wireValue;
+		}
+
+		@Nonnull
+		public static Optional<Scope> fromWireValue(@Nonnull String value) {
+			for (Scope scope : values())
+				if (scope.getWireValue().equals(value))
+					return Optional.of(scope);
+
+			return Optional.empty();
+		}
 	}
 
 	// Parsing an AccessToken can have many outcomes.
@@ -91,6 +137,20 @@ public record AccessToken(
 		record MissingClaims(@Nonnull Set<String> claims) implements AccessTokenResult {}
 
 		record InvalidClaims(@Nonnull Set<String> claims) implements AccessTokenResult {}
+	}
+
+	@Nonnull
+	public Boolean isExpired() {
+		return expiresAt().isBefore(Instant.now());
+	}
+
+	/**
+	 * Encodes this JWT to a string representation and signs it using Ed25519.
+	 */
+	@Nonnull
+	public String toStringRepresentation(@Nonnull PrivateKey privateKey) {
+		requireNonNull(privateKey);
+		return AccessToken.toStringRepresentation(accountId(), issuedAt(), expiresAt(), audience(), scopes(), privateKey);
 	}
 
 	/**
@@ -205,7 +265,42 @@ public record AccessToken(
 		Instant issuedAt = Instant.ofEpochSecond(iatAsNumber.longValue());
 		Instant expiresAt = Instant.ofEpochSecond(expAsNumber.longValue());
 
-		AccessToken accessToken = new AccessToken(sub, issuedAt, expiresAt);
+		String audAsString = (String) payload.get("aud");
+		Object scopeAsObject = payload.get("scope"); // usually String
+
+		if (audAsString == null)
+			missingClaims.add("aud");
+		if (scopeAsObject == null)
+			missingClaims.add("scope");
+
+		if (!missingClaims.isEmpty())
+			return new AccessTokenResult.MissingClaims(missingClaims);
+
+		Audience audience;
+
+		try {
+			audience = Audience.fromWireValue(audAsString).orElseThrow();
+		} catch (Exception e) {
+			return new AccessTokenResult.InvalidClaims(Set.of("aud"));
+		}
+
+		Set<Scope> scopes = new LinkedHashSet<>();
+
+		try {
+			if (scopeAsObject instanceof String scopeString) {
+				String trimmedScope = trimAggressivelyToNull(scopeString);
+
+				if (trimmedScope != null)
+					for (String part : trimmedScope.split("\\s+"))
+						scopes.add(Scope.fromWireValue(part).orElseThrow());
+			} else {
+				return new AccessTokenResult.InvalidClaims(Set.of("scope"));
+			}
+		} catch (Exception e) {
+			return new AccessTokenResult.InvalidClaims(Set.of("scope"));
+		}
+
+		AccessToken accessToken = new AccessToken(sub, issuedAt, expiresAt, audience, scopes);
 
 		if (expiresAt.isBefore(Instant.now()))
 			return new AccessTokenResult.Expired(accessToken, expiresAt);
@@ -217,10 +312,14 @@ public record AccessToken(
 	public static String toStringRepresentation(@Nonnull UUID accountId,
 																							@Nonnull Instant issuedAt,
 																							@Nonnull Instant expiresAt,
+																							@Nonnull Audience audience,
+																							@Nonnull Set<Scope> scopes,
 																							@Nonnull PrivateKey privateKey) {
 		requireNonNull(accountId);
 		requireNonNull(issuedAt);
 		requireNonNull(expiresAt);
+		requireNonNull(audience);
+		requireNonNull(scopes);
 		requireNonNull(privateKey);
 
 		String headerJson = GSON.toJson(Map.of(
@@ -229,9 +328,15 @@ public record AccessToken(
 		));
 
 		String payloadJson = GSON.toJson(Map.of(
-				"sub", accountId,
+				"sub", accountId.toString(),
 				"iat", issuedAt.getEpochSecond(),
-				"exp", expiresAt.getEpochSecond()
+				"exp", expiresAt.getEpochSecond(),
+				"aud", audience.getWireValue(),
+				"scope", scopes.stream()
+						.map(Scope::getWireValue)
+						.sorted()
+						.reduce((a, b) -> a + " " + b)
+						.orElse("")
 		));
 
 		String encodedHeader = base64UrlEncode(headerJson.getBytes(StandardCharsets.UTF_8));

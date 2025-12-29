@@ -69,8 +69,6 @@ import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseF
 import com.soklet.toystore.model.api.response.ToyResponse.ToyResponseFactory;
 import com.soklet.toystore.model.auth.AccessToken;
 import com.soklet.toystore.model.auth.AccessToken.AccessTokenResult;
-import com.soklet.toystore.model.auth.ServerSentEventContextToken;
-import com.soklet.toystore.model.auth.ServerSentEventContextToken.ServerSentEventContextTokenResult;
 import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.model.db.Role.RoleId;
 import com.soklet.toystore.service.AccountService;

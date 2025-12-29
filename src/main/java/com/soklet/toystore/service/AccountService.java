@@ -24,6 +24,8 @@ import com.soklet.toystore.exception.ApplicationException;
 import com.soklet.toystore.exception.ApplicationException.ErrorCollector;
 import com.soklet.toystore.model.api.request.AccountAuthenticateRequest;
 import com.soklet.toystore.model.auth.AccessToken;
+import com.soklet.toystore.model.auth.AccessToken.Audience;
+import com.soklet.toystore.model.auth.AccessToken.Scope;
 import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.util.PasswordManager;
 import org.slf4j.Logger;
@@ -34,6 +36,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.soklet.toystore.util.Normalizer.normalizeEmailAddress;
@@ -129,7 +132,17 @@ public class AccountService {
 		// Generate a JWT
 		Instant issuedAt = Instant.now();
 		Instant expiresAt = issuedAt.plus(getConfiguration().getAccessTokenExpiration());
-		return new AccessToken(account.accountId(), issuedAt, expiresAt);
+
+		return new AccessToken(
+				account.accountId(),
+				issuedAt,
+				expiresAt,
+				Audience.API,
+				Set.of(
+						Scope.API_READ,
+						Scope.API_WRITE
+				)
+		);
 	}
 
 	@Nonnull
