@@ -408,24 +408,23 @@
         }
 
         /**
-         * Acquires a short-lived SSE context token from the server.
-         * This token embeds the account ID, locale, and timezone for the SSE connection.
-         * Per the README: SSE spec does not support custom headers, so we package up
-         * authentication and locale/timezone information into a short-lived token.
+         * Acquires a short-lived SSE access token from the server.
+         * Per the README: SSE spec does not support custom headers, so we use
+         * a short-lived access token that is safe to pass via query parameters.
          */
-        async function acquireSseContextToken() {
-            const response = await fetch('/accounts/sse-context-token', {
+        async function acquireSseAccessToken() {
+            const response = await fetch('/accounts/sse-access-token', {
                 method: 'POST',
                 headers: getHeaders()
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.summary || 'Failed to acquire SSE context token');
+                throw new Error(errorData.summary || 'Failed to acquire SSE access token');
             }
 
             const data = await response.json();
-            return data.serverSentEventContextToken;
+            return data.accessToken;
         }
 
         async function connectSSE() {
@@ -442,16 +441,15 @@
             }
 
             try {
-                addEventLogEntry('Info', 'Acquiring SSE context token...', 'system');
+                addEventLogEntry('Info', 'Acquiring SSE access token...', 'system');
 
-                // Step 1: Acquire a short-lived SSE context token
-                // This token includes accountId, locale, and timezone
-                const sseContextToken = await acquireSseContextToken();
+                // Step 1: Acquire a short-lived SSE access token
+                const sseAccessToken = await acquireSseAccessToken();
 
-                // Step 2: Build SSE URL with the context token as query parameter
+                // Step 2: Build SSE URL with the access token as query parameter
                 // Fixed: Use correct endpoint (/toys/event-source) and port (8081)
                 const params = new URLSearchParams({
-                    'X-Server-Sent-Event-Context-Token': sseContextToken
+                    'sse-access-token': sseAccessToken
                 });
 
                 const url = `${config.sseBaseUrl}/toys/event-source?${params.toString()}`;

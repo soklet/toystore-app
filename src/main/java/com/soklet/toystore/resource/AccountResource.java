@@ -96,14 +96,14 @@ public class AccountResource {
 
 	@Nonnull
 	@AuthorizationRequired
-	@POST("/accounts/sse-context-token")
-	public ServerSentEventContextResponseHolder acquireServerSentEventContextToken() {
+	@POST("/accounts/sse-access-token")
+	public SseAccessTokenResponseHolder acquireSseAccessToken() {
 		CurrentContext currentContext = getCurrentContext();
 		Account account = currentContext.getAccount().get();
 		Instant issuedAt = Instant.now();
-		Instant expiresAt = issuedAt.plus(getConfiguration().getServerSentEventContextTokenExpiration());
+		Instant expiresAt = issuedAt.plus(getConfiguration().getSseAccessTokenExpiration());
 
-		AccessToken serverSentEventContextToken = new AccessToken(
+		AccessToken sseAccessToken = new AccessToken(
 				account.accountId(),
 				issuedAt,
 				expiresAt,
@@ -111,13 +111,13 @@ public class AccountResource {
 				Set.of(Scope.SSE_HANDSHAKE)
 		);
 
-		return new ServerSentEventContextResponseHolder(serverSentEventContextToken);
+		return new SseAccessTokenResponseHolder(sseAccessToken);
 	}
 
-	public record ServerSentEventContextResponseHolder(
+	public record SseAccessTokenResponseHolder(
 			@Nonnull AccessToken accessToken
 	) {
-		public ServerSentEventContextResponseHolder {
+		public SseAccessTokenResponseHolder {
 			requireNonNull(accessToken);
 		}
 	}

@@ -255,7 +255,7 @@ public class AppModule extends AbstractModule {
 						// When a request arrives, immediately apply a "current context" scope to it.
 						// Pick the best-matching locale and timezone based on information we have from the request.
 						// We might override locale/timezone downstream if we authenticate an account for this request
-						Localization localization = resolveLocalization(request, null, null);
+						Localization localization = resolveLocalization(request, null);
 
 						CurrentContext.withRequest(request)
 								.locale(localization.locale())
@@ -274,56 +274,31 @@ public class AppModule extends AbstractModule {
 						requireNonNull(responseGenerator);
 						requireNonNull(responseWriter);
 
-						// Establish baseline values for account, then refine locale/timezone based on account or SSE token
+						// Establish baseline values for account, then refine locale/timezone based on account
 						Account account = null;
 
-						// Try to pull authentication token from request headers...
-						String accessTokenAsString = request.getHeader("X-Access-Token").orElse(null);
-
-						// ...and if it exists, see if we can pull an account from it.
-						if (accessTokenAsString != null) {
-							AccessTokenResult accessTokenResult = AccessToken.fromStringRepresentation(accessTokenAsString, configuration.getKeyPair().getPublic());
-
-							switch (accessTokenResult) {
-								case AccessTokenResult.Succeeded(@Nonnull AccessToken accessToken) ->
-										account = accountService.findAccountById(accessToken.accountId()).orElse(null);
-
-								case AccessTokenResult.Expired(@Nonnull AccessToken accessToken, @Nonnull Instant expiredAt) ->
-										logger.debug("Access Token for account ID {} expired at {}", accessToken.accountId(), expiredAt);
-
-								case AccessTokenResult.SignatureMismatch() ->
-										logger.warn("Access Token signature is invalid: {}", accessTokenAsString);
-
-								default -> logger.warn("Access Token is invalid: {}", accessTokenAsString);
-							}
-						}
-
-						ServerSentEventContextToken serverSentEventContextToken = null;
-
 						if (resourceMethod != null && resourceMethod.isServerSentEventSource()) {
-							// Is this an SSE resource method? If so, auth + locale/timezone come from a query parameter (SSE spec does not permit headers)...
-							String serverSentEventContextAsString = request.getQueryParameter("X-Server-Sent-Event-Context-Token").orElse(null);
+							// Is this an SSE resource method? If so, auth comes from a query parameter (SSE spec does not permit headers)...
+							String sseAccessTokenAsString = request.getQueryParameter("sse-access-token").orElse(null);
 
-							// ...if the query parameter exists, see if we can pull an account from it.
-							if (serverSentEventContextAsString != null) {
-								ServerSentEventContextTokenResult serverSentEventContextTokenResult = ServerSentEventContextToken.fromStringRepresentation(serverSentEventContextAsString, configuration.getKeyPair().getPublic());
+							account = resolveAccountFromAccessToken(
+									sseAccessTokenAsString,
+									AccessToken.Audience.SSE,
+									Set.of(AccessToken.Scope.SSE_HANDSHAKE),
+									"SSE Access Token"
+							);
+						} else {
+							// Try to pull authentication token from request headers...
+							String accessTokenAsString = request.getHeader("X-Access-Token").orElse(null);
 
-								switch (serverSentEventContextTokenResult) {
-									case ServerSentEventContextTokenResult.Succeeded(@Nonnull ServerSentEventContextToken token) -> {
-										account = accountService.findAccountById(token.accountId()).orElse(null);
-										serverSentEventContextToken = token;
-									}
-
-									case ServerSentEventContextTokenResult.Expired(
-											@Nonnull ServerSentEventContextToken token, @Nonnull Instant expiredAt
-									) -> logger.debug("SSE Context Token for account ID {} expired at {}", token.accountId(), expiredAt);
-
-									case ServerSentEventContextTokenResult.SignatureMismatch() ->
-											logger.warn("SSE Context Token signature is invalid: {}", serverSentEventContextAsString);
-
-									default -> logger.warn("SSE Context Token is invalid: {}", serverSentEventContextAsString);
-								}
-							}
+							// ...and if it exists, see if we can pull an account from it.
+							Set<AccessToken.Scope> requiredScopes = resolveRequiredApiScopes(request);
+							account = resolveAccountFromAccessToken(
+									accessTokenAsString,
+									AccessToken.Audience.API,
+									requiredScopes,
+									"Access Token"
+							);
 						}
 
 						if (resourceMethod != null) {
@@ -344,7 +319,7 @@ public class AppModule extends AbstractModule {
 						}
 
 						// Finalize localization: if we have an account, use its settings to override request data
-						Localization localization = resolveLocalization(request, account, serverSentEventContextToken);
+						Localization localization = resolveLocalization(request, account);
 
 						CurrentContext currentContext = CurrentContext.withRequest(request, resourceMethod)
 								.locale(localization.locale())
@@ -364,14 +339,61 @@ public class AppModule extends AbstractModule {
 						});
 					}
 
+					@Nullable
+					private Account resolveAccountFromAccessToken(@Nullable String accessTokenAsString,
+																												@Nonnull AccessToken.Audience expectedAudience,
+																												@Nonnull Set<AccessToken.Scope> requiredScopes,
+																												@Nonnull String tokenLabel) {
+						requireNonNull(expectedAudience);
+						requireNonNull(requiredScopes);
+						requireNonNull(tokenLabel);
+
+						if (accessTokenAsString == null)
+							return null;
+
+						AccessTokenResult accessTokenResult = AccessToken.fromStringRepresentation(accessTokenAsString, configuration.getKeyPair().getPublic());
+
+						switch (accessTokenResult) {
+							case AccessTokenResult.Succeeded(@Nonnull AccessToken accessToken) -> {
+								if (!accessToken.audience().equals(expectedAudience)) {
+									logger.warn("{} audience is invalid: {}", tokenLabel, accessToken.audience());
+									return null;
+								}
+
+								if (!accessToken.scopes().containsAll(requiredScopes)) {
+									logger.warn("{} missing required scopes: {}", tokenLabel, requiredScopes);
+									return null;
+								}
+
+								return accountService.findAccountById(accessToken.accountId()).orElse(null);
+							}
+
+							case AccessTokenResult.Expired(@Nonnull AccessToken accessToken, @Nonnull Instant expiredAt) ->
+									logger.debug("{} for account ID {} expired at {}", tokenLabel, accessToken.accountId(), expiredAt);
+
+							case AccessTokenResult.SignatureMismatch() ->
+									logger.warn("{} signature is invalid: {}", tokenLabel, accessTokenAsString);
+
+							default -> logger.warn("{} is invalid: {}", tokenLabel, accessTokenAsString);
+						}
+
+						return null;
+					}
+
 					@Nonnull
-					private Localization resolveLocalization(@Nonnull Request request,
-																									 @Nullable Account account,
-																									 @Nullable ServerSentEventContextToken serverSentEventContextToken) {
+					private Set<AccessToken.Scope> resolveRequiredApiScopes(@Nonnull Request request) {
 						requireNonNull(request);
 
-						if (serverSentEventContextToken != null)
-							return new Localization(serverSentEventContextToken.locale(), serverSentEventContextToken.timeZone());
+						return switch (request.getHttpMethod()) {
+							case GET, HEAD, OPTIONS -> Set.of(AccessToken.Scope.API_READ);
+							case POST, PUT, PATCH, DELETE -> Set.of(AccessToken.Scope.API_WRITE);
+						};
+					}
+
+					@Nonnull
+					private Localization resolveLocalization(@Nonnull Request request,
+																									 @Nullable Account account) {
+						requireNonNull(request);
 
 						return new Localization(resolveLocale(request, account), resolveTimeZone(request, account));
 					}
@@ -818,36 +840,6 @@ public class AppModule extends AbstractModule {
 							}
 							case AccessTokenResult.Expired(@Nonnull AccessToken accountJwt, @Nonnull Instant expiredAt) -> {
 								return accountJwt;
-							}
-							default -> {
-								return null;
-							}
-						}
-					}
-				})
-				// Convert our custom ServerSentEventContextToken to and from a JSON string
-				.registerTypeAdapter(ServerSentEventContextToken.class, new TypeAdapter<ServerSentEventContextToken>() {
-					@Override
-					public void write(@Nonnull JsonWriter jsonWriter,
-														@Nonnull ServerSentEventContextToken serverSentEventContextJwt) throws IOException {
-						jsonWriter.value(serverSentEventContextJwt.toStringRepresentation(configuration.getKeyPair().getPrivate()));
-					}
-
-					@Override
-					@Nullable
-					public ServerSentEventContextToken read(@Nonnull JsonReader jsonReader) throws IOException {
-						ServerSentEventContextTokenResult result = ServerSentEventContextToken.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPublic());
-
-						switch (result) {
-							case ServerSentEventContextTokenResult.Succeeded(
-									@Nonnull ServerSentEventContextToken serverSentEventContextJwt
-							) -> {
-								return serverSentEventContextJwt;
-							}
-							case ServerSentEventContextTokenResult.Expired(
-									@Nonnull ServerSentEventContextToken serverSentEventContextJwt, @Nonnull Instant expiredAt
-							) -> {
-								return serverSentEventContextJwt;
 							}
 							default -> {
 								return null;

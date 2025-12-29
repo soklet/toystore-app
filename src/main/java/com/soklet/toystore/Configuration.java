@@ -81,7 +81,7 @@ public class Configuration {
 	@Nonnull
 	private final Duration accessTokenExpiration;
 	@Nonnull
-	private final Duration serverSentEventContextTokenExpiration;
+	private final Duration sseAccessTokenExpiration;
 	@Nonnull
 	private final KeyPair keyPair;
 	@Nonnull
@@ -104,7 +104,7 @@ public class Configuration {
 		this.port = requireNonNull(configFile.port());
 		this.serverSentEventPort = requireNonNull(configFile.serverSentEventPort());
 		this.accessTokenExpiration = Duration.ofSeconds(configFile.accessTokenExpirationInSeconds());
-		this.serverSentEventContextTokenExpiration = Duration.ofSeconds(configFile.serverSentEventContextTokenExpirationInSeconds());
+		this.sseAccessTokenExpiration = Duration.ofSeconds(configFile.sseAccessTokenExpirationInSeconds());
 		this.corsWhitelistedOrigins = configFile.corsWhitelistedOrigins() == null ? Set.of() : configFile.corsWhitelistedOrigins();
 		this.secretsManagerType = configFile.secretsManager.type();
 		this.creditCardProcessorType = configFile.creditCardProcessor.type();
@@ -167,7 +167,7 @@ public class Configuration {
 			@Nonnull Integer serverSentEventPort,
 			@Nonnull Set<String> corsWhitelistedOrigins,
 			@Nonnull Integer accessTokenExpirationInSeconds,
-			@Nonnull Integer serverSentEventContextTokenExpirationInSeconds,
+			@Nonnull Integer sseAccessTokenExpirationInSeconds,
 			@Nonnull ConfigKeyPair keyPair,
 			@Nonnull ConfigSecretsManager secretsManager,
 			@Nonnull ConfigCreditCardProcessor creditCardProcessor,
@@ -178,7 +178,7 @@ public class Configuration {
 			requireNonNull(serverSentEventPort);
 			requireNonNull(corsWhitelistedOrigins);
 			requireNonNull(accessTokenExpirationInSeconds);
-			requireNonNull(serverSentEventContextTokenExpirationInSeconds);
+			requireNonNull(sseAccessTokenExpirationInSeconds);
 			requireNonNull(keyPair);
 			requireNonNull(secretsManager);
 			requireNonNull(creditCardProcessor);
@@ -261,8 +261,8 @@ public class Configuration {
 	}
 
 	@Nonnull
-	public Duration getServerSentEventContextTokenExpiration() {
-		return this.serverSentEventContextTokenExpiration;
+	public Duration getSseAccessTokenExpiration() {
+		return this.sseAccessTokenExpiration;
 	}
 
 	@Nonnull

@@ -3,7 +3,7 @@
   "serverSentEventPort": 8081,
   "corsWhitelistedOrigins": ["https://my.dev.webapp"],
   "accessTokenExpirationInSeconds": 259200,
-  "serverSentEventContextTokenExpirationInSeconds": 60,
+  "sseAccessTokenExpirationInSeconds": 60,
   "keyPair": {
     "algorithm": "Ed25519",
     "publicKey": "MCowBQYDK2VwAyEApv8tMZ0EW4t7sauPkus0aHfwosV1Lv1SAyvACucl1HY="
