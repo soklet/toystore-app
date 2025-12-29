@@ -24,6 +24,7 @@
             // Settings
             settingsNote: document.getElementById('settings-note'),
             presetButtons: document.querySelectorAll('[data-account-preset]'),
+            presetSection: document.getElementById('preset-section'),
 
             // Auth
             authForm: document.getElementById('auth-form'),
@@ -63,6 +64,10 @@
         };
 
         const accountPresets = {
+            administrator: {
+                email: 'admin@soklet.com',
+                password: 'test123'
+            },
             customer: {
                 email: 'customer@soklet.com',
                 password: 'test123'
@@ -104,7 +109,7 @@
 
             const locale = state.browserLocale || 'unknown';
             const timeZone = state.browserTimeZone || 'unknown';
-            elements.settingsNote.textContent = `Signed out: browser locale is ${locale} and time zone is ${timeZone}. Signing in uses account settings instead.`;
+            elements.settingsNote.textContent = `Signed out: browser locale is ${locale} and time zone is ${timeZone}. Signing in may override these with account settings.`;
         }
 
         function showResponse(element, data, isError = false) {
@@ -141,13 +146,19 @@
                         Email: ${state.account.emailAddress}
                     </div>
                 `;
-                elements.authForm.classList.add('hidden');
-                elements.signOutBtn.classList.remove('hidden');
+                elements.authForm.classList.add('invisible');
+                elements.signOutBtn.classList.remove('invisible');
+                if (elements.presetSection) {
+                    elements.presetSection.classList.add('invisible');
+                }
             } else {
                 elements.accountStatus.className = 'account-status signed-out';
                 elements.accountStatus.textContent = '✗ Not signed in';
-                elements.authForm.classList.remove('hidden');
-                elements.signOutBtn.classList.add('hidden');
+                elements.authForm.classList.remove('invisible');
+                elements.signOutBtn.classList.add('invisible');
+                if (elements.presetSection) {
+                    elements.presetSection.classList.remove('invisible');
+                }
             }
         }
 
@@ -160,12 +171,17 @@
 
             elements.email.value = preset.email;
             elements.password.value = preset.password;
+
+            if (elements.authForm && elements.authForm.requestSubmit) {
+                elements.authForm.requestSubmit();
+            }
         }
 
         async function signIn(e) {
             e.preventDefault();
 
             try {
+                elements.authResponse.classList.add('hidden');
                 const response = await fetch('/accounts/authenticate', {
                     method: 'POST',
                     headers: getHeaders(),

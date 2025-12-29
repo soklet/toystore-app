@@ -28,37 +28,54 @@
 				<h2 class="card-title">Authentication</h2>
 			</div>
 
-			<div id="account-status" class="account-status signed-out">
-				✗ Not signed in
-			</div>
+			<div class="card-body">
+				<div class="card-panel auth-panel">
+					<div class="auth-status">
+						<div id="account-status" class="account-status signed-out">
+							✗ Not signed in
+						</div>
 
-			<div class="preset-buttons">
-				<button type="button" class="btn-secondary btn-sm" data-account-preset="customer">Use Customer</button>
-				<button type="button" class="btn-secondary btn-sm" data-account-preset="employee">Use Employee</button>
-			</div>
-			<p class="preset-note">Customer: en-US / America/New_York · Employee: de-DE / Europe/Berlin</p>
+						<button id="sign-out-btn" class="btn-danger btn-block invisible">
+							Sign Out
+						</button>
+					</div>
 
-			<form id="auth-form">
-				<div class="form-group">
-					<label for="email">Email Address</label>
-					<input type="email" id="email" value="admin@soklet.com" required>
+					<form id="auth-form">
+						<div class="form-group">
+							<label for="email">Email Address</label>
+							<input type="email" id="email" value="admin@soklet.com" required>
+						</div>
+
+						<div class="form-group">
+							<label for="password">Password</label>
+							<input type="password" id="password" value="test123" required>
+						</div>
+
+						<button type="submit" id="auth-btn" class="btn-primary btn-block">
+							Sign In
+						</button>
+
+						<div id="preset-section" class="preset-section">
+							<div class="preset-buttons">
+								<button type="button" class="btn-secondary btn-sm" data-account-preset="administrator">Use Administrator</button>
+								<button type="button" class="btn-secondary btn-sm" data-account-preset="customer">Use Customer</button>
+								<button type="button" class="btn-secondary btn-sm" data-account-preset="employee">Use Employee</button>
+							</div>
+							<ul class="preset-note">
+								<li>Administrator: pt-BR / America/Sao_Paulo</li>
+								<li>Customer: en-US / America/New_York</li>
+								<li>Employee: de-DE / Europe/Berlin</li>
+							</ul>
+						</div>
+					</form>
 				</div>
 
-				<div class="form-group">
-					<label for="password">Password</label>
-					<input type="password" id="password" value="test123" required>
+				<div class="card-panel output-panel output-panel--auth">
+					<div class="output-title">Response</div>
+					<div id="auth-response" class="response-output hidden"></div>
+					<div class="response-placeholder">No response yet.</div>
 				</div>
-
-				<button type="submit" id="auth-btn" class="btn-primary btn-block">
-					Sign In
-				</button>
-			</form>
-
-			<button id="sign-out-btn" class="btn-danger btn-block hidden" style="margin-top: 1rem;">
-				Sign Out
-			</button>
-
-			<div id="auth-response" class="response-output hidden"></div>
+			</div>
 		</div>
 
 		<!-- Create Toy Card -->
@@ -67,37 +84,44 @@
 				<span class="card-icon">🧸</span>
 				<h2 class="card-title">Create Toy</h2>
 			</div>
+			<div class="card-body">
+				<div class="card-panel">
+					<form id="create-toy-form">
+						<div class="form-group">
+							<label for="toy-name">Toy Name</label>
+							<input type="text" id="toy-name" placeholder="Teddy Bear" required>
+						</div>
 
-			<form id="create-toy-form">
-				<div class="form-group">
-					<label for="toy-name">Toy Name</label>
-					<input type="text" id="toy-name" placeholder="Teddy Bear" required>
+						<div class="form-row">
+							<div class="form-group">
+								<label for="toy-price">Price</label>
+								<input type="number" id="toy-price" placeholder="19.99" step="0.01" min="0" required>
+							</div>
+
+							<div class="form-group">
+								<label for="toy-currency">Currency</label>
+								<select id="toy-currency">
+									<option value="USD">USD ($)</option>
+									<option value="EUR">EUR (€)</option>
+									<option value="GBP">GBP (£)</option>
+									<option value="BRL">BRL (R$)</option>
+									<option value="JPY">JPY (¥)</option>
+								</select>
+							</div>
+						</div>
+
+						<button type="submit" class="btn-primary btn-block">
+							Create Toy
+						</button>
+					</form>
 				</div>
 
-				<div class="form-row">
-					<div class="form-group">
-						<label for="toy-price">Price</label>
-						<input type="number" id="toy-price" placeholder="19.99" step="0.01" min="0" required>
-					</div>
-
-					<div class="form-group">
-						<label for="toy-currency">Currency</label>
-						<select id="toy-currency">
-							<option value="USD">USD ($)</option>
-							<option value="EUR">EUR (€)</option>
-							<option value="GBP">GBP (£)</option>
-							<option value="BRL">BRL (R$)</option>
-							<option value="JPY">JPY (¥)</option>
-						</select>
-					</div>
+				<div class="card-panel output-panel">
+					<div class="output-title">Response</div>
+					<div id="create-toy-response" class="response-output hidden"></div>
+					<div class="response-placeholder">No response yet.</div>
 				</div>
-
-				<button type="submit" class="btn-primary btn-block">
-					Create Toy
-				</button>
-			</form>
-
-			<div id="create-toy-response" class="response-output hidden"></div>
+			</div>
 		</div>
 
 		<!-- List Toys Card -->
@@ -106,20 +130,26 @@
 				<span class="card-icon">📋</span>
 				<h2 class="card-title">Toys Inventory</h2>
 			</div>
+			<div class="card-body">
+				<div class="card-panel">
+					<div class="form-group">
+						<label for="toy-search">Search (optional)</label>
+						<input type="text" id="toy-search" placeholder="Filter by name...">
+					</div>
 
-			<div class="form-group">
-				<label for="toy-search">Search (optional)</label>
-				<input type="text" id="toy-search" placeholder="Filter by name...">
-			</div>
+					<button id="list-toys-btn" class="btn-secondary btn-block">
+						List Toys
+					</button>
+				</div>
 
-			<button id="list-toys-btn" class="btn-secondary btn-block">
-				List Toys
-			</button>
-
-			<div id="toys-list" class="toys-list">
-				<div class="empty-state">
-					<div class="empty-state-icon">📦</div>
-					<p>Click "List Toys" to load inventory</p>
+				<div class="card-panel output-panel">
+					<div class="output-title">Results</div>
+					<div id="toys-list" class="toys-list">
+						<div class="empty-state">
+							<div class="empty-state-icon">📦</div>
+							<p>Click "List Toys" to load inventory</p>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -130,29 +160,36 @@
 				<span class="card-icon">💳</span>
 				<h2 class="card-title">Purchase Toy</h2>
 			</div>
+			<div class="card-body">
+				<div class="card-panel">
+					<form id="purchase-form">
+						<div class="form-group">
+							<label for="purchase-toy-id">Toy ID</label>
+							<input type="text" id="purchase-toy-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required>
+						</div>
 
-			<form id="purchase-form">
-				<div class="form-group">
-					<label for="purchase-toy-id">Toy ID</label>
-					<input type="text" id="purchase-toy-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required>
+						<div class="form-group">
+							<label for="cc-number">Credit Card Number</label>
+							<input type="text" id="cc-number" value="4111111111111111" required>
+						</div>
+
+						<div class="form-group">
+							<label for="cc-expiration">Expiration (YYYY-MM)</label>
+							<input type="text" id="cc-expiration" value="2028-03" placeholder="2028-03" required>
+						</div>
+
+						<button type="submit" class="btn-primary btn-block">
+							Purchase
+						</button>
+					</form>
 				</div>
 
-				<div class="form-group">
-					<label for="cc-number">Credit Card Number</label>
-					<input type="text" id="cc-number" value="4111111111111111" required>
+				<div class="card-panel output-panel">
+					<div class="output-title">Response</div>
+					<div id="purchase-response" class="response-output hidden"></div>
+					<div class="response-placeholder">No response yet.</div>
 				</div>
-
-				<div class="form-group">
-					<label for="cc-expiration">Expiration (YYYY-MM)</label>
-					<input type="text" id="cc-expiration" value="2028-03" placeholder="2028-03" required>
-				</div>
-
-				<button type="submit" class="btn-primary btn-block">
-					Purchase
-				</button>
-			</form>
-
-			<div id="purchase-response" class="response-output hidden"></div>
+			</div>
 		</div>
 
 		<!-- SSE Events Card -->
@@ -168,24 +205,30 @@
 					<span id="sse-status-text">Disconnected</span>
 				</div>
 			</div>
+			<div class="card-body card-body--stacked">
+				<div class="card-panel">
+					<div class="events-controls">
+						<button id="sse-connect-btn" class="btn-secondary btn-sm">
+							Connect
+						</button>
+						<button id="sse-disconnect-btn" class="btn-danger btn-sm" disabled>
+							Disconnect
+						</button>
+						<button id="sse-clear-btn" class="btn-sm btn-muted">
+							Clear Log
+						</button>
+					</div>
+				</div>
 
-			<div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-				<button id="sse-connect-btn" class="btn-secondary btn-sm">
-					Connect
-				</button>
-				<button id="sse-disconnect-btn" class="btn-danger btn-sm" disabled>
-					Disconnect
-				</button>
-				<button id="sse-clear-btn" class="btn-sm" style="background: var(--color-border); color: var(--color-text);">
-					Clear Log
-				</button>
-			</div>
-
-			<div class="events-log" id="events-log">
-				<div class="event-entry system">
-					<span class="event-time">--:--:--</span>
-					<span class="event-type">System</span>
-					<span>Click "Connect" to start listening for toy events...</span>
+				<div class="card-panel output-panel">
+					<div class="output-title">Event Log</div>
+					<div class="events-log" id="events-log">
+						<div class="event-entry system">
+							<span class="event-time">--:--:--</span>
+							<span class="event-type">System</span>
+							<span>Click "Connect" to start listening for toy events...</span>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
