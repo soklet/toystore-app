@@ -25,6 +25,8 @@
             settingsNote: document.getElementById('settings-note'),
             presetButtons: document.querySelectorAll('[data-account-preset]'),
             presetSection: document.getElementById('preset-section'),
+            sseDrawer: document.getElementById('sse-drawer'),
+            sseToggleBtn: document.getElementById('sse-toggle-btn'),
 
             // Auth
             authForm: document.getElementById('auth-form'),
@@ -133,6 +135,30 @@
             elements.eventsLog.insertBefore(entry, elements.eventsLog.firstChild);
         }
 
+        function isSseDrawerCollapsed() {
+            return elements.sseDrawer && elements.sseDrawer.classList.contains('sse-collapsed');
+        }
+
+        function setSseDrawerCollapsed(collapsed) {
+            if (!elements.sseDrawer || !elements.sseToggleBtn) {
+                return;
+            }
+
+            elements.sseDrawer.classList.toggle('sse-collapsed', collapsed);
+            elements.sseToggleBtn.textContent = collapsed ? 'Expand' : 'Collapse';
+            elements.sseToggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        }
+
+        function toggleSseDrawer() {
+            setSseDrawerCollapsed(!isSseDrawerCollapsed());
+        }
+
+        function expandSseDrawer() {
+            if (isSseDrawerCollapsed()) {
+                setSseDrawerCollapsed(false);
+            }
+        }
+
         // ============================================================
         // Authentication
         // ============================================================
@@ -146,18 +172,18 @@
                         Email: ${state.account.emailAddress}
                     </div>
                 `;
-                elements.authForm.classList.add('invisible');
-                elements.signOutBtn.classList.remove('invisible');
+                elements.authForm.classList.add('hidden');
+                elements.signOutBtn.classList.remove('hidden');
                 if (elements.presetSection) {
-                    elements.presetSection.classList.add('invisible');
+                    elements.presetSection.classList.add('hidden');
                 }
             } else {
                 elements.accountStatus.className = 'account-status signed-out';
                 elements.accountStatus.textContent = '✗ Not signed in';
-                elements.authForm.classList.remove('invisible');
-                elements.signOutBtn.classList.add('invisible');
+                elements.authForm.classList.remove('hidden');
+                elements.signOutBtn.classList.add('hidden');
                 if (elements.presetSection) {
-                    elements.presetSection.classList.remove('invisible');
+                    elements.presetSection.classList.remove('hidden');
                 }
             }
         }
@@ -171,10 +197,6 @@
 
             elements.email.value = preset.email;
             elements.password.value = preset.password;
-
-            if (elements.authForm && elements.authForm.requestSubmit) {
-                elements.authForm.requestSubmit();
-            }
         }
 
         async function signIn(e) {
@@ -241,6 +263,7 @@
                     elements.toyName.value = '';
                     elements.toyPrice.value = '';
                     listToys(); // Refresh list
+                    refreshPurchaseToyOptions(); // Refresh purchase dropdown
                 } else {
                     showResponse(elements.createToyResponse, data, true);
                 }
@@ -252,47 +275,86 @@
         // ============================================================
         // List Toys
         // ============================================================
+        async function fetchToys(query = '') {
+            const trimmedQuery = query.trim();
+            const url = trimmedQuery ? `/toys?query=${encodeURIComponent(trimmedQuery)}` : '/toys';
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: getHeaders()
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.toys) {
+                const message = data.summary || 'Error loading toys';
+                throw new Error(message);
+            }
+
+            return data.toys;
+        }
+
+        function renderToyList(toys) {
+            if (toys.length === 0) {
+                elements.toysList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🏜️</div>
+                        <p>No toys found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            elements.toysList.innerHTML = toys.map(toy => `
+                <div class="toy-item">
+                    <div>
+                        <div class="toy-name">${escapeHtml(toy.name)}</div>
+                        <div style="font-size: 0.8rem; color: var(--color-text-muted);">
+                            ${escapeHtml(toy.toyId)}
+                        </div>
+                    </div>
+                    <div class="toy-price">${escapeHtml(toy.priceDescription)}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderPurchaseToyOptions(toys) {
+            if (!elements.purchaseToyId) {
+                return;
+            }
+
+            const selectedValue = elements.purchaseToyId.value;
+            const options = toys.map(toy => `
+                <option value="${escapeHtml(toy.toyId)}">
+                    ${escapeHtml(toy.name)} — ${escapeHtml(toy.priceDescription)}
+                </option>
+            `);
+
+            elements.purchaseToyId.innerHTML = [
+                '<option value="">Select toy</option>',
+                ...options
+            ].join('');
+
+            if (selectedValue) {
+                elements.purchaseToyId.value = selectedValue;
+            }
+        }
+
+        async function refreshPurchaseToyOptions() {
+            try {
+                const toys = await fetchToys();
+                renderPurchaseToyOptions(toys);
+            } catch (err) {
+                if (elements.purchaseToyId) {
+                    elements.purchaseToyId.innerHTML = '<option value="">Select toy</option>';
+                }
+            }
+        }
+
         async function listToys() {
             try {
-                const query = elements.toySearch.value.trim();
-                const url = query ? `/toys?query=${encodeURIComponent(query)}` : '/toys';
-
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: getHeaders()
-                });
-
-                const data = await response.json();
-
-                if (response.ok && data.toys) {
-                    if (data.toys.length === 0) {
-                        elements.toysList.innerHTML = `
-                            <div class="empty-state">
-                                <div class="empty-state-icon">🏜️</div>
-                                <p>No toys found</p>
-                            </div>
-                        `;
-                    } else {
-                        elements.toysList.innerHTML = data.toys.map(toy => `
-                            <div class="toy-item">
-                                <div>
-                                    <div class="toy-name">${escapeHtml(toy.name)}</div>
-                                    <div style="font-size: 0.8rem; color: var(--color-text-muted);">
-                                        ${toy.toyId}
-                                    </div>
-                                </div>
-                                <div class="toy-price">${toy.priceDescription}</div>
-                            </div>
-                        `).join('');
-                    }
-                } else {
-                    elements.toysList.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">⚠️</div>
-                            <p>Error loading toys</p>
-                        </div>
-                    `;
-                }
+                const toys = await fetchToys(elements.toySearch.value);
+                renderToyList(toys);
             } catch (err) {
                 elements.toysList.innerHTML = `
                     <div class="empty-state">
@@ -316,9 +378,10 @@
             e.preventDefault();
 
             const toyId = elements.purchaseToyId.value.trim();
+            const toyIdParam = toyId.length === 0 ? 'null' : toyId;
 
             try {
-                const response = await fetch(`/toys/${toyId}/purchase`, {
+                const response = await fetch(`/toys/${encodeURIComponent(toyIdParam)}/purchase`, {
                     method: 'POST',
                     headers: getHeaders(),
                     body: JSON.stringify({
@@ -412,6 +475,7 @@
                 // Listen for specific event types (these match the backend's SSE event names)
                 ['toy-created', 'toy-updated', 'toy-deleted', 'toy-purchased'].forEach(eventType => {
                     state.eventSource.addEventListener(eventType, (event) => {
+                        expandSseDrawer();
                         try {
                             const data = JSON.parse(event.data);
                             addEventLogEntry(eventType, JSON.stringify(data, null, 2), eventType);
@@ -423,6 +487,7 @@
 
                 // Fallback for generic messages (including heartbeat comments)
                 state.eventSource.onmessage = (event) => {
+                    expandSseDrawer();
                     addEventLogEntry('Message', event.data, 'system');
                 };
 
@@ -462,6 +527,9 @@
         elements.sseConnectBtn.addEventListener('click', connectSSE);
         elements.sseDisconnectBtn.addEventListener('click', disconnectSSE);
         elements.sseClearBtn.addEventListener('click', clearEventLog);
+        if (elements.sseToggleBtn) {
+            elements.sseToggleBtn.addEventListener('click', toggleSseDrawer);
+        }
         elements.presetButtons.forEach(button => {
             button.addEventListener('click', () => applyAccountPreset(button.dataset.accountPreset));
         });
@@ -478,3 +546,5 @@
         updateSettingsNote();
         updateAuthUI();
         updateSSEStatus(false);
+        refreshPurchaseToyOptions();
+        setSseDrawerCollapsed(true);

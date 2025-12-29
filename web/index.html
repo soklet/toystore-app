@@ -35,7 +35,7 @@
 							✗ Not signed in
 						</div>
 
-						<button id="sign-out-btn" class="btn-danger btn-block invisible">
+						<button id="sign-out-btn" class="btn-danger btn-block hidden">
 							Sign Out
 						</button>
 					</div>
@@ -89,18 +89,19 @@
 					<form id="create-toy-form">
 						<div class="form-group">
 							<label for="toy-name">Toy Name</label>
-							<input type="text" id="toy-name" placeholder="Teddy Bear" required>
+							<input type="text" id="toy-name" placeholder="Teddy Bear">
 						</div>
 
 						<div class="form-row">
 							<div class="form-group">
 								<label for="toy-price">Price</label>
-								<input type="number" id="toy-price" placeholder="19.99" step="0.01" min="0" required>
+								<input type="text" id="toy-price" placeholder="19.99">
 							</div>
 
 							<div class="form-group">
 								<label for="toy-currency">Currency</label>
 								<select id="toy-currency">
+									<option value="">Select currency</option>
 									<option value="USD">USD ($)</option>
 									<option value="EUR">EUR (€)</option>
 									<option value="GBP">GBP (£)</option>
@@ -164,18 +165,20 @@
 				<div class="card-panel">
 					<form id="purchase-form">
 						<div class="form-group">
-							<label for="purchase-toy-id">Toy ID</label>
-							<input type="text" id="purchase-toy-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required>
+							<label for="purchase-toy-id">Toy</label>
+							<select id="purchase-toy-id">
+								<option value="">Select toy</option>
+							</select>
 						</div>
 
 						<div class="form-group">
 							<label for="cc-number">Credit Card Number</label>
-							<input type="text" id="cc-number" value="4111111111111111" required>
+							<input type="text" id="cc-number" value="4111111111111111">
 						</div>
 
 						<div class="form-group">
 							<label for="cc-expiration">Expiration (YYYY-MM)</label>
-							<input type="text" id="cc-expiration" value="2028-03" placeholder="2028-03" required>
+							<input type="text" id="cc-expiration" value="2028-03" placeholder="2028-03">
 						</div>
 
 						<button type="submit" class="btn-primary btn-block">
@@ -192,43 +195,41 @@
 			</div>
 		</div>
 
-		<!-- SSE Events Card -->
-		<div class="card events-container">
-			<div class="card-header events-header">
-				<div style="display: flex; align-items: center; gap: 0.75rem;">
-					<span class="card-icon">📡</span>
-					<h2 class="card-title">Live Events (SSE)</h2>
-				</div>
-
-				<div class="connection-status">
-					<span class="status-dot" id="sse-status-dot"></span>
-					<span id="sse-status-text">Disconnected</span>
-				</div>
-			</div>
-			<div class="card-body card-body--stacked">
-				<div class="card-panel">
-					<div class="events-controls">
-						<button id="sse-connect-btn" class="btn-secondary btn-sm">
-							Connect
-						</button>
-						<button id="sse-disconnect-btn" class="btn-danger btn-sm" disabled>
-							Disconnect
-						</button>
-						<button id="sse-clear-btn" class="btn-sm btn-muted">
-							Clear Log
-						</button>
-					</div>
-				</div>
-
-				<div class="card-panel output-panel">
-					<div class="output-title">Event Log</div>
-					<div class="events-log" id="events-log">
-						<div class="event-entry system">
-							<span class="event-time">--:--:--</span>
-							<span class="event-type">System</span>
-							<span>Click "Connect" to start listening for toy events...</span>
-						</div>
-					</div>
+	</div>
+</div>
+<div id="sse-drawer" class="sse-drawer card sse-collapsed">
+	<div class="sse-drawer-header">
+		<div class="sse-drawer-title">
+			<span class="card-icon">📡</span>
+			<h2 class="card-title">Live Events (SSE)</h2>
+		</div>
+		<div class="connection-status">
+			<span class="status-dot" id="sse-status-dot"></span>
+			<span id="sse-status-text">Disconnected</span>
+		</div>
+		<button id="sse-toggle-btn" class="btn-sm btn-muted sse-toggle" type="button" aria-expanded="false">
+			Expand
+		</button>
+	</div>
+	<div class="sse-drawer-body">
+		<div class="events-controls">
+			<button id="sse-connect-btn" class="btn-secondary btn-sm">
+				Connect
+			</button>
+			<button id="sse-disconnect-btn" class="btn-danger btn-sm" disabled>
+				Disconnect
+			</button>
+			<button id="sse-clear-btn" class="btn-sm btn-muted">
+				Clear Log
+			</button>
+		</div>
+		<div class="sse-log">
+			<div class="output-title">Event Log</div>
+			<div class="events-log" id="events-log">
+				<div class="event-entry system">
+					<span class="event-time">--:--:--</span>
+					<span class="event-type">System</span>
+					<span>Click "Connect" to start listening for toy events...</span>
 				</div>
 			</div>
 		</div>

@@ -250,17 +250,16 @@ public class AppModule extends AbstractModule {
 
 					@Override
 					public void wrapRequest(@Nonnull Request request,
-																	@Nullable ResourceMethod resourceMethod,
 																	@Nonnull Consumer<Request> requestProcessor) {
 						requireNonNull(request);
 						requireNonNull(requestProcessor);
 
-						// Ensure a "current context" scope exists for all request-handling code.
+						// When a request arrives, immediately apply a "current context" scope to it.
 						// Pick the best-matching locale and timezone based on information we have from the request.
 						// We might override locale/timezone downstream if we authenticate an account for this request
 						Localization localization = resolveLocalization(request, null, null);
 
-						CurrentContext.withRequest(request, resourceMethod)
+						CurrentContext.withRequest(request)
 								.locale(localization.locale())
 								.timeZone(localization.timeZone())
 								.build().run(() -> {

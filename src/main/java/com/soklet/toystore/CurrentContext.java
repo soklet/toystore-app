@@ -114,6 +114,11 @@ public final class CurrentContext {
 	}
 
 	@Nonnull
+	public static Builder withRequest(@Nullable Request request) {
+		return withRequest(request, null);
+	}
+
+	@Nonnull
 	public static Builder withRequest(@Nullable Request request,
 																		@Nullable ResourceMethod resourceMethod) {
 		return new Builder().request(request).resourceMethod(resourceMethod);

@@ -206,9 +206,6 @@
             color: var(--color-text-muted);
         }
 
-        .output-panel--auth {
-            min-height: 270px;
-        }
 
         .card-icon {
             font-size: 1.5rem;
@@ -323,7 +320,6 @@
             margin-bottom: 1rem;
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.85rem;
-            min-height: 6.5rem;
         }
 
         .auth-status {
@@ -387,6 +383,69 @@
 
         .events-container {
             grid-column: 1 / -1;
+        }
+
+        .sse-drawer {
+            position: fixed;
+            right: 1.5rem;
+            bottom: 1.5rem;
+            width: 360px;
+            max-height: calc(100vh - 2rem);
+            z-index: 50;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .sse-drawer:not(.sse-collapsed) {
+            width: 560px;
+        }
+
+        .sse-drawer.sse-collapsed .sse-drawer-body {
+            display: none;
+        }
+
+        .sse-drawer.card:hover {
+            transform: none;
+        }
+
+        .sse-drawer-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem 0.75rem;
+        }
+
+        .sse-drawer-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1 1 180px;
+        }
+
+        .sse-toggle {
+            margin-left: auto;
+        }
+
+        .sse-drawer-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .sse-log {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .sse-drawer .events-log {
+            max-height: 220px;
+        }
+
+        .sse-drawer:not(.sse-collapsed) .events-log {
+            max-height: 320px;
         }
 
         .events-header {
@@ -520,10 +579,6 @@
             display: none !important;
         }
 
-        .invisible {
-            visibility: hidden;
-            pointer-events: none;
-        }
 
         .empty-state {
             text-align: center;
@@ -562,5 +617,12 @@
 
             .card-body {
                 grid-template-columns: 1fr;
+            }
+
+            .sse-drawer {
+                right: 1rem;
+                left: 1rem;
+                width: auto;
+                bottom: 1rem;
             }
         }
