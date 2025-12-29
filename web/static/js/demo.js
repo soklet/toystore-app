@@ -20,7 +20,6 @@
         // ============================================================
         const elements = {
             // Settings
-            locale: document.getElementById('locale'),
             timezone: document.getElementById('timezone'),
 
             // Auth
@@ -65,16 +64,42 @@
         // ============================================================
         function getHeaders() {
             const headers = {
-                'Content-Type': 'application/json',
-                'X-Locale': elements.locale.value,
-                'X-Time-Zone': elements.timezone.value
+                'Content-Type': 'application/json'
             };
+
+            if (elements.timezone && elements.timezone.value) {
+                headers['Time-Zone'] = elements.timezone.value;
+            }
 
             if (state.authToken) {
                 headers['X-Access-Token'] = state.authToken;  // Fixed: was X-Authentication-Token
             }
 
             return headers;
+        }
+
+        function applyBrowserTimeZone() {
+            if (!elements.timezone) {
+                return;
+            }
+
+            const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+            if (!browserTimeZone) {
+                return;
+            }
+
+            const hasOption = Array.from(elements.timezone.options)
+                .some(option => option.value === browserTimeZone);
+
+            if (!hasOption) {
+                const option = document.createElement('option');
+                option.value = browserTimeZone;
+                option.textContent = `${browserTimeZone} (local)`;
+                elements.timezone.insertBefore(option, elements.timezone.firstChild);
+            }
+
+            elements.timezone.value = browserTimeZone;
         }
 
         function showResponse(element, data, isError = false) {
@@ -414,5 +439,6 @@
         });
 
         // Initialize UI
+        applyBrowserTimeZone();
         updateAuthUI();
         updateSSEStatus(false);

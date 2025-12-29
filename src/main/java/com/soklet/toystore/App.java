@@ -161,8 +161,8 @@ public class App {
 				.bind("name", "Example Administrator")
 				.bind("emailAddress", normalizeEmailAddress("admin@soklet.com"))
 				.bind("passwordHash", passwordManager.hashPassword("test123"))
-				.bind("timeZone", ZoneId.of("America/New_York"))
-				.bind("locale", Locale.forLanguageTag("en-US"))
+				.bind("timeZone", ZoneId.of("America/Sao_Paulo"))
+				.bind("locale", Locale.forLanguageTag("pt-BR"))
 				.execute();
 
 		database.query("""

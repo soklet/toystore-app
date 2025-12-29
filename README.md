@@ -93,13 +93,13 @@ Here we demonstrate how a client might interact with the Toy Store App.
 
 Given an email address and password, return account information and an authentication token (here, a [JWT](#jwt-handling)).
 
-We specify headers with preferred locale and time zone so the server knows how to provide "friendly" localized descriptions in the response.
+We specify `Accept-Language` and `Time-Zone` headers so the server knows how to provide "friendly" localized descriptions in the unauthenticated response.
 
 ```shell
  % curl -i -X POST 'http://localhost:8080/accounts/authenticate' \
    -d '{"emailAddress": "admin@soklet.com", "password": "test123"}' \
-   -H "X-Locale: en-US" \
-   -H "X-Time-Zone: America/New_York"
+   -H "Accept-Language: en-US" \
+   -H "Time-Zone: America/New_York"
 HTTP/1.1 200 OK
 Content-Length: 640
 Content-Type: application/json;charset=UTF-8
@@ -186,14 +186,12 @@ Date: Sun, 09 Jun 2024 14:12:08 GMT
 
 #### Internationalization (i18n)
 
-Here we specify `X-Locale` and `X-Time-Zone` headers to format our response in a different locale and time zone - in this case, `pt-BR` (Brazilian Portuguese) and `America/Sao_Paulo` (São Paulo time, UTC-03:00).
+Unauthenticated requests use `Accept-Language` and `Time-Zone` headers; authenticated requests use the account's locale and time zone. The example below assumes the account is configured for `pt-BR` (Brazilian Portuguese) and `America/Sao_Paulo` (São Paulo time, UTC-03:00).
 
 ```shell
 % curl -i -X POST 'http://localhost:8080/toys' \
   -d '{"name": "Bola de futebol", "price": "50", "currency": "BRL"}' \
-  -H "X-Access-Token: eyJhbG...c76fxc" \
-  -H "X-Locale: pt-BR" \
-  -H "X-Time-Zone: America/Sao_Paulo"
+  -H "X-Access-Token: eyJhbG...c76fxc"
 HTTP/1.1 200 OK
 Content-Length: 362
 Content-Type: application/json;charset=UTF-8
@@ -219,9 +217,7 @@ Error messages are localized as well.  Here we supply a negative `price` and for
 ```shell
 % curl -i -X POST 'http://localhost:8080/toys' \
   -d '{"name": "Bola de futebol", "price": "-50"}' \ 
-  -H "X-Access-Token: eyJhbG...c76fxc" \
-  -H "X-Locale: pt-BR" \
-  -H "X-Time-Zone: America/Sao_Paulo"
+  -H "X-Access-Token: eyJhbG...c76fxc"
 HTTP/1.1 422 Unprocessable Content
 Content-Length: 261
 Content-Type: application/json;charset=UTF-8
@@ -248,15 +244,13 @@ Clients can listen on `/toys/event-source` for toy-related Server-Sent Events.
 
 Note that the standard Toy Store plumbing - authentication/authorization, transactions, etc. - automatically applies as you would expect for SSE Event Sources.
 
-Server-Sent Events, per spec, do not support custom headers, so we package up authentication and locale/timezone information into a short-lived token that is safe to pass to our _Event Source Method_ as a query parameter (this mitigates replay attacks that would be possible if we were to pass the long-lived Access Token instead).
+Server-Sent Events, per spec, do not support custom headers, so we package up authentication and account locale/timezone information into a short-lived token that is safe to pass to our _Event Source Method_ as a query parameter (this mitigates replay attacks that would be possible if we were to pass the long-lived Access Token instead).
 
 First, we ask for a short-lived, cryptographically-signed SSE Context Token for the authenticated account:
 
 ```shell
 % curl -i -X POST 'http://localhost:8080/accounts/sse-context-token' \
-  -H "X-Access-Token: eyJhbG...c76fxc" \
-  -H "X-Locale: pt-BR" \
-  -H "X-Time-Zone: America/Sao_Paulo"
+  -H "X-Access-Token: eyJhbG...c76fxc"
 HTTP/1.1 200 OK
 Content-Length: 351
 Content-Type: application/json;charset=UTF-8

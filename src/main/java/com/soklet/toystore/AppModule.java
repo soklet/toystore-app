@@ -60,6 +60,7 @@ import com.soklet.toystore.exception.ApplicationException;
 import com.soklet.toystore.exception.AuthenticationException;
 import com.soklet.toystore.exception.AuthorizationException;
 import com.soklet.toystore.exception.NotFoundException;
+import com.soklet.toystore.mock.MockCreditCardProcessor;
 import com.soklet.toystore.model.api.response.AccountResponse.AccountResponseFactory;
 import com.soklet.toystore.model.api.response.ErrorResponse;
 import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseFactory;
@@ -72,7 +73,6 @@ import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.model.db.Role.RoleId;
 import com.soklet.toystore.service.AccountService;
 import com.soklet.toystore.util.CreditCardProcessor;
-import com.soklet.toystore.mock.MockCreditCardProcessor;
 import com.soklet.toystore.util.PasswordManager;
 import com.soklet.toystore.util.SensitiveValueRedactor;
 import org.hsqldb.jdbc.JDBCDataSource;
@@ -251,8 +251,10 @@ public class AppModule extends AbstractModule {
 						requireNonNull(requestProcessor);
 
 						// Ensure a "current context" scope exists for all request-handling code.
-						// Pick the best-matching locale and timezone based on information we have from the request
+						// Pick the best-matching locale and timezone based on information we have from the request.
+						// We might override locale/timezone downstream if we authenticate an account for this request
 						Localization localization = resolveLocalization(request, null, null);
+
 						CurrentContext.withRequest(request, resourceMethod)
 								.locale(localization.locale())
 								.timeZone(localization.timeZone())
@@ -339,7 +341,9 @@ public class AppModule extends AbstractModule {
 							}
 						}
 
+						// Finalize localization: if we have an account, use its settings to override request data
 						Localization localization = resolveLocalization(request, account, serverSentEventContextToken);
+
 						CurrentContext currentContext = CurrentContext.withRequest(request, resourceMethod)
 								.locale(localization.locale())
 								.timeZone(localization.timeZone())
@@ -359,70 +363,6 @@ public class AppModule extends AbstractModule {
 					}
 
 					@Nonnull
-					private Locale determineLocale(@Nonnull Request request) {
-						requireNonNull(request);
-						return determineLocale(request, null);
-					}
-
-					@Nonnull
-					private Locale determineLocale(@Nonnull Request request,
-																				 @Nullable Account account) {
-						requireNonNull(request);
-
-						// Allow clients to specify a special header which indicates preferred locale
-						String localeHeader = request.getHeader("X-Locale").orElse(null);
-
-						if (localeHeader != null) {
-							try {
-								return Locale.forLanguageTag(localeHeader);
-							} catch (Exception ignored) {
-								// Illegal locale specified, we'll just try one of our fallbacks
-							}
-						}
-
-						// Next, if there's a signed-in account, use their configured locale
-						if (account != null)
-							return account.locale();
-
-						// If that didn't work, try the request's Accept-Language header
-						if (request.getLocales().size() > 0)
-							return request.getLocales().get(0);
-
-						// Still not sure?  Fall back to a safe default
-						return Configuration.getDefaultLocale();
-					}
-
-					@Nonnull
-					private ZoneId determineTimeZone(@Nonnull Request request) {
-						requireNonNull(request);
-						return determineTimeZone(request, null);
-					}
-
-					@Nonnull
-					private ZoneId determineTimeZone(@Nonnull Request request,
-																					 @Nullable Account account) {
-						requireNonNull(request);
-
-						// Allow clients to specify a special header which indicates preferred timezone
-						String timeZoneHeader = request.getHeader("X-Time-Zone").orElse(null);
-
-						if (timeZoneHeader != null) {
-							try {
-								return ZoneId.of(timeZoneHeader);
-							} catch (Exception ignored) {
-								// Illegal timezone specified, we'll just try one of our fallbacks
-							}
-						}
-
-						// Next, if there's a signed-in account, use their configured timezone
-						if (account != null)
-							return account.timeZone();
-
-						// Still not sure?  Fall back to a safe default
-						return Configuration.getDefaultTimeZone();
-					}
-
-					@Nonnull
 					private Localization resolveLocalization(@Nonnull Request request,
 																									 @Nullable Account account,
 																									 @Nullable ServerSentEventContextToken serverSentEventContextToken) {
@@ -431,10 +371,53 @@ public class AppModule extends AbstractModule {
 						if (serverSentEventContextToken != null)
 							return new Localization(serverSentEventContextToken.locale(), serverSentEventContextToken.timeZone());
 
-						if (account != null)
-							return new Localization(determineLocale(request, account), determineTimeZone(request, account));
+						return new Localization(resolveLocale(request, account), resolveTimeZone(request, account));
+					}
 
-						return new Localization(determineLocale(request), determineTimeZone(request));
+					@Nonnull
+					private Locale resolveLocale(@Nonnull Request request,
+																			 @Nullable Account account) {
+						requireNonNull(request);
+
+						// If there's an account, use its locale.
+						// If there's a request, use its best-matching locale.
+						// Otherwise, fall back to system default.
+						return Optional.ofNullable(account)
+								.map(Account::locale)
+								.or(() -> request.getLocales().stream().findFirst())
+								.orElse(Configuration.getDefaultLocale());
+					}
+
+					@Nonnull
+					private ZoneId resolveTimeZone(@Nonnull Request request,
+																				 @Nullable Account account) {
+						requireNonNull(request);
+
+						// If there's an account, use its time zone.
+						// If there's a request, use its time zone.
+						// Otherwise, fall back to system default.
+						return Optional.ofNullable(account)
+								.map(Account::timeZone)
+								.or(() -> resolveTimeZoneHeader(request))
+								.orElse(Configuration.getDefaultTimeZone());
+					}
+
+					@Nonnull
+					private Optional<ZoneId> resolveTimeZoneHeader(@Nonnull Request request) {
+						requireNonNull(request);
+
+						// Allow clients to specify a Time-Zone header which indicates preferred timezone
+						String timeZoneHeader = request.getHeader("Time-Zone").orElse(null);
+
+						if (timeZoneHeader != null) {
+							try {
+								return Optional.of(ZoneId.of(timeZoneHeader));
+							} catch (Exception ignored) {
+								// Illegal timezone specified
+							}
+						}
+
+						return Optional.empty();
 					}
 				})
 				.requestBodyMarshaler(new RequestBodyMarshaler() {
