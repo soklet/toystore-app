@@ -94,6 +94,19 @@
             text-align: center;
         }
 
+        .preset-buttons {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .preset-note {
+            margin: 0 0 1rem 0;
+            color: var(--color-text-muted);
+            font-size: 0.85rem;
+        }
+
         .setting-group {
             display: flex;
             align-items: center;

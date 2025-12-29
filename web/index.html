@@ -15,20 +15,9 @@
 		<h1>🎪 Toy <span>Store</span> Demo</h1>
 		<p class="subtitle">Interactive API Explorer for Soklet</p>
 
-		<div class="settings-bar">
-			<div class="setting-group">
-				<label for="timezone">🕐 Time Zone:</label>
-				<select id="timezone">
-					<option value="America/New_York">New York (ET)</option>
-					<option value="America/Chicago">Chicago (CT)</option>
-					<option value="America/Denver">Denver (MT)</option>
-					<option value="America/Los_Angeles">Los Angeles (PT)</option>
-					<option value="America/Sao_Paulo">São Paulo (BRT)</option>
-					<option value="America/Manaus">Manaus (AMT)</option>
-				</select>
-			</div>
-		</div>
-		<p class="settings-note">Locale uses your browser language when signed out and your account settings when signed in.</p>
+		<p id="settings-note" class="settings-note">
+			Locale uses your browser language and time zone when signed out; signing in uses account settings.
+		</p>
 	</header>
 
 	<div class="grid">
@@ -42,6 +31,12 @@
 			<div id="account-status" class="account-status signed-out">
 				✗ Not signed in
 			</div>
+
+			<div class="preset-buttons">
+				<button type="button" class="btn-secondary btn-sm" data-account-preset="customer">Use Customer</button>
+				<button type="button" class="btn-secondary btn-sm" data-account-preset="employee">Use Employee</button>
+			</div>
+			<p class="preset-note">Customer: en-US / America/New_York · Employee: de-DE / Europe/Berlin</p>
 
 			<form id="auth-form">
 				<div class="form-group">

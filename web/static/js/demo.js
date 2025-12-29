@@ -12,7 +12,9 @@
         const state = {
             authToken: null,
             account: null,
-            eventSource: null
+            eventSource: null,
+            browserLocale: null,
+            browserTimeZone: null
         };
 
         // ============================================================
@@ -20,7 +22,8 @@
         // ============================================================
         const elements = {
             // Settings
-            timezone: document.getElementById('timezone'),
+            settingsNote: document.getElementById('settings-note'),
+            presetButtons: document.querySelectorAll('[data-account-preset]'),
 
             // Auth
             authForm: document.getElementById('auth-form'),
@@ -59,6 +62,17 @@
             eventsLog: document.getElementById('events-log')
         };
 
+        const accountPresets = {
+            customer: {
+                email: 'customer@soklet.com',
+                password: 'test123'
+            },
+            employee: {
+                email: 'employee@soklet.com',
+                password: 'test123'
+            }
+        };
+
         // ============================================================
         // Utility Functions
         // ============================================================
@@ -67,8 +81,8 @@
                 'Content-Type': 'application/json'
             };
 
-            if (elements.timezone && elements.timezone.value) {
-                headers['Time-Zone'] = elements.timezone.value;
+            if (state.browserTimeZone) {
+                headers['Time-Zone'] = state.browserTimeZone;
             }
 
             if (state.authToken) {
@@ -78,28 +92,19 @@
             return headers;
         }
 
-        function applyBrowserTimeZone() {
-            if (!elements.timezone) {
+        function detectBrowserSettings() {
+            state.browserLocale = navigator.language || 'unknown';
+            state.browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+        }
+
+        function updateSettingsNote() {
+            if (!elements.settingsNote) {
                 return;
             }
 
-            const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-            if (!browserTimeZone) {
-                return;
-            }
-
-            const hasOption = Array.from(elements.timezone.options)
-                .some(option => option.value === browserTimeZone);
-
-            if (!hasOption) {
-                const option = document.createElement('option');
-                option.value = browserTimeZone;
-                option.textContent = `${browserTimeZone} (local)`;
-                elements.timezone.insertBefore(option, elements.timezone.firstChild);
-            }
-
-            elements.timezone.value = browserTimeZone;
+            const locale = state.browserLocale || 'unknown';
+            const timeZone = state.browserTimeZone || 'unknown';
+            elements.settingsNote.textContent = `Signed out: browser locale is ${locale} and time zone is ${timeZone}. Signing in uses account settings instead.`;
         }
 
         function showResponse(element, data, isError = false) {
@@ -144,6 +149,17 @@
                 elements.authForm.classList.remove('hidden');
                 elements.signOutBtn.classList.add('hidden');
             }
+        }
+
+        function applyAccountPreset(presetKey) {
+            const preset = accountPresets[presetKey];
+
+            if (!preset) {
+                return;
+            }
+
+            elements.email.value = preset.email;
+            elements.password.value = preset.password;
         }
 
         async function signIn(e) {
@@ -430,6 +446,9 @@
         elements.sseConnectBtn.addEventListener('click', connectSSE);
         elements.sseDisconnectBtn.addEventListener('click', disconnectSSE);
         elements.sseClearBtn.addEventListener('click', clearEventLog);
+        elements.presetButtons.forEach(button => {
+            button.addEventListener('click', () => applyAccountPreset(button.dataset.accountPreset));
+        });
 
         // Allow Enter key in search box to trigger list
         elements.toySearch.addEventListener('keypress', (e) => {
@@ -439,6 +458,7 @@
         });
 
         // Initialize UI
-        applyBrowserTimeZone();
+        detectBrowserSettings();
+        updateSettingsNote();
         updateAuthUI();
         updateSSEStatus(false);

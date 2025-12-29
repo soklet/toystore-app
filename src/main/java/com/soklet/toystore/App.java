@@ -165,6 +165,47 @@ public class App {
 				.bind("locale", Locale.forLanguageTag("pt-BR"))
 				.execute();
 
+		// Create an employee and a customer with distinct locale/timezone settings
+		database.query("""
+						INSERT INTO account (
+							account_id,
+							role_id,
+							name,
+							email_address,
+							password_hash,
+							time_zone,
+							locale
+						) VALUES (:accountId, :roleId, :name, :emailAddress, :passwordHash, :timeZone, :locale)
+						""")
+				.bind("accountId", UUID.fromString("3d2c6fd1-6d9b-40bb-9ca0-2d2ee00e24b9"))
+				.bind("roleId", RoleId.EMPLOYEE)
+				.bind("name", "Example Employee")
+				.bind("emailAddress", normalizeEmailAddress("employee@soklet.com"))
+				.bind("passwordHash", passwordManager.hashPassword("test123"))
+				.bind("timeZone", ZoneId.of("Europe/Berlin"))
+				.bind("locale", Locale.forLanguageTag("de-DE"))
+				.execute();
+
+		database.query("""
+						INSERT INTO account (
+							account_id,
+							role_id,
+							name,
+							email_address,
+							password_hash,
+							time_zone,
+							locale
+						) VALUES (:accountId, :roleId, :name, :emailAddress, :passwordHash, :timeZone, :locale)
+						""")
+				.bind("accountId", UUID.fromString("a9c0b6d4-1a29-4e83-9b39-32e8e23f4064"))
+				.bind("roleId", RoleId.CUSTOMER)
+				.bind("name", "Example Customer")
+				.bind("emailAddress", normalizeEmailAddress("customer@soklet.com"))
+				.bind("passwordHash", passwordManager.hashPassword("test123"))
+				.bind("timeZone", ZoneId.of("America/New_York"))
+				.bind("locale", Locale.forLanguageTag("en-US"))
+				.execute();
+
 		database.query("""
 				CREATE TABLE toy (
 					toy_id UUID PRIMARY KEY,

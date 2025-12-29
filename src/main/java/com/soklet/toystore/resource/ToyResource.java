@@ -166,7 +166,7 @@ public class ToyResource {
 	}
 
 	@Nonnull
-	@AuthorizationRequired(RoleId.ADMINISTRATOR)
+	@AuthorizationRequired({RoleId.EMPLOYEE, RoleId.ADMINISTRATOR})
 	@ServerSentEventSource("/toys/event-source")
 	public HandshakeResult toysEventSource() {
 		// Accept the handshake and store off the current context so we can appropriately localize our SSE broadcasts
