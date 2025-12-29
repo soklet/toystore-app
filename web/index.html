@@ -4,9 +4,6 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Toy Store Demo</title>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 	<link href="/static/css/demo.css" rel="stylesheet">
 </head>
 <body>
@@ -48,7 +45,7 @@
 
 						<div class="form-group">
 							<label for="password">Password</label>
-							<input type="password" id="password" value="test123" required>
+							<input type="password" id="password" value="administrator-password" required>
 						</div>
 
 						<button type="submit" id="auth-btn" class="btn-primary btn-block">
@@ -62,9 +59,9 @@
 								<button type="button" class="btn-secondary btn-sm" data-account-preset="employee">Use Employee</button>
 							</div>
 							<ul class="preset-note">
-								<li>Administrator: pt-BR / America/Sao_Paulo</li>
-								<li>Customer: en-US / America/New_York</li>
-								<li>Employee: de-DE / Europe/Berlin</li>
+								<li>Administrator: <code>en-US</code> locale, <code>America/New_York</code> timezone</li>
+								<li>Customer: <code>pt-BR</code> locale, <code>America/Sao_Paulo</code> timezone</li>
+								<li>Employee: <code>de-DE</code> locale, <code>Europe/Berlin</code> timezone</li>
 							</ul>
 						</div>
 					</form>
@@ -129,7 +126,7 @@
 		<div class="card">
 			<div class="card-header">
 				<span class="card-icon">📋</span>
-				<h2 class="card-title">Toys Inventory</h2>
+				<h2 class="card-title">Toy Inventory</h2>
 			</div>
 			<div class="card-body">
 				<div class="card-panel">
@@ -223,6 +220,9 @@
 				Clear Log
 			</button>
 		</div>
+		<p class="sse-note">
+			Note: Customers are not authorized to listen for Server-Sent Events.
+		</p>
 		<div class="sse-log">
 			<div class="output-title">Event Log</div>
 			<div class="events-log" id="events-log">

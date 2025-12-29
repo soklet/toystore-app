@@ -69,7 +69,7 @@ public class ToyResourceTests {
 
 		Soklet.runSimulator(config, (simulator -> {
 			// Get an auth token so we can provide to API calls
-			String authenticationToken = acquireAuthenticationToken(app, "admin@soklet.com", "test123");
+			String authenticationToken = acquireAuthenticationToken(app, "admin@soklet.com", "administrator-password");
 
 			// Create a toy by calling the API
 			String name = "Example Toy";
@@ -150,7 +150,7 @@ public class ToyResourceTests {
 
 		Soklet.runSimulator(config, (simulator -> {
 			// Get an auth token so we can provide to API calls
-			String authenticationToken = acquireAuthenticationToken(app, "admin@soklet.com", "test123");
+			String authenticationToken = acquireAuthenticationToken(app, "admin@soklet.com", "administrator-password");
 
 			// Create an expensive toy by calling the API
 			String name = "Expensive Toy";

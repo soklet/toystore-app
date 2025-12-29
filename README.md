@@ -97,7 +97,7 @@ We specify `Accept-Language` and `Time-Zone` headers so the server knows how to 
 
 ```shell
  % curl -i -X POST 'http://localhost:8080/accounts/authenticate' \
-   -d '{"emailAddress": "admin@soklet.com", "password": "test123"}' \
+   -d '{"emailAddress": "admin@soklet.com", "password": "administrator-password"}' \
    -H "Accept-Language: en-US" \
    -H "Time-Zone: America/New_York"
 HTTP/1.1 200 OK

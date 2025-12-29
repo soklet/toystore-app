@@ -160,9 +160,9 @@ public class App {
 				.bind("roleId", RoleId.ADMINISTRATOR)
 				.bind("name", "Example Administrator")
 				.bind("emailAddress", normalizeEmailAddress("admin@soklet.com"))
-				.bind("passwordHash", passwordManager.hashPassword("test123"))
-				.bind("timeZone", ZoneId.of("America/Sao_Paulo"))
-				.bind("locale", Locale.forLanguageTag("pt-BR"))
+				.bind("passwordHash", passwordManager.hashPassword("administrator-password"))
+				.bind("timeZone", ZoneId.of("America/New_York"))
+				.bind("locale", Locale.forLanguageTag("en-US"))
 				.execute();
 
 		// Create an employee and a customer with distinct locale/timezone settings
@@ -181,7 +181,7 @@ public class App {
 				.bind("roleId", RoleId.EMPLOYEE)
 				.bind("name", "Example Employee")
 				.bind("emailAddress", normalizeEmailAddress("employee@soklet.com"))
-				.bind("passwordHash", passwordManager.hashPassword("test123"))
+				.bind("passwordHash", passwordManager.hashPassword("employee-password"))
 				.bind("timeZone", ZoneId.of("Europe/Berlin"))
 				.bind("locale", Locale.forLanguageTag("de-DE"))
 				.execute();
@@ -201,9 +201,9 @@ public class App {
 				.bind("roleId", RoleId.CUSTOMER)
 				.bind("name", "Example Customer")
 				.bind("emailAddress", normalizeEmailAddress("customer@soklet.com"))
-				.bind("passwordHash", passwordManager.hashPassword("test123"))
-				.bind("timeZone", ZoneId.of("America/New_York"))
-				.bind("locale", Locale.forLanguageTag("en-US"))
+				.bind("passwordHash", passwordManager.hashPassword("customer-password"))
+				.bind("timeZone", ZoneId.of("America/Sao_Paulo"))
+				.bind("locale", Locale.forLanguageTag("pt-BR"))
 				.execute();
 
 		database.query("""

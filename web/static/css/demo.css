@@ -26,7 +26,7 @@
         }
 
         body {
-            font-family: 'Baloo 2', cursive;
+            font-family: system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
             background: var(--color-bg);
             color: var(--color-text);
             line-height: 1.6;
@@ -122,26 +122,6 @@
             font-weight: 600;
             color: var(--color-text-muted);
             font-size: 0.9rem;
-        }
-
-        select {
-            font-family: inherit;
-            padding: 0.5rem 1rem;
-            border: 2px solid var(--color-border);
-            border-radius: 8px;
-            font-size: 0.95rem;
-            background: var(--color-surface);
-            cursor: pointer;
-            transition: border-color 0.2s;
-        }
-
-        select:hover {
-            border-color: var(--color-primary);
-        }
-
-        select:focus {
-            outline: none;
-            border-color: var(--color-primary);
         }
 
         .grid {
@@ -318,7 +298,7 @@
             padding: 1rem;
             border-radius: 8px;
             margin-bottom: 1rem;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
             font-size: 0.85rem;
         }
 
@@ -376,7 +356,7 @@
         }
 
         .toy-price {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
             color: var(--color-success);
             font-weight: 500;
         }
@@ -432,6 +412,16 @@
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
+        }
+
+        .sse-note {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--color-text-muted);
+        }
+
+        .sse-drawer.sse-collapsed .sse-note {
+            display: none;
         }
 
         .sse-log {
@@ -498,7 +488,7 @@
             margin-top: 0;
             max-height: 300px;
             overflow-y: auto;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
             font-size: 0.85rem;
             background: #1a1a2e;
             border-radius: 8px;
@@ -543,7 +533,7 @@
             padding: 1rem;
             background: #1a1a2e;
             border-radius: 8px;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
             font-size: 0.8rem;
             color: #e5e7eb;
             max-height: 200px;

@@ -45,7 +45,7 @@ public class AccountResourceTests {
 
 		Soklet.runSimulator(config, (simulator -> {
 			// Correct email/password
-			String requestBodyJson = gson.toJson(new AccountAuthenticateRequest("admin@soklet.com", "test123"));
+			String requestBodyJson = gson.toJson(new AccountAuthenticateRequest("admin@soklet.com", "administrator-password"));
 
 			Request request = Request.withPath(HttpMethod.POST, "/accounts/authenticate")
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))

@@ -68,15 +68,15 @@
         const accountPresets = {
             administrator: {
                 email: 'admin@soklet.com',
-                password: 'test123'
+                password: 'administrator-password'
             },
             customer: {
                 email: 'customer@soklet.com',
-                password: 'test123'
+                password: 'customer-password'
             },
             employee: {
                 email: 'employee@soklet.com',
-                password: 'test123'
+                password: 'employee-password'
             }
         };
 
