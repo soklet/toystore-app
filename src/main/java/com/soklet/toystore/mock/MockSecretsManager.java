@@ -20,6 +20,14 @@ import com.soklet.toystore.util.SecretsManager;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static com.soklet.toystore.util.Normalizer.trimAggressivelyToNull;
+import static java.lang.String.format;
 
 /**
  * Mock implementation of {@link SecretsManager} which pulls secrets from the filesystem.
@@ -29,8 +37,35 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class MockSecretsManager implements SecretsManager {
 	@Nonnull
+	private String keypairPrivateKey;
+
+	public MockSecretsManager() {
+		this.keypairPrivateKey = loadKeypairPrivateKey();
+	}
+
+	@Nonnull
 	@Override
 	public String getKeypairPrivateKey() {
-		throw new UnsupportedOperationException();
+		return this.keypairPrivateKey;
+	}
+
+	@Nonnull
+	private String loadKeypairPrivateKey() {
+		// Hardcode a path; this is a mock implementation
+		Path path = Path.of("secrets/keypair-private-key");
+
+		if (!Files.isRegularFile(path))
+			throw new IllegalStateException(format("Keypair private key file not found at %s", path.toAbsolutePath()));
+
+		try {
+			String keypairPrivateKey = trimAggressivelyToNull(Files.readString(path, StandardCharsets.UTF_8));
+
+			if (keypairPrivateKey == null)
+				throw new IllegalStateException(format("Keypair private key file at %s is empty", path.toAbsolutePath()));
+
+			return keypairPrivateKey;
+		} catch (IOException e) {
+			throw new UncheckedIOException(format("Error reading keypair private key from %s", path.toAbsolutePath()), e);
+		}
 	}
 }

@@ -61,6 +61,8 @@ import com.soklet.toystore.exception.AuthenticationException;
 import com.soklet.toystore.exception.AuthorizationException;
 import com.soklet.toystore.exception.NotFoundException;
 import com.soklet.toystore.mock.MockCreditCardProcessor;
+import com.soklet.toystore.mock.MockErrorReporter;
+import com.soklet.toystore.mock.MockSecretsManager;
 import com.soklet.toystore.model.api.response.AccountResponse.AccountResponseFactory;
 import com.soklet.toystore.model.api.response.ErrorResponse;
 import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseFactory;
@@ -73,9 +75,12 @@ import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.model.db.Role.RoleId;
 import com.soklet.toystore.service.AccountService;
 import com.soklet.toystore.util.CreditCardProcessor;
+import com.soklet.toystore.util.ErrorReporter;
 import com.soklet.toystore.util.PasswordManager;
+import com.soklet.toystore.util.SecretsManager;
 import com.soklet.toystore.util.SensitiveValueRedactor;
 import org.hsqldb.jdbc.JDBCDataSource;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -665,8 +670,52 @@ public class AppModule extends AbstractModule {
 	@Nonnull
 	@Provides
 	@Singleton
-	public CreditCardProcessor provideCreditCardProcessor() {
-		return new MockCreditCardProcessor();
+	public SecretsManager provideSecretsManager(@NonNull Configuration configuration) {
+		requireNonNull(configuration);
+
+		SecretsManager secretsManager = null;
+
+		switch (configuration.getSecretsManagerType()) {
+			case MOCK -> secretsManager = new MockSecretsManager();
+			case REAL ->
+					throw new IllegalStateException(format("Need to create a real %s implementation", SecretsManager.class.getSimpleName()));
+		}
+
+		return secretsManager;
+	}
+
+	@Nonnull
+	@Provides
+	@Singleton
+	public CreditCardProcessor provideCreditCardProcessor(@NonNull Configuration configuration) {
+		requireNonNull(configuration);
+
+		CreditCardProcessor creditCardProcessor = null;
+
+		switch (configuration.getCreditCardProcessorType()) {
+			case MOCK -> creditCardProcessor = new MockCreditCardProcessor();
+			case REAL ->
+					throw new IllegalStateException(format("Need to create a real %s implementation", CreditCardProcessor.class.getSimpleName()));
+		}
+
+		return creditCardProcessor;
+	}
+
+	@Nonnull
+	@Provides
+	@Singleton
+	public ErrorReporter provideErrorReporter(@NonNull Configuration configuration) {
+		requireNonNull(configuration);
+
+		ErrorReporter errorReporter = null;
+
+		switch (configuration.getErrorReporterType()) {
+			case MOCK -> errorReporter = new MockErrorReporter();
+			case REAL ->
+					throw new IllegalStateException(format("Need to create a real %s implementation", ErrorReporter.class.getSimpleName()));
+		}
+
+		return errorReporter;
 	}
 
 	// Supports "complex" types to/from JSON: Locale, ZoneId, Instant, YearMonth

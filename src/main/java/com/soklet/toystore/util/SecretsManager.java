@@ -29,4 +29,9 @@ import javax.annotation.Nonnull;
 public interface SecretsManager {
 	@Nonnull
 	String getKeypairPrivateKey();
+
+	enum Type {
+		MOCK,
+		REAL
+	}
 }

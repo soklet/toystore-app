@@ -18,6 +18,10 @@ package com.soklet.toystore;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.soklet.toystore.mock.MockSecretsManager;
+import com.soklet.toystore.util.CreditCardProcessor;
+import com.soklet.toystore.util.ErrorReporter;
+import com.soklet.toystore.util.SecretsManager;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -81,6 +85,12 @@ public class Configuration {
 	@Nonnull
 	private final KeyPair keyPair;
 	@Nonnull
+	private final SecretsManager.Type secretsManagerType;
+	@Nonnull
+	private final CreditCardProcessor.Type creditCardProcessorType;
+	@Nonnull
+	private final ErrorReporter.Type errorReporterType;
+	@Nonnull
 	private final Set<String> corsWhitelistedOrigins;
 
 	public Configuration(@Nonnull String environment) {
@@ -96,7 +106,10 @@ public class Configuration {
 		this.accessTokenExpiration = Duration.ofSeconds(configFile.accessTokenExpirationInSeconds());
 		this.serverSentEventContextTokenExpiration = Duration.ofSeconds(configFile.serverSentEventContextTokenExpirationInSeconds());
 		this.corsWhitelistedOrigins = configFile.corsWhitelistedOrigins() == null ? Set.of() : configFile.corsWhitelistedOrigins();
-		this.keyPair = loadKeyPair(configFile.keyPair());
+		this.secretsManagerType = configFile.secretsManager.type();
+		this.creditCardProcessorType = configFile.creditCardProcessor.type();
+		this.errorReporterType = configFile.errorReporter.type();
+		this.keyPair = loadKeyPair(configFile);
 
 		// Initialize Logback if not done already
 		if (System.getProperty("logback.configurationFile") == null)
@@ -104,21 +117,28 @@ public class Configuration {
 	}
 
 	@Nonnull
-	private KeyPair loadKeyPair(@Nonnull ConfigFile.ConfigKeyPair configKeyPair) {
-		requireNonNull(configKeyPair);
-		requireNonNull(configKeyPair.algorithm());
-		requireNonNull(configKeyPair.publicKey());
-		requireNonNull(configKeyPair.privateKey());
+	private KeyPair loadKeyPair(@Nonnull ConfigFile configFile) {
+		requireNonNull(configFile);
+
+		String algorithm = configFile.keyPair().algorithm();
+		String encodedPublicKey = configFile.keyPair().publicKey();
+		String encodedPrivateKey = null;
+
+		// Use the appropriate SecretsManager to pull data
+		switch (configFile.secretsManager().type()) {
+			case MOCK -> encodedPrivateKey = new MockSecretsManager().getKeypairPrivateKey();
+			case REAL ->
+					throw new UnsupportedOperationException(format("TODO: pull from a real %s implementation", SecretsManager.class.getSimpleName()));
+		}
 
 		// Keypair generation is documented at https://www.soklet.com/docs/toy-store-app#generating-keypairs
 		try {
-			KeyFactory keyFactory = KeyFactory.getInstance(configKeyPair.algorithm());
+			KeyFactory keyFactory = KeyFactory.getInstance(algorithm);
 
-			EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(configKeyPair.publicKey()));
+			EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(encodedPublicKey));
 			PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
 
-			// A real app would load from a secure location on the filesystem or a cloud platform's Secrets Manager
-			EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(configKeyPair.privateKey()));
+			EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(encodedPrivateKey));
 			PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
 
 			return new KeyPair(publicKey, privateKey);
@@ -148,7 +168,10 @@ public class Configuration {
 			@Nonnull Set<String> corsWhitelistedOrigins,
 			@Nonnull Integer accessTokenExpirationInSeconds,
 			@Nonnull Integer serverSentEventContextTokenExpirationInSeconds,
-			@Nonnull ConfigKeyPair keyPair
+			@Nonnull ConfigKeyPair keyPair,
+			@Nonnull ConfigSecretsManager secretsManager,
+			@Nonnull ConfigCreditCardProcessor creditCardProcessor,
+			@Nonnull ConfigErrorReporter errorReporter
 	) {
 		public ConfigFile {
 			requireNonNull(port);
@@ -157,17 +180,42 @@ public class Configuration {
 			requireNonNull(accessTokenExpirationInSeconds);
 			requireNonNull(serverSentEventContextTokenExpirationInSeconds);
 			requireNonNull(keyPair);
+			requireNonNull(secretsManager);
+			requireNonNull(creditCardProcessor);
+			requireNonNull(errorReporter);
 		}
 
 		private record ConfigKeyPair(
 				@Nonnull String algorithm,
-				@Nonnull String publicKey,
-				@Nonnull String privateKey
+				@Nonnull String publicKey
 		) {
 			public ConfigKeyPair {
 				requireNonNull(algorithm);
 				requireNonNull(publicKey);
-				requireNonNull(privateKey);
+			}
+		}
+
+		private record ConfigSecretsManager(
+				@Nonnull SecretsManager.Type type
+		) {
+			public ConfigSecretsManager {
+				requireNonNull(type);
+			}
+		}
+
+		private record ConfigCreditCardProcessor(
+				@Nonnull CreditCardProcessor.Type type
+		) {
+			public ConfigCreditCardProcessor {
+				requireNonNull(type);
+			}
+		}
+
+		private record ConfigErrorReporter(
+				@Nonnull ErrorReporter.Type type
+		) {
+			public ConfigErrorReporter {
+				requireNonNull(type);
 			}
 		}
 	}
@@ -220,6 +268,21 @@ public class Configuration {
 	@Nonnull
 	public KeyPair getKeyPair() {
 		return this.keyPair;
+	}
+
+	@Nonnull
+	public SecretsManager.Type getSecretsManagerType() {
+		return this.secretsManagerType;
+	}
+
+	@Nonnull
+	public CreditCardProcessor.Type getCreditCardProcessorType() {
+		return this.creditCardProcessorType;
+	}
+
+	@Nonnull
+	public ErrorReporter.Type getErrorReporterType() {
+		return this.errorReporterType;
 	}
 
 	@Nonnull

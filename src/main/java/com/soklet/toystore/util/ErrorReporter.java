@@ -33,4 +33,9 @@ public interface ErrorReporter {
 
 	void reportError(@Nullable String message,
 									 @Nullable Throwable throwable);
+
+	enum Type {
+		MOCK,
+		REAL
+	}
 }

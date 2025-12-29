@@ -6,7 +6,15 @@
   "serverSentEventContextTokenExpirationInSeconds": 60,
   "keyPair": {
     "algorithm": "Ed25519",
-    "publicKey": "MCowBQYDK2VwAyEApv8tMZ0EW4t7sauPkus0aHfwosV1Lv1SAyvACucl1HY=",
-    "privateKey": "MC4CAQAwBQYDK2VwBCIEIDOkZQNyINDg/r724e76xatJ0cdPWMZH501o8lAFUhk3"
+    "publicKey": "MCowBQYDK2VwAyEApv8tMZ0EW4t7sauPkus0aHfwosV1Lv1SAyvACucl1HY="
+  },
+  "secretsManager": {
+    "type": "REAL"
+  },
+  "creditCardProcessor": {
+    "type": "REAL"
+  },
+  "errorReporter": {
+    "type": "REAL"
   }
 }

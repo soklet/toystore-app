@@ -34,6 +34,11 @@ public interface CreditCardProcessor {
 										 @Nonnull BigDecimal amount,
 										 @Nonnull Currency currency) throws CreditCardPaymentException;
 
+	enum Type {
+		MOCK,
+		REAL
+	}
+
 	enum CreditCardPaymentFailureReason {
 		INVALID_CARD_NUMBER,
 		CARD_EXPIRED,
