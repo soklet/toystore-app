@@ -48,6 +48,7 @@
             listToysBtn: document.getElementById('list-toys-btn'),
             toySearch: document.getElementById('toy-search'),
             toysList: document.getElementById('toys-list'),
+            listToysResponse: document.getElementById('list-toys-response'),
 
             // Purchase
             purchaseForm: document.getElementById('purchase-form'),
@@ -109,9 +110,17 @@
                 return;
             }
 
-            const locale = state.browserLocale || 'unknown';
-            const timeZone = state.browserTimeZone || 'unknown';
-            elements.settingsNote.textContent = `Signed out: browser locale is ${locale} and time zone is ${timeZone}. Signing in may override these with account settings.`;
+            if (state.account) {
+                const email = escapeHtml(state.account.emailAddress || 'unknown');
+                const locale = escapeHtml(state.account.locale || 'unknown');
+                const timeZone = escapeHtml(state.account.timeZone || 'unknown');
+                elements.settingsNote.innerHTML = `Locale is <code>${locale}</code> and time zone is <code>${timeZone}</code>.`;
+                return;
+            }
+
+            const locale = escapeHtml(state.browserLocale || 'unknown');
+            const timeZone = escapeHtml(state.browserTimeZone || 'unknown');
+            elements.settingsNote.innerHTML = `When unauthenticated, locale is <code>${locale}</code> and time zone is <code>${timeZone}</code>. Authenticating will override these with account settings.`;
         }
 
         function showResponse(element, data, isError = false) {
@@ -186,6 +195,8 @@
                     elements.presetSection.classList.remove('hidden');
                 }
             }
+
+            updateSettingsNote();
         }
 
         function applyAccountPreset(presetKey) {
@@ -220,6 +231,8 @@
                     state.account = data.account;
                     updateAuthUI();
                     showResponse(elements.authResponse, data);
+                    refreshPurchaseToyOptions();
+                    listToys();
                 } else {
                     showResponse(elements.authResponse, data, true);
                 }
@@ -288,10 +301,15 @@
 
             if (!response.ok || !data.toys) {
                 const message = data.summary || 'Error loading toys';
-                throw new Error(message);
+                const error = new Error(message);
+                error.response = data;
+                throw error;
             }
 
-            return data.toys;
+            return {
+                toys: data.toys,
+                response: data
+            };
         }
 
         function renderToyList(toys) {
@@ -342,8 +360,8 @@
 
         async function refreshPurchaseToyOptions() {
             try {
-                const toys = await fetchToys();
-                renderPurchaseToyOptions(toys);
+                const result = await fetchToys();
+                renderPurchaseToyOptions(result.toys);
             } catch (err) {
                 if (elements.purchaseToyId) {
                     elements.purchaseToyId.innerHTML = '<option value="">Select toy</option>';
@@ -353,13 +371,21 @@
 
         async function listToys() {
             try {
-                const toys = await fetchToys(elements.toySearch.value);
-                renderToyList(toys);
+                const result = await fetchToys(elements.toySearch.value);
+                renderToyList(result.toys);
+                if (elements.listToysResponse) {
+                    showResponse(elements.listToysResponse, result.response);
+                }
             } catch (err) {
+                if (elements.listToysResponse) {
+                    const responsePayload = err.response || `Network error: ${err.message}`;
+                    showResponse(elements.listToysResponse, responsePayload, true);
+                }
+                const message = err.response?.summary || `Network error: ${err.message}`;
                 elements.toysList.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">❌</div>
-                        <p>Network error: ${escapeHtml(err.message)}</p>
+                        <p>${escapeHtml(message)}</p>
                     </div>
                 `;
             }

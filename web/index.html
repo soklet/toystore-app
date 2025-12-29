@@ -12,9 +12,6 @@
 		<h1>🎪 Soklet Toy <span>Store</span> Demo</h1>
 		<p class="subtitle">Interactive API Explorer</p>
 
-		<p id="settings-note" class="settings-note">
-			Locale uses your browser language and time zone when signed out; signing in uses account settings.
-		</p>
 	</header>
 
 	<div class="grid">
@@ -23,6 +20,7 @@
 			<div class="card-header">
 				<span class="card-icon">🔐</span>
 				<h2 class="card-title">Authentication</h2>
+				<p class="role-note role-note--header">Roles: <code>Public</code></p>
 			</div>
 
 			<div class="card-body">
@@ -65,6 +63,9 @@
 							</ul>
 						</div>
 					</form>
+					<p id="settings-note" class="settings-note settings-note--auth">
+						When unauthenticated, locale is <code>--</code> and time zone is <code>--</code>. Authenticating will override these with account settings.
+					</p>
 				</div>
 
 				<div class="card-panel output-panel output-panel--auth">
@@ -80,6 +81,7 @@
 			<div class="card-header">
 				<span class="card-icon">🧸</span>
 				<h2 class="card-title">Create Toy</h2>
+				<p class="role-note role-note--header">Roles: <code>Employee</code> <code>Administrator</code></p>
 			</div>
 			<div class="card-body">
 				<div class="card-panel">
@@ -127,9 +129,10 @@
 			<div class="card-header">
 				<span class="card-icon">📋</span>
 				<h2 class="card-title">Toy Inventory</h2>
+				<p class="role-note role-note--header">Roles: <code>Public</code></p>
 			</div>
 			<div class="card-body">
-				<div class="card-panel">
+				<div class="card-panel list-toys-panel">
 					<div class="form-group">
 						<label for="toy-search">Search (optional)</label>
 						<input type="text" id="toy-search" placeholder="Filter by name...">
@@ -140,13 +143,20 @@
 					</button>
 				</div>
 
-				<div class="card-panel output-panel">
-					<div class="output-title">Results</div>
-					<div id="toys-list" class="toys-list">
-						<div class="empty-state">
-							<div class="empty-state-icon">📦</div>
-							<p>Click "List Toys" to load inventory</p>
+				<div class="card-panel output-panel output-panel--stacked">
+					<div class="output-section">
+						<div class="output-title">Results</div>
+						<div id="toys-list" class="toys-list">
+							<div class="empty-state">
+								<div class="empty-state-icon">📦</div>
+								<p>Click "List Toys" to load inventory</p>
+							</div>
 						</div>
+					</div>
+					<div class="output-section">
+						<div class="output-title">Response</div>
+						<div id="list-toys-response" class="response-output hidden"></div>
+						<div class="response-placeholder">No response yet.</div>
 					</div>
 				</div>
 			</div>
@@ -157,6 +167,7 @@
 			<div class="card-header">
 				<span class="card-icon">💳</span>
 				<h2 class="card-title">Purchase Toy</h2>
+				<p class="role-note role-note--header">Roles: <code>Authenticated</code> (any role)</p>
 			</div>
 			<div class="card-body">
 				<div class="card-panel">
@@ -221,7 +232,7 @@
 			</button>
 		</div>
 		<p class="sse-note">
-			Note: Customers are not authorized to listen for Server-Sent Events.
+			Roles: <code>Employee</code> <code>Administrator</code>
 		</p>
 		<div class="sse-log">
 			<div class="output-title">Event Log</div>
