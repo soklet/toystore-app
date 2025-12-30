@@ -210,6 +210,10 @@
             elements.password.value = preset.password;
         }
 
+        function shouldAutoConnectSse() {
+            return state.account && state.account.roleId !== 'CUSTOMER';
+        }
+
         async function signIn(e) {
             e.preventDefault();
 
@@ -233,6 +237,9 @@
                     showResponse(elements.authResponse, data);
                     refreshPurchaseToyOptions();
                     listToys();
+                    if (shouldAutoConnectSse()) {
+                        connectSSE();
+                    }
                 } else {
                     showResponse(elements.authResponse, data, true);
                 }
