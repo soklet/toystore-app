@@ -184,6 +184,30 @@
 							<input type="text" id="cc-number" value="4111111111111111">
 						</div>
 
+						<p class="field-note">Test card numbers:</p>
+						<ul class="field-note-list">
+							<li>
+								<code>4111 1111 1111 1111</code> -> <code>VALID</code>
+								<button type="button" class="btn-sm btn-muted card-number-btn" data-card-number="4111111111111111">Use</button>
+							</li>
+							<li>
+								<code>4000 0000 0000 0002</code> -> <code>DECLINED</code>
+								<button type="button" class="btn-sm btn-muted card-number-btn" data-card-number="4000000000000002">Use</button>
+							</li>
+							<li>
+								<code>4000 0000 0000 0010</code> -> <code>CARD_EXPIRED</code>
+								<button type="button" class="btn-sm btn-muted card-number-btn" data-card-number="4000000000000010">Use</button>
+							</li>
+							<li>
+								<code>4000 0000 0000 0028</code> -> <code>INVALID_CARD_NUMBER</code>
+								<button type="button" class="btn-sm btn-muted card-number-btn" data-card-number="4000000000000028">Use</button>
+							</li>
+							<li>
+								<code>4000 0000 0000 0036</code> -> <code>UNKNOWN</code>
+								<button type="button" class="btn-sm btn-muted card-number-btn" data-card-number="4000000000000036">Use</button>
+							</li>
+						</ul>
+
 						<div class="form-group">
 							<label for="cc-expiration">Expiration (YYYY-MM)</label>
 							<input type="text" id="cc-expiration" value="2028-03" placeholder="2028-03">

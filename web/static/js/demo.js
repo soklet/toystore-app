@@ -56,6 +56,7 @@
             ccNumber: document.getElementById('cc-number'),
             ccExpiration: document.getElementById('cc-expiration'),
             purchaseResponse: document.getElementById('purchase-response'),
+            cardNumberButtons: document.querySelectorAll('.card-number-btn'),
 
             // SSE
             sseConnectBtn: document.getElementById('sse-connect-btn'),
@@ -563,6 +564,16 @@
         }
         elements.presetButtons.forEach(button => {
             button.addEventListener('click', () => applyAccountPreset(button.dataset.accountPreset));
+        });
+
+        elements.cardNumberButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const cardNumber = button.dataset.cardNumber;
+                if (cardNumber) {
+                    elements.ccNumber.value = cardNumber;
+                    elements.ccNumber.focus();
+                }
+            });
         });
 
         // Allow Enter key in search box to trigger list

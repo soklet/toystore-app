@@ -51,7 +51,17 @@ public class MockCreditCardProcessor implements CreditCardProcessor {
 		requireNonNull(amount);
 		requireNonNull(currency);
 
-		getLogger().info("Performing CC transaction for card number that begins with {}...", creditCardNumber.substring(0, 4));
+		String normalizedCardNumber = creditCardNumber.replaceAll("[^0-9]", "");
+		String cardPrefix = normalizedCardNumber.length() >= 4 ? normalizedCardNumber.substring(0, 4) : normalizedCardNumber;
+
+		getLogger().info("Performing CC transaction for card number that begins with {}...", cardPrefix);
+
+		switch (normalizedCardNumber) {
+			case "4000000000000002" -> throw new CreditCardPaymentException(CreditCardPaymentFailureReason.DECLINED);
+			case "4000000000000010" -> throw new CreditCardPaymentException(CreditCardPaymentFailureReason.CARD_EXPIRED);
+			case "4000000000000028" -> throw new CreditCardPaymentException(CreditCardPaymentFailureReason.INVALID_CARD_NUMBER);
+			case "4000000000000036" -> throw new CreditCardPaymentException(CreditCardPaymentFailureReason.UNKNOWN);
+		}
 
 		// Pretend to do some work
 		try {

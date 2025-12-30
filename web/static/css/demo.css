@@ -102,7 +102,9 @@
         .settings-note code,
         .preset-note code,
         .role-note code,
-        .sse-note code {
+        .sse-note code,
+        .field-note code,
+        .field-note-list code {
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
             font-size: 0.85em;
             padding: 0.1rem 0.35rem;
@@ -139,6 +141,31 @@
         .role-note--header {
             flex-basis: 100%;
             margin-top: 0.25rem;
+        }
+
+        .field-note {
+            margin: 0;
+            color: var(--color-text-muted);
+            font-size: 0.85rem;
+        }
+
+        .field-note-list {
+            margin: 0.25rem 0 0.5rem 1.25rem;
+            color: var(--color-text-muted);
+            font-size: 0.85rem;
+        }
+
+        .field-note-list li {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0.25rem 0;
+        }
+
+        .card-number-btn {
+            padding: 0.35rem 0.6rem;
+            font-size: 0.75rem;
         }
 
         .setting-group {
