@@ -69,6 +69,8 @@ import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseF
 import com.soklet.toystore.model.api.response.ToyResponse.ToyResponseFactory;
 import com.soklet.toystore.model.auth.AccessToken;
 import com.soklet.toystore.model.auth.AccessToken.AccessTokenResult;
+import com.soklet.toystore.model.auth.AccessToken.Audience;
+import com.soklet.toystore.model.auth.AccessToken.Scope;
 import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.model.db.Role.RoleId;
 import com.soklet.toystore.service.AccountService;
@@ -252,9 +254,9 @@ public class AppModule extends AbstractModule {
 						requireNonNull(request);
 						requireNonNull(requestProcessor);
 
-						// When a request arrives, immediately apply a "current context" scope to it.
-						// Pick the best-matching locale and timezone based on information we have from the request.
-						// We might override locale/timezone downstream if we authenticate an account for this request
+						// As soon as a request arrives wrap it in a "current context" scope.
+						// Pick the best-matching locale and timezone based on information we have from the request (i.e. headers).
+						// We will apply a new "current context" downstream with updated info if we authenticate an account for this request
 						Localization localization = resolveLocalization(request, null);
 
 						CurrentContext.withRequest(request)
@@ -274,8 +276,8 @@ public class AppModule extends AbstractModule {
 						requireNonNull(responseGenerator);
 						requireNonNull(responseWriter);
 
-						// Establish baseline values for account, then refine locale/timezone based on account
-						Account account = null;
+						// We'll pull an account to tie to our "current context" if the request has a valid access token
+						Account account;
 
 						if (resourceMethod != null && resourceMethod.isServerSentEventSource()) {
 							// Is this an SSE resource method? If so, auth comes from a query parameter (SSE spec does not permit headers)...
@@ -283,26 +285,25 @@ public class AppModule extends AbstractModule {
 
 							account = resolveAccountFromAccessToken(
 									sseAccessTokenAsString,
-									AccessToken.Audience.SSE,
-									Set.of(AccessToken.Scope.SSE_HANDSHAKE),
-									"SSE Access Token"
-							);
+									Audience.SSE,
+									Set.of(Scope.SSE_HANDSHAKE)
+							).orElse(null);
 						} else {
 							// Try to pull authentication token from request headers...
 							String accessTokenAsString = request.getHeader("X-Access-Token").orElse(null);
 
 							// ...and if it exists, see if we can pull an account from it.
-							Set<AccessToken.Scope> requiredScopes = resolveRequiredApiScopes(request);
+							Set<Scope> requiredScopes = resolveRequiredApiScopes(request);
+
 							account = resolveAccountFromAccessToken(
 									accessTokenAsString,
-									AccessToken.Audience.API,
-									requiredScopes,
-									"Access Token"
-							);
+									Audience.API,
+									requiredScopes
+							).orElse(null);
 						}
 
 						if (resourceMethod != null) {
-							// Next, see if the resource method has an @AuthorizationRequired annotation...
+							// Next, see if the resource method has an @AuthorizationRequired annotation, and respect it if so (401 or 403 as appropriate)
 							AuthorizationRequired authorizationRequired = resourceMethod.getMethod().getAnnotation(AuthorizationRequired.class);
 
 							if (authorizationRequired != null) {
@@ -339,54 +340,52 @@ public class AppModule extends AbstractModule {
 						});
 					}
 
-					@Nullable
-					private Account resolveAccountFromAccessToken(@Nullable String accessTokenAsString,
-																												@Nonnull AccessToken.Audience expectedAudience,
-																												@Nonnull Set<AccessToken.Scope> requiredScopes,
-																												@Nonnull String tokenLabel) {
+					@NonNull
+					private Optional<Account> resolveAccountFromAccessToken(@Nullable String accessTokenAsString,
+																																	@Nonnull Audience expectedAudience,
+																																	@Nonnull Set<Scope> requiredScopes) {
 						requireNonNull(expectedAudience);
 						requireNonNull(requiredScopes);
-						requireNonNull(tokenLabel);
 
 						if (accessTokenAsString == null)
-							return null;
+							return Optional.empty();
 
 						AccessTokenResult accessTokenResult = AccessToken.fromStringRepresentation(accessTokenAsString, configuration.getKeyPair().getPublic());
 
 						switch (accessTokenResult) {
 							case AccessTokenResult.Succeeded(@Nonnull AccessToken accessToken) -> {
 								if (!accessToken.audience().equals(expectedAudience)) {
-									logger.warn("{} audience is invalid: {}", tokenLabel, accessToken.audience());
-									return null;
+									logger.warn("{} Access Token audience is invalid: {}", expectedAudience.name(), accessToken.audience());
+									return Optional.empty();
 								}
 
 								if (!accessToken.scopes().containsAll(requiredScopes)) {
-									logger.warn("{} missing required scopes: {}", tokenLabel, requiredScopes);
-									return null;
+									logger.warn("{} Access Token missing required scopes: {}", expectedAudience.name(), requiredScopes);
+									return Optional.empty();
 								}
 
-								return accountService.findAccountById(accessToken.accountId()).orElse(null);
+								return accountService.findAccountById(accessToken.accountId());
 							}
 
 							case AccessTokenResult.Expired(@Nonnull AccessToken accessToken, @Nonnull Instant expiredAt) ->
-									logger.debug("{} for account ID {} expired at {}", tokenLabel, accessToken.accountId(), expiredAt);
+									logger.debug("{} Access Token for account ID {} expired at {}", expectedAudience.name(), accessToken.accountId(), expiredAt);
 
 							case AccessTokenResult.SignatureMismatch() ->
-									logger.warn("{} signature is invalid: {}", tokenLabel, accessTokenAsString);
+									logger.warn("{} Access Token signature is invalid: {}", expectedAudience.name(), accessTokenAsString);
 
-							default -> logger.warn("{} is invalid: {}", tokenLabel, accessTokenAsString);
+							default -> logger.warn("{} Access Token is invalid: {}", expectedAudience.name(), accessTokenAsString);
 						}
 
-						return null;
+						return Optional.empty();
 					}
 
 					@Nonnull
-					private Set<AccessToken.Scope> resolveRequiredApiScopes(@Nonnull Request request) {
+					private Set<Scope> resolveRequiredApiScopes(@Nonnull Request request) {
 						requireNonNull(request);
 
 						return switch (request.getHttpMethod()) {
-							case GET, HEAD, OPTIONS -> Set.of(AccessToken.Scope.API_READ);
-							case POST, PUT, PATCH, DELETE -> Set.of(AccessToken.Scope.API_WRITE);
+							case GET, HEAD, OPTIONS -> Set.of(Scope.API_READ);
+							case POST, PUT, PATCH, DELETE -> Set.of(Scope.API_WRITE);
 						};
 					}
 
@@ -394,7 +393,6 @@ public class AppModule extends AbstractModule {
 					private Localization resolveLocalization(@Nonnull Request request,
 																									 @Nullable Account account) {
 						requireNonNull(request);
-
 						return new Localization(resolveLocale(request, account), resolveTimeZone(request, account));
 					}
 
@@ -430,7 +428,7 @@ public class AppModule extends AbstractModule {
 					private Optional<ZoneId> resolveTimeZoneHeader(@Nonnull Request request) {
 						requireNonNull(request);
 
-						// Allow clients to specify a Time-Zone header which indicates preferred timezone
+						// Pull from RFC 7808 Time-Zone header
 						String timeZoneHeader = request.getHeader("Time-Zone").orElse(null);
 
 						if (timeZoneHeader != null) {
