@@ -133,7 +133,7 @@ Because the server knows which account is making the request, the data in the re
 # to support exact arbitrary-precision decimals
 % curl -i -X POST 'http://localhost:8080/toys' \
   -d '{"name": "Test", "price": "1234.5", "currency": "GBP"}' \
-  -H "X-Access-Token: eyJhbG...c76fxc"
+  -H "Authorization: Bearer eyJhbG...c76fxc"
 HTTP/1.1 200 OK
 Content-Length: 351
 Content-Type: application/json;charset=UTF-8
@@ -161,7 +161,7 @@ Let's purchase the toy that was just added.
 ```shell
  % curl -i -X POST 'http://localhost:8080/toys/9bd5ea4d-ebd1-47f7-a8b4-0531b8655e5d/purchase' \
   -d '{"creditCardNumber": "4111111111111111", "creditCardExpiration": "2028-03"}' \
-  -H "X-Access-Token: eyJhbG...c76fxc"
+  -H "Authorization: Bearer eyJhbG...c76fxc"
 HTTP/1.1 200 OK
 Content-Length: 523
 Content-Type: application/json;charset=UTF-8
@@ -191,7 +191,7 @@ Unauthenticated requests use `Accept-Language` and `Time-Zone` headers; authenti
 ```shell
 % curl -i -X POST 'http://localhost:8080/toys' \
   -d '{"name": "Bola de futebol", "price": "50", "currency": "BRL"}' \
-  -H "X-Access-Token: eyJhbG...c76fxc"
+  -H "Authorization: Bearer eyJhbG...c76fxc"
 HTTP/1.1 200 OK
 Content-Length: 362
 Content-Type: application/json;charset=UTF-8
@@ -217,7 +217,7 @@ Error messages are localized as well.  Here we supply a negative `price` and for
 ```shell
 % curl -i -X POST 'http://localhost:8080/toys' \
   -d '{"name": "Bola de futebol", "price": "-50"}' \ 
-  -H "X-Access-Token: eyJhbG...c76fxc"
+  -H "Authorization: Bearer eyJhbG...c76fxc"
 HTTP/1.1 422 Unprocessable Content
 Content-Length: 261
 Content-Type: application/json;charset=UTF-8
@@ -250,7 +250,7 @@ First, we ask for a short-lived, cryptographically-signed SSE access token for t
 
 ```shell
 % curl -i -X POST 'http://localhost:8080/accounts/sse-access-token' \
-  -H "X-Access-Token: eyJhbG...c76fxc"
+  -H "Authorization: Bearer eyJhbG...c76fxc"
 HTTP/1.1 200 OK
 Content-Length: 351
 Content-Type: application/json;charset=UTF-8

@@ -290,7 +290,7 @@ public class AppModule extends AbstractModule {
 							).orElse(null);
 						} else {
 							// Try to pull authentication token from request headers...
-							String accessTokenAsString = request.getHeader("X-Access-Token").orElse(null);
+							String accessTokenAsString = resolveAccessTokenFromAuthorization(request);
 
 							// ...and if it exists, see if we can pull an account from it.
 							Set<Scope> requiredScopes = resolveRequiredApiScopes(request);
@@ -377,6 +377,25 @@ public class AppModule extends AbstractModule {
 						}
 
 						return Optional.empty();
+					}
+
+					@Nullable
+					private String resolveAccessTokenFromAuthorization(@Nonnull Request request) {
+						requireNonNull(request);
+
+						String authorizationHeader = request.getHeader("Authorization").orElse(null);
+
+						if (authorizationHeader == null)
+							return null;
+
+						String trimmed = authorizationHeader.trim();
+
+						if (trimmed.length() < 7 || !trimmed.regionMatches(true, 0, "Bearer", 0, 6))
+							return null;
+
+						String token = trimmed.substring(6).trim();
+
+						return token.isEmpty() ? null : token;
 					}
 
 					@Nonnull

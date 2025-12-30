@@ -95,7 +95,7 @@
             }
 
             if (state.authToken) {
-                headers['X-Access-Token'] = state.authToken;  // Fixed: was X-Authentication-Token
+                headers['Authorization'] = `Bearer ${state.authToken}`;
             }
 
             return headers;
