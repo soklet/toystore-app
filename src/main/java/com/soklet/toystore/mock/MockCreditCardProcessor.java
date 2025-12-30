@@ -56,6 +56,7 @@ public class MockCreditCardProcessor implements CreditCardProcessor {
 
 		getLogger().info("Performing CC transaction for card number that begins with {}...", cardPrefix);
 
+		// Some "magic numbers" to exercise failure paths
 		switch (normalizedCardNumber) {
 			case "4000000000000002" -> throw new CreditCardPaymentException(CreditCardPaymentFailureReason.DECLINED);
 			case "4000000000000010" -> throw new CreditCardPaymentException(CreditCardPaymentFailureReason.CARD_EXPIRED);
@@ -70,6 +71,7 @@ public class MockCreditCardProcessor implements CreditCardProcessor {
 			// Don't care
 		}
 
+		// Simulate a txn identifier, like a real processor would give us
 		return UUID.randomUUID().toString();
 	}
 
