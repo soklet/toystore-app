@@ -17,10 +17,12 @@
 package com.soklet.toystore.resource;
 
 import com.soklet.MarshaledResponse;
+import com.soklet.MetricsCollector;
 import com.soklet.annotation.GET;
 import com.soklet.annotation.PathParameter;
 import com.soklet.toystore.annotation.SuppressRequestLogging;
 import com.soklet.toystore.exception.NotFoundException;
+import org.jspecify.annotations.NonNull;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -67,6 +69,19 @@ public class IndexResource {
 		return MarshaledResponse.withStatusCode(200)
 				.headers(Map.of("Content-Type", Set.of("text/plain;charset=UTF-8")))
 				.body("OK".getBytes(StandardCharsets.UTF_8))
+				.build();
+	}
+
+	@GET("/metrics")
+	public MarshaledResponse getMetrics(@NonNull MetricsCollector metricsCollector) {
+		String body = metricsCollector.snapshotAsText().orElse(null);
+
+		if (body == null)
+			return MarshaledResponse.withStatusCode(204).build();
+
+		return MarshaledResponse.withStatusCode(200)
+				.headers(Map.of("Content-Type", Set.of("text/plain; charset=UTF-8")))
+				.body(body.getBytes(StandardCharsets.UTF_8))
 				.build();
 	}
 
