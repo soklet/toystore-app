@@ -81,7 +81,8 @@ public class ToyResourceTests {
 
 		Soklet.runSimulator(config, (simulator -> {
 			// Get an auth token so we can provide to API calls
-			String authenticationToken = acquireAuthenticationToken(app, "admin@soklet.com", "administrator-password");
+			AccessToken accessToken = acquireAccessToken(app, "admin@soklet.com", "administrator-password");
+			String accessTokenAsString = accessToken.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate());
 
 			// Create a toy by calling the API
 			String name = "Example Toy";
@@ -91,7 +92,7 @@ public class ToyResourceTests {
 			String requestBodyJson = gson.toJson(new ToyCreateRequest(name, price, currency));
 
 			Request request = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("Authorization", Set.of("Bearer " + authenticationToken)))
+					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -109,7 +110,7 @@ public class ToyResourceTests {
 
 			// Try to create the same toy again and verify that the backend prevents it
 			request = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("Authorization", Set.of("Bearer " + authenticationToken)))
+					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -162,7 +163,8 @@ public class ToyResourceTests {
 
 		Soklet.runSimulator(config, (simulator -> {
 			// Get an auth token so we can provide to API calls
-			String authenticationToken = acquireAuthenticationToken(app, "admin@soklet.com", "administrator-password");
+			AccessToken accessToken = acquireAccessToken(app, "admin@soklet.com", "administrator-password");
+			String accessTokenAsString = accessToken.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate());
 
 			// Create an expensive toy by calling the API
 			String name = "Expensive Toy";
@@ -172,7 +174,7 @@ public class ToyResourceTests {
 			String requestBodyJson = gson.toJson(new ToyCreateRequest(name, price, currency));
 
 			Request request = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("Authorization", Set.of("Bearer " + authenticationToken)))
+					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -188,7 +190,7 @@ public class ToyResourceTests {
 
 			// Now, try to purchase the expensive toy and verify that the backend indicates a CC decline
 			request = Request.withPath(HttpMethod.POST, format("/toys/%s/purchase", expensiveToyId))
-					.headers(Map.of("Authorization", Set.of("Bearer " + authenticationToken)))
+					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
 					.body(gson.toJson(Map.of(
 							"creditCardNumber", "4111111111111111",
 							"creditCardExpiration", "2030-01"
@@ -215,7 +217,7 @@ public class ToyResourceTests {
 			requestBodyJson = gson.toJson(new ToyCreateRequest(name, price, currency));
 
 			request = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("Authorization", Set.of("Bearer " + authenticationToken)))
+					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -231,7 +233,7 @@ public class ToyResourceTests {
 
 			// Now, try to purchase the cheap toy and verify that we don't get declined
 			request = Request.withPath(HttpMethod.POST, format("/toys/%s/purchase", cheapToyId))
-					.headers(Map.of("Authorization", Set.of("Bearer " + authenticationToken)))
+					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
 					.body(gson.toJson(Map.of(
 							"creditCardNumber", "4111111111111111",
 							"creditCardExpiration", "2030-01"
@@ -251,9 +253,9 @@ public class ToyResourceTests {
 	}
 
 	@NonNull
-	private String acquireAuthenticationToken(@NonNull App app,
-																						@NonNull String emailAddress,
-																						@NonNull String password) {
+	private AccessToken acquireAccessToken(@NonNull App app,
+																				 @NonNull String emailAddress,
+																				 @NonNull String password) {
 		requireNonNull(app);
 		requireNonNull(emailAddress);
 		requireNonNull(password);
@@ -261,16 +263,15 @@ public class ToyResourceTests {
 		AccountService accountService = app.getInjector().getInstance(AccountService.class);
 
 		// Hold reference to data inside of the closure.
-		AtomicReference<String> holder = new AtomicReference<>();
+		AtomicReference<AccessToken> holder = new AtomicReference<>();
 
 		CurrentContext.with(Locale.US, ZoneId.of("America/New_York")).build().run(() -> {
-			// Ask the backend for an authentication token
+			// Ask the backend for an access token
 			AccountAuthenticateRequest accountAuthenticateRequest = new AccountAuthenticateRequest(emailAddress, password);
 			AccessToken accessToken = accountService.authenticateAccount(accountAuthenticateRequest);
-			String authenticationToken = accessToken.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate());
 
 			// "Warp" the token outside the closure so it can be returned
-			holder.set(authenticationToken);
+			holder.set(accessToken);
 		});
 
 		return holder.get();
@@ -283,12 +284,13 @@ public class ToyResourceTests {
 		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
 
 		Soklet.runSimulator(config, (simulator -> {
-			String authenticationToken = acquireAuthenticationToken(app, "admin@soklet.com", "administrator-password");
+			AccessToken accessToken = acquireAccessToken(app, "admin@soklet.com", "administrator-password");
+			String accessTokenAsString = accessToken.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate());
 
 			String requestBodyJson = gson.toJson(new ToyCreateRequest("Localized Toy", BigDecimal.valueOf(12.34), Currency.getInstance("USD")));
 
 			Request createRequest = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("Authorization", Set.of("Bearer " + authenticationToken)))
+					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -340,12 +342,15 @@ public class ToyResourceTests {
 		List<ServerSentEvent> employeeEvents = new ArrayList<>();
 
 		Soklet.runSimulator(config, (simulator -> {
-			String adminAuthenticationToken = acquireAuthenticationToken(app, "admin@soklet.com", "administrator-password");
-			String employeeAuthenticationToken = acquireAuthenticationToken(app, "employee@soklet.com", "employee-password");
-
 			PrivateKey privateKey = app.getConfiguration().getKeyPair().getPrivate();
-			AccessToken adminSseAccessToken = acquireSseAccessToken(simulator, gson, adminAuthenticationToken);
-			AccessToken employeeSseAccessToken = acquireSseAccessToken(simulator, gson, employeeAuthenticationToken);
+			AccessToken adminAccessToken = acquireAccessToken(app, "admin@soklet.com", "administrator-password");
+			AccessToken employeeAccessToken = acquireAccessToken(app, "employee@soklet.com", "employee-password");
+
+			String adminAccessTokenAsString = adminAccessToken.toStringRepresentation(privateKey);
+			String employeeAccessTokenAsString = employeeAccessToken.toStringRepresentation(privateKey);
+
+			AccessToken adminSseAccessToken = acquireSseAccessToken(simulator, gson, adminAccessTokenAsString);
+			AccessToken employeeSseAccessToken = acquireSseAccessToken(simulator, gson, employeeAccessTokenAsString);
 
 			HandshakeAccepted adminHandshake = performSseHandshake(simulator, adminSseAccessToken.toStringRepresentation(privateKey),
 					Map.of(
@@ -365,7 +370,7 @@ public class ToyResourceTests {
 			String requestBodyJson = gson.toJson(new ToyCreateRequest("Sse Toy", BigDecimal.valueOf(12.34), Currency.getInstance("USD")));
 
 			Request createRequest = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("Authorization", Set.of("Bearer " + adminAuthenticationToken)))
+					.headers(Map.of("Authorization", Set.of("Bearer " + adminAccessTokenAsString)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -388,13 +393,13 @@ public class ToyResourceTests {
 	@NonNull
 	private AccessToken acquireSseAccessToken(@NonNull Simulator simulator,
 																						@NonNull Gson gson,
-																						@NonNull String authenticationToken) {
+																						@NonNull String accessToken) {
 		requireNonNull(simulator);
 		requireNonNull(gson);
-		requireNonNull(authenticationToken);
+		requireNonNull(accessToken);
 
 		Request request = Request.withPath(HttpMethod.POST, "/accounts/sse-access-token")
-				.headers(Map.of("Authorization", Set.of("Bearer " + authenticationToken)))
+				.headers(Map.of("Authorization", Set.of("Bearer " + accessToken)))
 				.build();
 
 		MarshaledResponse marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
