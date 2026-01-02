@@ -18,6 +18,8 @@ package com.soklet.toystore.resource;
 
 import com.soklet.MarshaledResponse;
 import com.soklet.MetricsCollector;
+import com.soklet.MetricsCollector.MetricsFormat;
+import com.soklet.MetricsCollector.SnapshotTextOptions;
 import com.soklet.annotation.GET;
 import com.soklet.annotation.PathParameter;
 import com.soklet.toystore.annotation.SuppressRequestLogging;
@@ -74,7 +76,8 @@ public class IndexResource {
 
 	@GET("/metrics")
 	public MarshaledResponse getMetrics(@NonNull MetricsCollector metricsCollector) {
-		String body = metricsCollector.snapshotAsText().orElse(null);
+		SnapshotTextOptions snapshotTextOptions = SnapshotTextOptions.withMetricsFormat(MetricsFormat.PROMETHEUS).build();
+		String body = metricsCollector.snapshotText(snapshotTextOptions).orElse(null);
 
 		if (body == null)
 			return MarshaledResponse.withStatusCode(204).build();
