@@ -37,10 +37,10 @@ import com.soklet.toystore.model.auth.AccessToken;
 import com.soklet.toystore.service.AccountService;
 import com.soklet.toystore.util.CreditCardProcessor;
 import com.soklet.toystore.util.CreditCardProcessor.CreditCardPaymentFailureReason;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -119,17 +119,17 @@ public class ToyResourceTests {
 		// Our app is using Guice for Dependency Injection, which enables these kinds of "surgical" overrides.
 		// See https://github.com/google/guice/wiki/GettingStarted for details.
 		App app = new App(new Configuration("local"), new AbstractModule() {
-			@Nonnull
+			@NonNull
 			@Provides
 			@Singleton
 			public CreditCardProcessor provideCreditCardProcessor() {
 				// Our custom processor for testing decline scenarios
 				return new CreditCardProcessor() {
-					@Nonnull
+					@NonNull
 					@Override
-					public String makePayment(@Nonnull String creditCardNumber,
-																		@Nonnull BigDecimal amount,
-																		@Nonnull Currency currency) throws CreditCardPaymentException {
+					public String makePayment(@NonNull String creditCardNumber,
+																		@NonNull BigDecimal amount,
+																		@NonNull Currency currency) throws CreditCardPaymentException {
 						// Anything over USD$100 exceeds this card's limit
 						if (amount.compareTo(BigDecimal.valueOf(100)) > 0 && currency.getCurrencyCode().equals("USD"))
 							throw new CreditCardPaymentException(CreditCardPaymentFailureReason.DECLINED);
@@ -238,10 +238,10 @@ public class ToyResourceTests {
 		}));
 	}
 
-	@Nonnull
-	private String acquireAuthenticationToken(@Nonnull App app,
-																						@Nonnull String emailAddress,
-																						@Nonnull String password) {
+	@NonNull
+	private String acquireAuthenticationToken(@NonNull App app,
+																						@NonNull String emailAddress,
+																						@NonNull String password) {
 		requireNonNull(app);
 		requireNonNull(emailAddress);
 		requireNonNull(password);

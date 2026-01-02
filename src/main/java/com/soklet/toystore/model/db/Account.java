@@ -17,8 +17,8 @@
 package com.soklet.toystore.model.db;
 
 import com.soklet.toystore.model.db.Role.RoleId;
+import org.jspecify.annotations.NonNull;
 
-import javax.annotation.Nonnull;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Locale;
@@ -32,14 +32,14 @@ import static java.util.Objects.requireNonNull;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 public record Account(
-		@Nonnull UUID accountId,
-		@Nonnull RoleId roleId,
-		@Nonnull String name,
-		@Nonnull String emailAddress,
-		@Nonnull String passwordHash,
-		@Nonnull ZoneId timeZone,
-		@Nonnull Locale locale,
-		@Nonnull Instant createdAt
+		@NonNull UUID accountId,
+		@NonNull RoleId roleId,
+		@NonNull String name,
+		@NonNull String emailAddress,
+		@NonNull String passwordHash,
+		@NonNull ZoneId timeZone,
+		@NonNull Locale locale,
+		@NonNull Instant createdAt
 ) {
 	public Account {
 		requireNonNull(accountId);

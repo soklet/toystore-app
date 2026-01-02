@@ -16,7 +16,7 @@
 
 package com.soklet.toystore.model.db;
 
-import javax.annotation.Nonnull;
+import org.jspecify.annotations.NonNull;
 
 import static java.util.Objects.requireNonNull;
 
@@ -26,8 +26,8 @@ import static java.util.Objects.requireNonNull;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 public record Role(
-		@Nonnull RoleId roleId,
-		@Nonnull String description
+		@NonNull RoleId roleId,
+		@NonNull String description
 ) {
 	public enum RoleId {
 		CUSTOMER,

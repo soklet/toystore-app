@@ -16,8 +16,9 @@
 
 package com.soklet.toystore.util;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.crypto.SecretKeyFactory;
@@ -39,11 +40,11 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public final class PasswordManager {
-	@Nonnull
+	@NonNull
 	private static final Integer DEFAULT_ITERATIONS;
-	@Nonnull
+	@NonNull
 	private static final Integer DEFAULT_SALT_LENGTH;
-	@Nonnull
+	@NonNull
 	private static final Integer DEFAULT_KEY_LENGTH;
 
 	static {
@@ -52,22 +53,22 @@ public final class PasswordManager {
 		DEFAULT_KEY_LENGTH = 512;
 	}
 
-	@Nonnull
+	@NonNull
 	private final String hashAlgorithm;
-	@Nonnull
+	@NonNull
 	private final Integer iterations;
-	@Nonnull
+	@NonNull
 	private final Integer saltLength;
-	@Nonnull
+	@NonNull
 	private final Integer keyLength;
 
-	@Nonnull
-	public static Builder withHashAlgorithm(@Nonnull String hashAlgorithm) {
+	@NonNull
+	public static Builder withHashAlgorithm(@NonNull String hashAlgorithm) {
 		requireNonNull(hashAlgorithm);
 		return new Builder(hashAlgorithm);
 	}
 
-	private PasswordManager(@Nonnull Builder builder) {
+	private PasswordManager(@NonNull Builder builder) {
 		requireNonNull(builder);
 
 		this.hashAlgorithm = requireNonNull(builder.hashAlgorithm);
@@ -76,8 +77,8 @@ public final class PasswordManager {
 		this.keyLength = builder.keyLength == null ? DEFAULT_KEY_LENGTH : builder.keyLength;
 	}
 
-	@Nonnull
-	public String hashPassword(@Nonnull String plaintextPassword) {
+	@NonNull
+	public String hashPassword(@NonNull String plaintextPassword) {
 		requireNonNull(plaintextPassword);
 
 		try {
@@ -99,9 +100,9 @@ public final class PasswordManager {
 		}
 	}
 
-	@Nonnull
-	public Boolean verifyPassword(@Nonnull String plaintextPassword,
-																@Nonnull String hashedPassword) {
+	@NonNull
+	public Boolean verifyPassword(@NonNull String plaintextPassword,
+																@NonNull String hashedPassword) {
 		requireNonNull(plaintextPassword);
 		requireNonNull(hashedPassword);
 
@@ -127,21 +128,21 @@ public final class PasswordManager {
 		}
 	}
 
-	@Nonnull
-	private static String base64Encode(@Nonnull byte[] bytes) {
+	@NonNull
+	private static String base64Encode(@NonNull byte[] bytes) {
 		requireNonNull(bytes);
 		return Base64.getEncoder().withoutPadding().encodeToString(bytes);
 	}
 
-	@Nonnull
-	private static byte[] base64Decode(@Nonnull String string) {
+	@NonNull
+	private static byte[] base64Decode(@NonNull String string) {
 		requireNonNull(string);
 		return Base64.getDecoder().decode(string);
 	}
 
 	@NotThreadSafe
 	public static class Builder {
-		@Nonnull
+		@NonNull
 		private final String hashAlgorithm;
 		@Nullable
 		private Integer iterations;
@@ -150,51 +151,51 @@ public final class PasswordManager {
 		@Nullable
 		private Integer keyLength;
 
-		private Builder(@Nonnull String hashAlgorithm) {
+		private Builder(@NonNull String hashAlgorithm) {
 			requireNonNull(hashAlgorithm);
 			this.hashAlgorithm = hashAlgorithm;
 		}
 
-		@Nonnull
+		@NonNull
 		public Builder iterations(@Nullable Integer iterations) {
 			this.iterations = iterations;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public Builder saltLength(@Nullable Integer saltLength) {
 			this.saltLength = saltLength;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public Builder keyLength(@Nullable Integer keyLength) {
 			this.keyLength = keyLength;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public PasswordManager build() {
 			return new PasswordManager(this);
 		}
 	}
 
-	@Nonnull
+	@NonNull
 	public String getHashAlgorithm() {
 		return this.hashAlgorithm;
 	}
 
-	@Nonnull
+	@NonNull
 	public Integer getIterations() {
 		return this.iterations;
 	}
 
-	@Nonnull
+	@NonNull
 	public Integer getSaltLength() {
 		return this.saltLength;
 	}
 
-	@Nonnull
+	@NonNull
 	public Integer getKeyLength() {
 		return this.keyLength;
 	}

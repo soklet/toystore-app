@@ -18,8 +18,8 @@ package com.soklet.toystore.model.auth;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import org.jspecify.annotations.NonNull;
 
-import javax.annotation.Nonnull;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
@@ -43,14 +43,14 @@ import static java.util.Objects.requireNonNull;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 public record AccessToken(
-		@Nonnull UUID accountId,
-		@Nonnull Instant issuedAt,
-		@Nonnull Instant expiresAt,
-		@Nonnull Audience audience,
-		@Nonnull Set<Scope> scopes
+		@NonNull UUID accountId,
+		@NonNull Instant issuedAt,
+		@NonNull Instant expiresAt,
+		@NonNull Audience audience,
+		@NonNull Set<Scope> scopes
 ) {
 	// Manage our own internal GSON instance because our needs are simple - no need to inject one
-	@Nonnull
+	@NonNull
 	private static final Gson GSON;
 
 	static {
@@ -69,21 +69,21 @@ public record AccessToken(
 		API("api"),
 		SSE("sse");
 
-		@Nonnull
+		@NonNull
 		private final String wireValue;
 
-		Audience(@Nonnull String wireValue) {
+		Audience(@NonNull String wireValue) {
 			requireNonNull(wireValue);
 			this.wireValue = wireValue;
 		}
 
-		@Nonnull
+		@NonNull
 		public String getWireValue() {
 			return this.wireValue;
 		}
 
-		@Nonnull
-		public static Optional<Audience> fromWireValue(@Nonnull String value) {
+		@NonNull
+		public static Optional<Audience> fromWireValue(@NonNull String value) {
 			for (Audience audience : values())
 				if (audience.getWireValue().equals(value))
 					return Optional.of(audience);
@@ -97,21 +97,21 @@ public record AccessToken(
 		API_WRITE("api:write"),
 		SSE_HANDSHAKE("sse:handshake");
 
-		@Nonnull
+		@NonNull
 		private final String wireValue;
 
-		Scope(@Nonnull String wireValue) {
+		Scope(@NonNull String wireValue) {
 			requireNonNull(wireValue);
 			this.wireValue = wireValue;
 		}
 
-		@Nonnull
+		@NonNull
 		public String getWireValue() {
 			return this.wireValue;
 		}
 
-		@Nonnull
-		public static Optional<Scope> fromWireValue(@Nonnull String value) {
+		@NonNull
+		public static Optional<Scope> fromWireValue(@NonNull String value) {
 			for (Scope scope : values())
 				if (scope.getWireValue().equals(value))
 					return Optional.of(scope);
@@ -122,24 +122,24 @@ public record AccessToken(
 
 	// Parsing an AccessToken can have many outcomes.
 	public sealed interface AccessTokenResult {
-		record Succeeded(@Nonnull AccessToken accessToken) implements AccessTokenResult {}
+		record Succeeded(@NonNull AccessToken accessToken) implements AccessTokenResult {}
 
 		record InvalidStructure() implements AccessTokenResult {}
 
 		record SignatureMismatch() implements AccessTokenResult {}
 
-		record Expired(@Nonnull AccessToken accessToken, @Nonnull Instant expiredAt) implements AccessTokenResult {}
+		record Expired(@NonNull AccessToken accessToken, @NonNull Instant expiredAt) implements AccessTokenResult {}
 
-		record MissingHeaders(@Nonnull Set<String> headers) implements AccessTokenResult {}
+		record MissingHeaders(@NonNull Set<String> headers) implements AccessTokenResult {}
 
-		record InvalidHeaders(@Nonnull Set<String> headers) implements AccessTokenResult {}
+		record InvalidHeaders(@NonNull Set<String> headers) implements AccessTokenResult {}
 
-		record MissingClaims(@Nonnull Set<String> claims) implements AccessTokenResult {}
+		record MissingClaims(@NonNull Set<String> claims) implements AccessTokenResult {}
 
-		record InvalidClaims(@Nonnull Set<String> claims) implements AccessTokenResult {}
+		record InvalidClaims(@NonNull Set<String> claims) implements AccessTokenResult {}
 	}
 
-	@Nonnull
+	@NonNull
 	public Boolean isExpired() {
 		return expiresAt().isBefore(Instant.now());
 	}
@@ -147,8 +147,8 @@ public record AccessToken(
 	/**
 	 * Encodes this JWT to a string representation and signs it using Ed25519.
 	 */
-	@Nonnull
-	public String toStringRepresentation(@Nonnull PrivateKey privateKey) {
+	@NonNull
+	public String toStringRepresentation(@NonNull PrivateKey privateKey) {
 		requireNonNull(privateKey);
 		return AccessToken.toStringRepresentation(accountId(), issuedAt(), expiresAt(), audience(), scopes(), privateKey);
 	}
@@ -156,10 +156,10 @@ public record AccessToken(
 	/**
 	 * Parses and verifies an AccessToken from its string representation using the given Ed25519 public key.
 	 */
-	@Nonnull
+	@NonNull
 	@SuppressWarnings("unchecked")
-	public static AccessTokenResult fromStringRepresentation(@Nonnull String string,
-																													 @Nonnull PublicKey publicKey) {
+	public static AccessTokenResult fromStringRepresentation(@NonNull String string,
+																													 @NonNull PublicKey publicKey) {
 		requireNonNull(string);
 		requireNonNull(publicKey);
 
@@ -308,13 +308,13 @@ public record AccessToken(
 		return new AccessTokenResult.Succeeded(accessToken);
 	}
 
-	@Nonnull
-	public static String toStringRepresentation(@Nonnull UUID accountId,
-																							@Nonnull Instant issuedAt,
-																							@Nonnull Instant expiresAt,
-																							@Nonnull Audience audience,
-																							@Nonnull Set<Scope> scopes,
-																							@Nonnull PrivateKey privateKey) {
+	@NonNull
+	public static String toStringRepresentation(@NonNull UUID accountId,
+																							@NonNull Instant issuedAt,
+																							@NonNull Instant expiresAt,
+																							@NonNull Audience audience,
+																							@NonNull Set<Scope> scopes,
+																							@NonNull PrivateKey privateKey) {
 		requireNonNull(accountId);
 		requireNonNull(issuedAt);
 		requireNonNull(expiresAt);
@@ -357,9 +357,9 @@ public record AccessToken(
 		return format("%s.%s.%s", encodedHeader, encodedPayload, encodedSignature);
 	}
 
-	@Nonnull
-	private static byte[] signEd25519(@Nonnull String signingInput,
-																		@Nonnull PrivateKey privateKey) throws GeneralSecurityException {
+	@NonNull
+	private static byte[] signEd25519(@NonNull String signingInput,
+																		@NonNull PrivateKey privateKey) throws GeneralSecurityException {
 		requireNonNull(signingInput);
 		requireNonNull(privateKey);
 
@@ -370,10 +370,10 @@ public record AccessToken(
 		return signature.sign();
 	}
 
-	@Nonnull
-	private static Boolean verifyEd25519(@Nonnull String signingInput,
-																			 @Nonnull byte[] signatureBytes,
-																			 @Nonnull PublicKey publicKey) throws GeneralSecurityException {
+	@NonNull
+	private static Boolean verifyEd25519(@NonNull String signingInput,
+																			 @NonNull byte[] signatureBytes,
+																			 @NonNull PublicKey publicKey) throws GeneralSecurityException {
 		requireNonNull(signingInput);
 		requireNonNull(signatureBytes);
 		requireNonNull(publicKey);
@@ -385,14 +385,14 @@ public record AccessToken(
 		return signature.verify(signatureBytes);
 	}
 
-	@Nonnull
-	private static String base64UrlEncode(@Nonnull byte[] bytes) {
+	@NonNull
+	private static String base64UrlEncode(@NonNull byte[] bytes) {
 		requireNonNull(bytes);
 		return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 	}
 
-	@Nonnull
-	private static byte[] base64UrlDecode(@Nonnull String string) {
+	@NonNull
+	private static byte[] base64UrlDecode(@NonNull String string) {
 		requireNonNull(string);
 		return Base64.getUrlDecoder().decode(string);
 	}

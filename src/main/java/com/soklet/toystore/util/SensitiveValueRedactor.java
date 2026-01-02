@@ -23,8 +23,8 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import com.google.inject.Inject;
 import com.soklet.toystore.annotation.SensitiveValue;
+import org.jspecify.annotations.NonNull;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
@@ -44,13 +44,13 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class SensitiveValueRedactor {
-	@Nonnull
+	@NonNull
 	private final Gson gson;
-	@Nonnull
+	@NonNull
 	private final ConcurrentHashMap<Class<?>, Set<String>> sensitivePathsCache;
 
 	@Inject
-	public SensitiveValueRedactor(@Nonnull Gson gson) {
+	public SensitiveValueRedactor(@NonNull Gson gson) {
 		requireNonNull(gson);
 
 		this.gson = gson;
@@ -59,9 +59,9 @@ public class SensitiveValueRedactor {
 
 	// Perform redactions by examining {@link SensitiveValue} annotations in {@code targetType}.
 	// Supports nested fields of arbitrary depth
-	@Nonnull
-	public String performRedactions(@Nonnull String json,
-																	@Nonnull Class<?> targetType) {
+	@NonNull
+	public String performRedactions(@NonNull String json,
+																	@NonNull Class<?> targetType) {
 		requireNonNull(json);
 		requireNonNull(targetType);
 
@@ -82,8 +82,8 @@ public class SensitiveValueRedactor {
 		}
 	}
 
-	@Nonnull
-	private Set<String> determineSensitivePaths(@Nonnull Class<?> containingType) {
+	@NonNull
+	private Set<String> determineSensitivePaths(@NonNull Class<?> containingType) {
 		requireNonNull(containingType);
 
 		return getSensitivePathsCache().computeIfAbsent(containingType, clazz -> {
@@ -96,10 +96,10 @@ public class SensitiveValueRedactor {
 		});
 	}
 
-	private void collectSensitivePathsRecursively(@Nonnull Class<?> recordType,
-																								@Nonnull String pathPrefix,
-																								@Nonnull Set<String> accumulator,
-																								@Nonnull Set<Class<?>> visited) {
+	private void collectSensitivePathsRecursively(@NonNull Class<?> recordType,
+																								@NonNull String pathPrefix,
+																								@NonNull Set<String> accumulator,
+																								@NonNull Set<Class<?>> visited) {
 		requireNonNull(recordType);
 		requireNonNull(pathPrefix);
 		requireNonNull(accumulator);
@@ -139,9 +139,9 @@ public class SensitiveValueRedactor {
 		}
 	}
 
-	private void redactRecursively(@Nonnull JsonObject jsonObject,
-																 @Nonnull Set<String> sensitivePaths,
-																 @Nonnull String currentPath) {
+	private void redactRecursively(@NonNull JsonObject jsonObject,
+																 @NonNull Set<String> sensitivePaths,
+																 @NonNull String currentPath) {
 		requireNonNull(jsonObject);
 		requireNonNull(sensitivePaths);
 		requireNonNull(currentPath);
@@ -164,12 +164,12 @@ public class SensitiveValueRedactor {
 		}
 	}
 
-	@Nonnull
+	@NonNull
 	private Gson getGson() {
 		return this.gson;
 	}
 
-	@Nonnull
+	@NonNull
 	private ConcurrentHashMap<Class<?>, Set<String>> getSensitivePathsCache() {
 		return this.sensitivePathsCache;
 	}

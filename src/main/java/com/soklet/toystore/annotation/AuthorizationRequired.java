@@ -17,8 +17,8 @@
 package com.soklet.toystore.annotation;
 
 import com.soklet.toystore.model.db.Role.RoleId;
+import org.jspecify.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

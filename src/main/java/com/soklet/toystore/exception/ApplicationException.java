@@ -16,8 +16,9 @@
 
 package com.soklet.toystore.exception;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,23 +45,23 @@ import static java.util.Objects.requireNonNull;
  */
 @NotThreadSafe
 public class ApplicationException extends RuntimeException {
-	@Nonnull
+	@NonNull
 	private final Integer statusCode;
-	@Nonnull
+	@NonNull
 	private final List<String> generalErrors;
-	@Nonnull
+	@NonNull
 	private final Map<String, List<String>> fieldErrors;
-	@Nonnull
+	@NonNull
 	private final Map<String, Object> metadata;
 
-	@Nonnull
-	public static Builder withStatusCode(@Nonnull Integer statusCode) {
+	@NonNull
+	public static Builder withStatusCode(@NonNull Integer statusCode) {
 		requireNonNull(statusCode);
 		return new Builder(statusCode);
 	}
 
-	@Nonnull
-	public static Builder withStatusCodeAndErrors(@Nonnull Integer statusCode,
+	@NonNull
+	public static Builder withStatusCodeAndErrors(@NonNull Integer statusCode,
 																								@Nullable ErrorCollector errorCollector) {
 		requireNonNull(statusCode);
 
@@ -74,9 +75,9 @@ public class ApplicationException extends RuntimeException {
 		return builder;
 	}
 
-	@Nonnull
-	public static Builder withStatusCodeAndGeneralError(@Nonnull Integer statusCode,
-																											@Nonnull String generalError) {
+	@NonNull
+	public static Builder withStatusCodeAndGeneralError(@NonNull Integer statusCode,
+																											@NonNull String generalError) {
 		requireNonNull(statusCode);
 		requireNonNull(generalError);
 
@@ -86,8 +87,8 @@ public class ApplicationException extends RuntimeException {
 		return builder;
 	}
 
-	private ApplicationException(@Nonnull String message,
-															 @Nonnull Builder builder) {
+	private ApplicationException(@NonNull String message,
+															 @NonNull Builder builder) {
 		super(requireNonNull(message));
 		requireNonNull(builder);
 
@@ -99,9 +100,9 @@ public class ApplicationException extends RuntimeException {
 
 	@NotThreadSafe
 	public static class ErrorCollector {
-		@Nonnull
+		@NonNull
 		private final List<String> generalErrors;
-		@Nonnull
+		@NonNull
 		private final Map<String, List<String>> fieldErrors;
 
 		public ErrorCollector() {
@@ -109,13 +110,13 @@ public class ApplicationException extends RuntimeException {
 			this.fieldErrors = new LinkedHashMap<>();
 		}
 
-		public void addGeneralError(@Nonnull String generalError) {
+		public void addGeneralError(@NonNull String generalError) {
 			requireNonNull(generalError);
 			this.generalErrors.add(generalError);
 		}
 
-		public void addFieldError(@Nonnull String field,
-															@Nonnull String error) {
+		public void addFieldError(@NonNull String field,
+															@NonNull String error) {
 			requireNonNull(field);
 			requireNonNull(error);
 
@@ -130,7 +131,7 @@ public class ApplicationException extends RuntimeException {
 				errors.add(error);
 		}
 
-		@Nonnull
+		@NonNull
 		public Boolean hasErrors() {
 			return this.generalErrors.size() > 0 || this.fieldErrors.size() > 0;
 		}
@@ -138,7 +139,7 @@ public class ApplicationException extends RuntimeException {
 
 	@NotThreadSafe
 	public static class Builder {
-		@Nonnull
+		@NonNull
 		private Integer statusCode;
 		@Nullable
 		private List<String> generalErrors;
@@ -147,43 +148,43 @@ public class ApplicationException extends RuntimeException {
 		@Nullable
 		private Map<String, Object> metadata;
 
-		private Builder(@Nonnull Integer statusCode) {
+		private Builder(@NonNull Integer statusCode) {
 			requireNonNull(statusCode);
 			this.statusCode = statusCode;
 		}
 
-		@Nonnull
-		public Builder statusCode(@Nonnull Integer statusCode) {
+		@NonNull
+		public Builder statusCode(@NonNull Integer statusCode) {
 			requireNonNull(statusCode);
 			this.statusCode = statusCode;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public Builder generalError(@Nullable String generalError) {
 			this.generalErrors = generalError == null ? null : List.of(generalError);
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public Builder generalErrors(@Nullable List<String> generalErrors) {
 			this.generalErrors = generalErrors;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public Builder fieldErrors(@Nullable Map<String, List<String>> fieldErrors) {
 			this.fieldErrors = fieldErrors;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public Builder metadata(@Nullable Map<String, Object> metadata) {
 			this.metadata = metadata;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public ApplicationException build() {
 			// Create an exception message by combining fields
 			List<String> messageComponents = new ArrayList<>(4);
@@ -204,22 +205,22 @@ public class ApplicationException extends RuntimeException {
 		}
 	}
 
-	@Nonnull
+	@NonNull
 	public Integer getStatusCode() {
 		return this.statusCode;
 	}
 
-	@Nonnull
+	@NonNull
 	public List<String> getGeneralErrors() {
 		return this.generalErrors;
 	}
 
-	@Nonnull
+	@NonNull
 	public Map<String, List<String>> getFieldErrors() {
 		return this.fieldErrors;
 	}
 
-	@Nonnull
+	@NonNull
 	public Map<String, Object> getMetadata() {
 		return this.metadata;
 	}

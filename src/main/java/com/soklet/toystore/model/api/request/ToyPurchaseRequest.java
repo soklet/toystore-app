@@ -17,13 +17,11 @@
 package com.soklet.toystore.model.api.request;
 
 import com.soklet.toystore.annotation.SensitiveValue;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.time.YearMonth;
 import java.util.UUID;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
@@ -34,12 +32,12 @@ public record ToyPurchaseRequest(
 		@Nullable @SensitiveValue String creditCardNumber,
 		@Nullable @SensitiveValue YearMonth creditCardExpiration
 ) {
-	@Nonnull
+	@NonNull
 	public ToyPurchaseRequest withToyId(@Nullable UUID toyId) {
 		return new ToyPurchaseRequest(toyId, accountId, creditCardNumber, creditCardExpiration);
 	}
 
-	@Nonnull
+	@NonNull
 	public ToyPurchaseRequest withAccountId(@Nullable UUID accountId) {
 		return new ToyPurchaseRequest(toyId, accountId, creditCardNumber, creditCardExpiration);
 	}

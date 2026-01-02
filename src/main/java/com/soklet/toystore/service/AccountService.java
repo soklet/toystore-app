@@ -28,11 +28,11 @@ import com.soklet.toystore.model.auth.AccessToken.Audience;
 import com.soklet.toystore.model.auth.AccessToken.Scope;
 import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.util.PasswordManager;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.time.Instant;
 import java.util.Optional;
@@ -51,22 +51,22 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class AccountService {
-	@Nonnull
+	@NonNull
 	private final Configuration configuration;
-	@Nonnull
+	@NonNull
 	private final PasswordManager passwordManager;
-	@Nonnull
+	@NonNull
 	private final Database database;
-	@Nonnull
+	@NonNull
 	private final Strings strings;
-	@Nonnull
+	@NonNull
 	private final Logger logger;
 
 	@Inject
-	public AccountService(@Nonnull Configuration configuration,
-												@Nonnull PasswordManager passwordManager,
-												@Nonnull Database database,
-												@Nonnull Strings strings) {
+	public AccountService(@NonNull Configuration configuration,
+												@NonNull PasswordManager passwordManager,
+												@NonNull Database database,
+												@NonNull Strings strings) {
 		requireNonNull(configuration);
 		requireNonNull(passwordManager);
 		requireNonNull(database);
@@ -79,7 +79,7 @@ public class AccountService {
 		this.logger = LoggerFactory.getLogger(getClass());
 	}
 
-	@Nonnull
+	@NonNull
 	public Optional<Account> findAccountById(@Nullable UUID accountId) {
 		if (accountId == null)
 			return Optional.empty();
@@ -93,8 +93,8 @@ public class AccountService {
 				.fetchObject(Account.class);
 	}
 
-	@Nonnull
-	public AccessToken authenticateAccount(@Nonnull AccountAuthenticateRequest request) {
+	@NonNull
+	public AccessToken authenticateAccount(@NonNull AccountAuthenticateRequest request) {
 		requireNonNull(request);
 
 		String emailAddress = trimAggressivelyToNull(request.emailAddress());
@@ -145,27 +145,27 @@ public class AccountService {
 		);
 	}
 
-	@Nonnull
+	@NonNull
 	private Configuration getConfiguration() {
 		return this.configuration;
 	}
 
-	@Nonnull
+	@NonNull
 	private PasswordManager getPasswordManager() {
 		return this.passwordManager;
 	}
 
-	@Nonnull
+	@NonNull
 	private Database getDatabase() {
 		return this.database;
 	}
 
-	@Nonnull
+	@NonNull
 	private Strings getStrings() {
 		return this.strings;
 	}
 
-	@Nonnull
+	@NonNull
 	private Logger getLogger() {
 		return this.logger;
 	}

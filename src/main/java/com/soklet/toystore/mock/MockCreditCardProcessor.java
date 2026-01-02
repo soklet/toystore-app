@@ -17,10 +17,10 @@
 package com.soklet.toystore.mock;
 
 import com.soklet.toystore.util.CreditCardProcessor;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
 import java.util.Currency;
@@ -35,18 +35,18 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class MockCreditCardProcessor implements CreditCardProcessor {
-	@Nonnull
+	@NonNull
 	private final Logger logger;
 
 	public MockCreditCardProcessor() {
 		this.logger = LoggerFactory.getLogger(getClass());
 	}
 
-	@Nonnull
+	@NonNull
 	@Override
-	public String makePayment(@Nonnull String creditCardNumber,
-														@Nonnull BigDecimal amount,
-														@Nonnull Currency currency) throws CreditCardPaymentException {
+	public String makePayment(@NonNull String creditCardNumber,
+														@NonNull BigDecimal amount,
+														@NonNull Currency currency) throws CreditCardPaymentException {
 		requireNonNull(creditCardNumber);
 		requireNonNull(amount);
 		requireNonNull(currency);
@@ -75,7 +75,7 @@ public class MockCreditCardProcessor implements CreditCardProcessor {
 		return UUID.randomUUID().toString();
 	}
 
-	@Nonnull
+	@NonNull
 	private Logger getLogger() {
 		return this.logger;
 	}

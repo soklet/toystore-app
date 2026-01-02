@@ -17,8 +17,8 @@
 package com.soklet.toystore.mock;
 
 import com.soklet.toystore.util.SecretsManager;
+import org.jspecify.annotations.NonNull;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -36,20 +36,20 @@ import static java.lang.String.format;
  */
 @ThreadSafe
 public class MockSecretsManager implements SecretsManager {
-	@Nonnull
+	@NonNull
 	private String keypairPrivateKey;
 
 	public MockSecretsManager() {
 		this.keypairPrivateKey = loadKeypairPrivateKey();
 	}
 
-	@Nonnull
+	@NonNull
 	@Override
 	public String getKeypairPrivateKey() {
 		return this.keypairPrivateKey;
 	}
 
-	@Nonnull
+	@NonNull
 	private String loadKeypairPrivateKey() {
 		// Hardcode a path; this is a mock implementation
 		Path path = Path.of("secrets/keypair-private-key");

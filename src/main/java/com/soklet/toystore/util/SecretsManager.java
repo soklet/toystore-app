@@ -16,7 +16,7 @@
 
 package com.soklet.toystore.util;
 
-import javax.annotation.Nonnull;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Contract for loading sensitive data, e.g. passwords and API tokens.
@@ -27,7 +27,7 @@ import javax.annotation.Nonnull;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 public interface SecretsManager {
-	@Nonnull
+	@NonNull
 	String getKeypairPrivateKey();
 
 	enum Type {

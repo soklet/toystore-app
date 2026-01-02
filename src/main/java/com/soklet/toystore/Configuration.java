@@ -22,8 +22,8 @@ import com.soklet.toystore.mock.MockSecretsManager;
 import com.soklet.toystore.util.CreditCardProcessor;
 import com.soklet.toystore.util.ErrorReporter;
 import com.soklet.toystore.util.SecretsManager;
+import org.jspecify.annotations.NonNull;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -55,11 +55,11 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class Configuration {
-	@Nonnull
+	@NonNull
 	private static final Locale DEFAULT_LOCALE;
-	@Nonnull
+	@NonNull
 	private static final ZoneId DEFAULT_TIME_ZONE;
-	@Nonnull
+	@NonNull
 	private static final Gson GSON;
 
 	static {
@@ -68,32 +68,29 @@ public class Configuration {
 		GSON = new GsonBuilder().disableHtmlEscaping().create();
 	}
 
-	@Nonnull
+	@NonNull
 	private final String environment;
-	@Nonnull
+	@NonNull
 	private final Boolean runningInDocker;
-	@Nonnull
+	@NonNull
 	private final Boolean stopOnKeypress;
-	@Nonnull
+	@NonNull
 	private final Integer port;
-	@Nonnull
+	@NonNull
 	private final Integer serverSentEventPort;
-	@Nonnull
+	@NonNull
 	private final Duration accessTokenExpiration;
-	@Nonnull
+	@NonNull
 	private final Duration sseAccessTokenExpiration;
-	@Nonnull
+	@NonNull
 	private final KeyPair keyPair;
-	@Nonnull
-	private final SecretsManager.Type secretsManagerType;
-	@Nonnull
-	private final CreditCardProcessor.Type creditCardProcessorType;
-	@Nonnull
-	private final ErrorReporter.Type errorReporterType;
-	@Nonnull
+	private final SecretsManager.@NonNull Type secretsManagerType;
+	private final CreditCardProcessor.@NonNull Type creditCardProcessorType;
+	private final ErrorReporter.@NonNull Type errorReporterType;
+	@NonNull
 	private final Set<String> corsWhitelistedOrigins;
 
-	public Configuration(@Nonnull String environment) {
+	public Configuration(@NonNull String environment) {
 		requireNonNull(environment);
 
 		ConfigFile configFile = loadConfigFileForEnvironment(environment);
@@ -116,8 +113,8 @@ public class Configuration {
 			System.setProperty("logback.configurationFile", format("config/%s/logback.xml", environment));
 	}
 
-	@Nonnull
-	private KeyPair loadKeyPair(@Nonnull ConfigFile configFile) {
+	@NonNull
+	private KeyPair loadKeyPair(@NonNull ConfigFile configFile) {
 		requireNonNull(configFile);
 
 		String algorithm = configFile.keyPair().algorithm();
@@ -147,8 +144,8 @@ public class Configuration {
 		}
 	}
 
-	@Nonnull
-	private ConfigFile loadConfigFileForEnvironment(@Nonnull String environment) {
+	@NonNull
+	private ConfigFile loadConfigFileForEnvironment(@NonNull String environment) {
 		Path configFile = Path.of(format("config/%s/settings.json", environment));
 
 		if (!Files.isRegularFile(configFile))
@@ -163,15 +160,15 @@ public class Configuration {
 
 	// Record that maps to the config/{environment}/settings.json file format
 	private record ConfigFile(
-			@Nonnull Integer port,
-			@Nonnull Integer serverSentEventPort,
-			@Nonnull Set<String> corsWhitelistedOrigins,
-			@Nonnull Integer accessTokenExpirationInSeconds,
-			@Nonnull Integer sseAccessTokenExpirationInSeconds,
-			@Nonnull ConfigKeyPair keyPair,
-			@Nonnull ConfigSecretsManager secretsManager,
-			@Nonnull ConfigCreditCardProcessor creditCardProcessor,
-			@Nonnull ConfigErrorReporter errorReporter
+			@NonNull Integer port,
+			@NonNull Integer serverSentEventPort,
+			@NonNull Set<String> corsWhitelistedOrigins,
+			@NonNull Integer accessTokenExpirationInSeconds,
+			@NonNull Integer sseAccessTokenExpirationInSeconds,
+			@NonNull ConfigKeyPair keyPair,
+			@NonNull ConfigSecretsManager secretsManager,
+			@NonNull ConfigCreditCardProcessor creditCardProcessor,
+			@NonNull ConfigErrorReporter errorReporter
 	) {
 		public ConfigFile {
 			requireNonNull(port);
@@ -186,8 +183,8 @@ public class Configuration {
 		}
 
 		private record ConfigKeyPair(
-				@Nonnull String algorithm,
-				@Nonnull String publicKey
+				@NonNull String algorithm,
+				@NonNull String publicKey
 		) {
 			public ConfigKeyPair {
 				requireNonNull(algorithm);
@@ -196,7 +193,7 @@ public class Configuration {
 		}
 
 		private record ConfigSecretsManager(
-				@Nonnull SecretsManager.Type type
+				SecretsManager.@NonNull Type type
 		) {
 			public ConfigSecretsManager {
 				requireNonNull(type);
@@ -204,7 +201,7 @@ public class Configuration {
 		}
 
 		private record ConfigCreditCardProcessor(
-				@Nonnull CreditCardProcessor.Type type
+				CreditCardProcessor.@NonNull Type type
 		) {
 			public ConfigCreditCardProcessor {
 				requireNonNull(type);
@@ -212,7 +209,7 @@ public class Configuration {
 		}
 
 		private record ConfigErrorReporter(
-				@Nonnull ErrorReporter.Type type
+				ErrorReporter.@NonNull Type type
 		) {
 			public ConfigErrorReporter {
 				requireNonNull(type);
@@ -220,72 +217,69 @@ public class Configuration {
 		}
 	}
 
-	@Nonnull
+	@NonNull
 	public static Locale getDefaultLocale() {
 		return DEFAULT_LOCALE;
 	}
 
-	@Nonnull
+	@NonNull
 	public static ZoneId getDefaultTimeZone() {
 		return DEFAULT_TIME_ZONE;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getEnvironment() {
 		return this.environment;
 	}
 
-	@Nonnull
+	@NonNull
 	public Boolean getRunningInDocker() {
 		return this.runningInDocker;
 	}
 
-	@Nonnull
+	@NonNull
 	public Boolean getStopOnKeypress() {
 		return this.stopOnKeypress;
 	}
 
-	@Nonnull
+	@NonNull
 	public Integer getPort() {
 		return this.port;
 	}
 
-	@Nonnull
+	@NonNull
 	public Integer getServerSentEventPort() {
 		return this.serverSentEventPort;
 	}
 
-	@Nonnull
+	@NonNull
 	public Duration getAccessTokenExpiration() {
 		return this.accessTokenExpiration;
 	}
 
-	@Nonnull
+	@NonNull
 	public Duration getSseAccessTokenExpiration() {
 		return this.sseAccessTokenExpiration;
 	}
 
-	@Nonnull
+	@NonNull
 	public KeyPair getKeyPair() {
 		return this.keyPair;
 	}
 
-	@Nonnull
-	public SecretsManager.Type getSecretsManagerType() {
+	public SecretsManager.@NonNull Type getSecretsManagerType() {
 		return this.secretsManagerType;
 	}
 
-	@Nonnull
-	public CreditCardProcessor.Type getCreditCardProcessorType() {
+	public CreditCardProcessor.@NonNull Type getCreditCardProcessorType() {
 		return this.creditCardProcessorType;
 	}
 
-	@Nonnull
-	public ErrorReporter.Type getErrorReporterType() {
+	public ErrorReporter.@NonNull Type getErrorReporterType() {
 		return this.errorReporterType;
 	}
 
-	@Nonnull
+	@NonNull
 	public Set<String> getCorsWhitelistedOrigins() {
 		return this.corsWhitelistedOrigins;
 	}

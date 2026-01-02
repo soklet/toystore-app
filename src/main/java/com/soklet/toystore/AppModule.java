@@ -82,11 +82,10 @@ import com.soklet.toystore.util.SecretsManager;
 import com.soklet.toystore.util.SensitiveValueRedactor;
 import org.hsqldb.jdbc.JDBCDataSource;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
 import java.lang.reflect.Parameter;
@@ -122,31 +121,31 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class AppModule extends AbstractModule {
-	@Nonnull
+	@NonNull
 	private final Configuration configuration;
 
-	public AppModule(@Nonnull Configuration configuration) {
+	public AppModule(@NonNull Configuration configuration) {
 		requireNonNull(configuration);
 		this.configuration = configuration;
 	}
 
-	@Nonnull
+	@NonNull
 	@Provides
 	@Singleton
 	public Configuration provideConfiguration() {
 		return this.configuration;
 	}
 
-	@Nonnull
+	@NonNull
 	@Provides
 	@Singleton
-	public SokletConfig provideSokletConfig(@Nonnull Injector injector,
-																					@Nonnull Configuration configuration,
-																					@Nonnull Database database,
-																					@Nonnull AccountService accountService,
-																					@Nonnull SensitiveValueRedactor sensitiveValueRedactor,
-																					@Nonnull Strings strings,
-																					@Nonnull Gson gson) {
+	public SokletConfig provideSokletConfig(@NonNull Injector injector,
+																					@NonNull Configuration configuration,
+																					@NonNull Database database,
+																					@NonNull AccountService accountService,
+																					@NonNull SensitiveValueRedactor sensitiveValueRedactor,
+																					@NonNull Strings strings,
+																					@NonNull Gson gson) {
 		requireNonNull(injector);
 		requireNonNull(configuration);
 		requireNonNull(database);
@@ -158,12 +157,12 @@ public class AppModule extends AbstractModule {
 		return SokletConfig.withServer(Server.withPort(configuration.getPort()).build())
 				.serverSentEventServer(ServerSentEventServer.withPort(configuration.getServerSentEventPort()).build())
 				.lifecycleObserver(new LifecycleObserver() {
-					@Nonnull
+					@NonNull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.LifecycleObserver");
 
 					@Override
 					public void didStartRequestHandling(@NonNull ServerType serverType,
-																							@Nonnull Request request,
+																							@NonNull Request request,
 																							@Nullable ResourceMethod resourceMethod) {
 						if (shouldPerformRequestLogging(request, resourceMethod))
 							logger.debug("Received {} {}", request.getHttpMethod(), request.getRawPathAndQuery());
@@ -171,18 +170,18 @@ public class AppModule extends AbstractModule {
 
 					@Override
 					public void didFinishRequestHandling(@NonNull ServerType serverType,
-																							 @Nonnull Request request,
+																							 @NonNull Request request,
 																							 @Nullable ResourceMethod resourceMethod,
-																							 @Nonnull MarshaledResponse marshaledResponse,
-																							 @Nonnull Duration processingDuration,
-																							 @Nonnull List<Throwable> throwables) {
+																							 @NonNull MarshaledResponse marshaledResponse,
+																							 @NonNull Duration processingDuration,
+																							 @NonNull List<Throwable> throwables) {
 						if (shouldPerformRequestLogging(request, resourceMethod))
 							logger.debug(format("Finished processing %s %s (HTTP %d) in %.2fms", request.getHttpMethod(),
 									request.getRawPathAndQuery(), marshaledResponse.getStatusCode(), processingDuration.toNanos() / 1000000.0));
 					}
 
-					@Nonnull
-					private Boolean shouldPerformRequestLogging(@Nonnull Request request,
+					@NonNull
+					private Boolean shouldPerformRequestLogging(@NonNull Request request,
 																											@Nullable ResourceMethod resourceMethod) {
 						requireNonNull(request);
 
@@ -199,41 +198,41 @@ public class AppModule extends AbstractModule {
 					}
 
 					@Override
-					public void willStartSoklet(@Nonnull Soklet soklet) {
+					public void willStartSoklet(@NonNull Soklet soklet) {
 						logger.debug("Toystore app starting in {} environment...", configuration.getEnvironment());
 					}
 
 					@Override
-					public void willStopSoklet(@Nonnull Soklet soklet) {
+					public void willStopSoklet(@NonNull Soklet soklet) {
 						logger.debug("Toystore app stopping...");
 					}
 
 					@Override
-					public void didStopSoklet(@Nonnull Soklet soklet) {
+					public void didStopSoklet(@NonNull Soklet soklet) {
 						logger.debug("Toystore app stopped.");
 					}
 
 					@Override
-					public void didStartServer(@Nonnull Server server) {
+					public void didStartServer(@NonNull Server server) {
 						logger.debug("Server started on port {}", configuration.getPort());
 					}
 
 					@Override
-					public void didStartServerSentEventServer(@Nonnull ServerSentEventServer serverSentEventServer) {
+					public void didStartServerSentEventServer(@NonNull ServerSentEventServer serverSentEventServer) {
 						logger.debug("Server-Sent Event server started on port {}", configuration.getServerSentEventPort());
 					}
 
 					@Override
-					public void didEstablishServerSentEventConnection(@Nonnull ServerSentEventConnection serverSentEventConnection) {
+					public void didEstablishServerSentEventConnection(@NonNull ServerSentEventConnection serverSentEventConnection) {
 						CurrentContext currentContext = (CurrentContext) serverSentEventConnection.getClientContext().get();
 						logger.debug("Server-Sent Event Connection ID {} established for {}. Context: {}",
 								serverSentEventConnection.getRequest().getId(), serverSentEventConnection.getRequest().getPath(), currentContext);
 					}
 
 					@Override
-					public void didTerminateServerSentEventConnection(@Nonnull ServerSentEventConnection serverSentEventConnection,
-																														@Nonnull Duration connectionDuration,
-																														@Nonnull TerminationReason terminationReason,
+					public void didTerminateServerSentEventConnection(@NonNull ServerSentEventConnection serverSentEventConnection,
+																														@NonNull Duration connectionDuration,
+																														@NonNull TerminationReason terminationReason,
 																														@Nullable Throwable throwable) {
 						CurrentContext currentContext = (CurrentContext) serverSentEventConnection.getClientContext().get();
 						logger.debug("Server-Sent Event Connection ID {} terminated for {} (reason: {}). Context: {}",
@@ -242,18 +241,18 @@ public class AppModule extends AbstractModule {
 					}
 
 					@Override
-					public void didReceiveLogEvent(@Nonnull LogEvent logEvent) {
+					public void didReceiveLogEvent(@NonNull LogEvent logEvent) {
 						requireNonNull(logEvent);
 						logger.warn(logEvent.getMessage(), logEvent.getThrowable().orElse(null));
 					}
 				})
 				.requestInterceptor(new RequestInterceptor() {
-					@Nonnull
+					@NonNull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.RequestInterceptor");
 
 					@Override
-					public void wrapRequest(@Nonnull Request request,
-																	@Nonnull Consumer<Request> requestProcessor) {
+					public void wrapRequest(@NonNull Request request,
+																	@NonNull Consumer<Request> requestProcessor) {
 						requireNonNull(request);
 						requireNonNull(requestProcessor);
 
@@ -271,10 +270,10 @@ public class AppModule extends AbstractModule {
 					}
 
 					@Override
-					public void interceptRequest(@Nonnull Request request,
+					public void interceptRequest(@NonNull Request request,
 																			 @Nullable ResourceMethod resourceMethod,
-																			 @Nonnull Function<Request, MarshaledResponse> responseGenerator,
-																			 @Nonnull Consumer<MarshaledResponse> responseWriter) {
+																			 @NonNull Function<Request, MarshaledResponse> responseGenerator,
+																			 @NonNull Consumer<MarshaledResponse> responseWriter) {
 						requireNonNull(request);
 						requireNonNull(responseGenerator);
 						requireNonNull(responseWriter);
@@ -345,8 +344,8 @@ public class AppModule extends AbstractModule {
 
 					@NonNull
 					private Optional<Account> resolveAccountFromAccessToken(@Nullable String accessTokenAsString,
-																																	@Nonnull Audience expectedAudience,
-																																	@Nonnull Set<Scope> requiredScopes) {
+																																	@NonNull Audience expectedAudience,
+																																	@NonNull Set<Scope> requiredScopes) {
 						requireNonNull(expectedAudience);
 						requireNonNull(requiredScopes);
 
@@ -356,7 +355,7 @@ public class AppModule extends AbstractModule {
 						AccessTokenResult accessTokenResult = AccessToken.fromStringRepresentation(accessTokenAsString, configuration.getKeyPair().getPublic());
 
 						switch (accessTokenResult) {
-							case AccessTokenResult.Succeeded(@Nonnull AccessToken accessToken) -> {
+							case AccessTokenResult.Succeeded(@NonNull AccessToken accessToken) -> {
 								if (!accessToken.audience().equals(expectedAudience)) {
 									logger.warn("{} Access Token audience is invalid: {}", expectedAudience.name(), accessToken.audience());
 									return Optional.empty();
@@ -370,7 +369,7 @@ public class AppModule extends AbstractModule {
 								return accountService.findAccountById(accessToken.accountId());
 							}
 
-							case AccessTokenResult.Expired(@Nonnull AccessToken accessToken, @Nonnull Instant expiredAt) ->
+							case AccessTokenResult.Expired(@NonNull AccessToken accessToken, @NonNull Instant expiredAt) ->
 									logger.debug("{} Access Token for account ID {} expired at {}", expectedAudience.name(), accessToken.accountId(), expiredAt);
 
 							case AccessTokenResult.SignatureMismatch() ->
@@ -383,7 +382,7 @@ public class AppModule extends AbstractModule {
 					}
 
 					@Nullable
-					private String resolveAccessTokenFromAuthorization(@Nonnull Request request) {
+					private String resolveAccessTokenFromAuthorization(@NonNull Request request) {
 						requireNonNull(request);
 
 						String authorizationHeader = request.getHeader("Authorization").orElse(null);
@@ -401,8 +400,8 @@ public class AppModule extends AbstractModule {
 						return token.isEmpty() ? null : token;
 					}
 
-					@Nonnull
-					private Set<Scope> resolveRequiredApiScopes(@Nonnull Request request) {
+					@NonNull
+					private Set<Scope> resolveRequiredApiScopes(@NonNull Request request) {
 						requireNonNull(request);
 
 						return switch (request.getHttpMethod()) {
@@ -411,15 +410,15 @@ public class AppModule extends AbstractModule {
 						};
 					}
 
-					@Nonnull
-					private Localization resolveLocalization(@Nonnull Request request,
+					@NonNull
+					private Localization resolveLocalization(@NonNull Request request,
 																									 @Nullable Account account) {
 						requireNonNull(request);
 						return new Localization(resolveLocale(request, account), resolveTimeZone(request, account));
 					}
 
-					@Nonnull
-					private Locale resolveLocale(@Nonnull Request request,
+					@NonNull
+					private Locale resolveLocale(@NonNull Request request,
 																			 @Nullable Account account) {
 						requireNonNull(request);
 
@@ -432,8 +431,8 @@ public class AppModule extends AbstractModule {
 								.orElse(Configuration.getDefaultLocale());
 					}
 
-					@Nonnull
-					private ZoneId resolveTimeZone(@Nonnull Request request,
+					@NonNull
+					private ZoneId resolveTimeZone(@NonNull Request request,
 																				 @Nullable Account account) {
 						requireNonNull(request);
 
@@ -446,8 +445,8 @@ public class AppModule extends AbstractModule {
 								.orElse(Configuration.getDefaultTimeZone());
 					}
 
-					@Nonnull
-					private Optional<ZoneId> resolveTimeZoneHeader(@Nonnull Request request) {
+					@NonNull
+					private Optional<ZoneId> resolveTimeZoneHeader(@NonNull Request request) {
 						requireNonNull(request);
 
 						// Pull from RFC 7808 Time-Zone header
@@ -465,15 +464,15 @@ public class AppModule extends AbstractModule {
 					}
 				})
 				.requestBodyMarshaler(new RequestBodyMarshaler() {
-					@Nonnull
+					@NonNull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.RequestBodyMarshaler");
 
 					@Nullable
 					@Override
-					public Optional<Object> marshalRequestBody(@Nonnull Request request,
-																										 @Nonnull ResourceMethod resourceMethod,
-																										 @Nonnull Parameter parameter,
-																										 @Nonnull Type requestBodyType) {
+					public Optional<Object> marshalRequestBody(@NonNull Request request,
+																										 @NonNull ResourceMethod resourceMethod,
+																										 @NonNull Parameter parameter,
+																										 @NonNull Type requestBodyType) {
 						requireNonNull(request);
 						requireNonNull(requestBodyType);
 
@@ -491,9 +490,9 @@ public class AppModule extends AbstractModule {
 					}
 				})
 				.responseMarshaler(ResponseMarshaler.withDefaults()
-						.resourceMethodHandler((@Nonnull Request request,
-																		@Nonnull Response response,
-																		@Nonnull ResourceMethod resourceMethod) -> {
+						.resourceMethodHandler((@NonNull Request request,
+																		@NonNull Response response,
+																		@NonNull ResourceMethod resourceMethod) -> {
 							// Use Gson to turn response objects into JSON to go over the wire
 							Object bodyObject = response.getBody().orElse(null);
 							byte[] body = bodyObject == null ? null : gson.toJson(bodyObject).getBytes(StandardCharsets.UTF_8);
@@ -508,7 +507,7 @@ public class AppModule extends AbstractModule {
 									.body(body)
 									.build();
 						})
-						.notFoundHandler((@Nonnull Request request) -> {
+						.notFoundHandler((@NonNull Request request) -> {
 							// Use Gson to turn the error response into JSON
 							ErrorResponse errorResponse = ErrorResponse.withSummary(strings.get("The resource you requested was not found.")).build();
 							byte[] body = gson.toJson(errorResponse).getBytes(StandardCharsets.UTF_8);
@@ -521,8 +520,8 @@ public class AppModule extends AbstractModule {
 									.body(body)
 									.build();
 						})
-						.throwableHandler((@Nonnull Request request,
-															 @Nonnull Throwable throwable,
+						.throwableHandler((@NonNull Request request,
+															 @NonNull Throwable throwable,
 															 @Nullable ResourceMethod resourceMethod) -> {
 							// Collect error information for display to client
 							int statusCode;
@@ -623,26 +622,26 @@ public class AppModule extends AbstractModule {
 	}
 
 	// Explicitly provide this so it can be injected directly, e.g. to ToyService for broadcasting Server-Sent Events
-	@Nonnull
+	@NonNull
 	@Provides
 	@Singleton
-	public ServerSentEventServer provideServerSentEventServer(@Nonnull SokletConfig sokletConfig) {
+	public ServerSentEventServer provideServerSentEventServer(@NonNull SokletConfig sokletConfig) {
 		requireNonNull(sokletConfig);
 		return sokletConfig.getServerSentEventServer().get();
 	}
 
 	// What context is bound to the current execution scope?
-	@Nonnull
+	@NonNull
 	@Provides
 	public CurrentContext provideCurrentContext() {
 		return CurrentContext.get();
 	}
 
 	// Provides a way to talk to a relational database
-	@Nonnull
+	@NonNull
 	@Provides
 	@Singleton
-	public Database provideDatabase(@Nonnull Injector injector) {
+	public Database provideDatabase(@NonNull Injector injector) {
 		requireNonNull(injector);
 
 		// Example in-memory datasource for HSQLDB.
@@ -657,18 +656,18 @@ public class AppModule extends AbstractModule {
 				// Use Google Guice when Pyranid needs to vend instances
 				.instanceProvider(new InstanceProvider() {
 					@Override
-					@Nonnull
-					public <T> T provide(@Nonnull StatementContext<T> statementContext,
-															 @Nonnull Class<T> instanceType) {
+					@NonNull
+					public <T> T provide(@NonNull StatementContext<T> statementContext,
+															 @NonNull Class<T> instanceType) {
 						return injector.getInstance(instanceType);
 					}
 				})
 				.statementLogger(new StatementLogger() {
-					@Nonnull
+					@NonNull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.StatementLogger");
 
 					@Override
-					public void log(@Nonnull StatementLog statementLog) {
+					public void log(@NonNull StatementLog statementLog) {
 						if (logger.isTraceEnabled())
 							logger.trace("SQL took {}ms:\n{}\nParameters: {}", format("%.2f", statementLog.getTotalDuration().toNanos() / 1000000.0),
 									statementLog.getStatementContext().getStatement().getSql().stripIndent().trim(),
@@ -679,10 +678,10 @@ public class AppModule extends AbstractModule {
 	}
 
 	// Provides context-aware localization
-	@Nonnull
+	@NonNull
 	@Provides
 	@Singleton
-	public Strings provideStrings(@Nonnull Provider<CurrentContext> currentContextProvider) {
+	public Strings provideStrings(@NonNull Provider<CurrentContext> currentContextProvider) {
 		requireNonNull(currentContextProvider);
 
 		return Strings.withFallbackLocale(Locale.forLanguageTag("en-US"))
@@ -695,7 +694,7 @@ public class AppModule extends AbstractModule {
 				.build();
 	}
 
-	@Nonnull
+	@NonNull
 	@Provides
 	@Singleton
 	public PasswordManager providePasswordManager() {
@@ -706,7 +705,7 @@ public class AppModule extends AbstractModule {
 				.build();
 	}
 
-	@Nonnull
+	@NonNull
 	@Provides
 	@Singleton
 	public SecretsManager provideSecretsManager(@NonNull Configuration configuration) {
@@ -723,7 +722,7 @@ public class AppModule extends AbstractModule {
 		return secretsManager;
 	}
 
-	@Nonnull
+	@NonNull
 	@Provides
 	@Singleton
 	public CreditCardProcessor provideCreditCardProcessor(@NonNull Configuration configuration) {
@@ -740,7 +739,7 @@ public class AppModule extends AbstractModule {
 		return creditCardProcessor;
 	}
 
-	@Nonnull
+	@NonNull
 	@Provides
 	@Singleton
 	public ErrorReporter provideErrorReporter(@NonNull Configuration configuration) {
@@ -758,10 +757,10 @@ public class AppModule extends AbstractModule {
 	}
 
 	// Supports "complex" types to/from JSON: Locale, ZoneId, Instant, YearMonth
-	@Nonnull
+	@NonNull
 	@Provides
 	@Singleton
-	public Gson provideGson(@Nonnull Configuration configuration) {
+	public Gson provideGson(@NonNull Configuration configuration) {
 		requireNonNull(configuration);
 
 		GsonBuilder gsonBuilder = new GsonBuilder()
@@ -770,41 +769,41 @@ public class AppModule extends AbstractModule {
 				// Support `Locale` type for handling locales
 				.registerTypeAdapter(Locale.class, new TypeAdapter<Locale>() {
 					@Override
-					public void write(@Nonnull JsonWriter jsonWriter,
-														@Nonnull Locale locale) throws IOException {
+					public void write(@NonNull JsonWriter jsonWriter,
+														@NonNull Locale locale) throws IOException {
 						jsonWriter.value(locale.toLanguageTag());
 					}
 
 					@Override
-					public Locale read(@Nonnull JsonReader jsonReader) throws IOException {
+					public Locale read(@NonNull JsonReader jsonReader) throws IOException {
 						return Locale.forLanguageTag(jsonReader.nextString());
 					}
 				})
 				// Support `ZoneId` type for handling timezones
 				.registerTypeHierarchyAdapter(ZoneId.class, new TypeAdapter<ZoneId>() {
 					@Override
-					public void write(@Nonnull JsonWriter jsonWriter,
-														@Nonnull ZoneId zoneId) throws IOException {
+					public void write(@NonNull JsonWriter jsonWriter,
+														@NonNull ZoneId zoneId) throws IOException {
 						jsonWriter.value(zoneId.getId());
 					}
 
 					@Override
 					@Nullable
-					public ZoneId read(@Nonnull JsonReader jsonReader) throws IOException {
+					public ZoneId read(@NonNull JsonReader jsonReader) throws IOException {
 						return ZoneId.of(jsonReader.nextString());
 					}
 				})
 				// Support `Currency` type for handling ISO currency codes
 				.registerTypeAdapter(Currency.class, new TypeAdapter<Currency>() {
 					@Override
-					public void write(@Nonnull JsonWriter jsonWriter,
-														@Nonnull Currency currency) throws IOException {
+					public void write(@NonNull JsonWriter jsonWriter,
+														@NonNull Currency currency) throws IOException {
 						jsonWriter.value(currency.getCurrencyCode());
 					}
 
 					@Override
 					@Nullable
-					public Currency read(@Nonnull JsonReader jsonReader) throws IOException {
+					public Currency read(@NonNull JsonReader jsonReader) throws IOException {
 						String code = jsonReader.nextString();
 						try {
 							return Currency.getInstance(code);
@@ -816,49 +815,49 @@ public class AppModule extends AbstractModule {
 				// Use ISO formatting for Instants
 				.registerTypeAdapter(Instant.class, new TypeAdapter<Instant>() {
 					@Override
-					public void write(@Nonnull JsonWriter jsonWriter,
-														@Nonnull Instant instant) throws IOException {
+					public void write(@NonNull JsonWriter jsonWriter,
+														@NonNull Instant instant) throws IOException {
 						jsonWriter.value(instant.toString());
 					}
 
 					@Override
 					@Nullable
-					public Instant read(@Nonnull JsonReader jsonReader) throws IOException {
+					public Instant read(@NonNull JsonReader jsonReader) throws IOException {
 						return Instant.parse(jsonReader.nextString());
 					}
 				})
 				// Use ISO formatting for YearMonths
 				.registerTypeAdapter(YearMonth.class, new TypeAdapter<YearMonth>() {
 					@Override
-					public void write(@Nonnull JsonWriter jsonWriter,
-														@Nonnull YearMonth yearMonth) throws IOException {
+					public void write(@NonNull JsonWriter jsonWriter,
+														@NonNull YearMonth yearMonth) throws IOException {
 						jsonWriter.value(yearMonth.toString());
 					}
 
 					@Override
 					@Nullable
-					public YearMonth read(@Nonnull JsonReader jsonReader) throws IOException {
+					public YearMonth read(@NonNull JsonReader jsonReader) throws IOException {
 						return YearMonth.parse(jsonReader.nextString());
 					}
 				})
 				// Convert our custom AccessToken to and from a JSON string
 				.registerTypeAdapter(AccessToken.class, new TypeAdapter<AccessToken>() {
 					@Override
-					public void write(@Nonnull JsonWriter jsonWriter,
-														@Nonnull AccessToken accountJwt) throws IOException {
+					public void write(@NonNull JsonWriter jsonWriter,
+														@NonNull AccessToken accountJwt) throws IOException {
 						jsonWriter.value(accountJwt.toStringRepresentation(configuration.getKeyPair().getPrivate()));
 					}
 
 					@Override
 					@Nullable
-					public AccessToken read(@Nonnull JsonReader jsonReader) throws IOException {
+					public AccessToken read(@NonNull JsonReader jsonReader) throws IOException {
 						AccessTokenResult result = AccessToken.fromStringRepresentation(jsonReader.nextString(), configuration.getKeyPair().getPublic());
 
 						switch (result) {
-							case AccessTokenResult.Succeeded(@Nonnull AccessToken accountJwt) -> {
+							case AccessTokenResult.Succeeded(@NonNull AccessToken accountJwt) -> {
 								return accountJwt;
 							}
-							case AccessTokenResult.Expired(@Nonnull AccessToken accountJwt, @Nonnull Instant expiredAt) -> {
+							case AccessTokenResult.Expired(@NonNull AccessToken accountJwt, @NonNull Instant expiredAt) -> {
 								return accountJwt;
 							}
 							default -> {
@@ -881,8 +880,8 @@ public class AppModule extends AbstractModule {
 	}
 
 	// Tuple to hold localization information
-	private record Localization(@Nonnull Locale locale,
-															@Nonnull ZoneId timeZone) {
+	private record Localization(@NonNull Locale locale,
+															@NonNull ZoneId timeZone) {
 		public Localization {
 			requireNonNull(locale);
 			requireNonNull(timeZone);

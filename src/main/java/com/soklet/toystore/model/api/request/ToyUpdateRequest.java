@@ -16,13 +16,12 @@
 
 package com.soklet.toystore.model.api.request;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.UUID;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
@@ -33,7 +32,7 @@ public record ToyUpdateRequest(
 		@Nullable BigDecimal price,
 		@Nullable Currency currency
 ) {
-	@Nonnull
+	@NonNull
 	public ToyUpdateRequest withToyId(@Nullable UUID toyId) {
 		return new ToyUpdateRequest(toyId, name, price, currency);
 	}

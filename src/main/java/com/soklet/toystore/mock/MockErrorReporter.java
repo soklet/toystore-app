@@ -17,11 +17,11 @@
 package com.soklet.toystore.mock;
 
 import com.soklet.toystore.util.ErrorReporter;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 import static com.soklet.toystore.util.Normalizer.trimAggressivelyToNull;
@@ -33,7 +33,7 @@ import static com.soklet.toystore.util.Normalizer.trimAggressivelyToNull;
  */
 @ThreadSafe
 public class MockErrorReporter implements ErrorReporter {
-	@Nonnull
+	@NonNull
 	private final Logger logger;
 
 	public MockErrorReporter() {
@@ -64,7 +64,7 @@ public class MockErrorReporter implements ErrorReporter {
 			getLogger().error(message);
 	}
 
-	@Nonnull
+	@NonNull
 	private Logger getLogger() {
 		return this.logger;
 	}

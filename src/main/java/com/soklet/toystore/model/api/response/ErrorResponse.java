@@ -16,8 +16,9 @@
 
 package com.soklet.toystore.model.api.response;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.Collections;
@@ -33,22 +34,22 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class ErrorResponse {
-	@Nonnull
+	@NonNull
 	private final String summary;
-	@Nonnull
+	@NonNull
 	private final List<String> generalErrors;
-	@Nonnull
+	@NonNull
 	private final Map<String, List<String>> fieldErrors;
-	@Nonnull
+	@NonNull
 	private final Map<String, Object> metadata;
 
-	@Nonnull
-	public static Builder withSummary(@Nonnull String summary) {
+	@NonNull
+	public static Builder withSummary(@NonNull String summary) {
 		requireNonNull(summary);
 		return new Builder(summary);
 	}
 
-	private ErrorResponse(@Nonnull Builder builder) {
+	private ErrorResponse(@NonNull Builder builder) {
 		requireNonNull(builder);
 
 		this.summary = requireNonNull(builder.summary);
@@ -59,7 +60,7 @@ public class ErrorResponse {
 
 	@NotThreadSafe
 	public static class Builder {
-		@Nonnull
+		@NonNull
 		private String summary;
 		@Nullable
 		private List<String> generalErrors;
@@ -68,58 +69,58 @@ public class ErrorResponse {
 		@Nullable
 		private Map<String, Object> metadata;
 
-		private Builder(@Nonnull String summary) {
+		private Builder(@NonNull String summary) {
 			requireNonNull(summary);
 			this.summary = summary;
 		}
 
-		@Nonnull
-		public Builder summary(@Nonnull String summary) {
+		@NonNull
+		public Builder summary(@NonNull String summary) {
 			requireNonNull(summary);
 			this.summary = summary;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public Builder generalErrors(@Nullable List<String> generalErrors) {
 			this.generalErrors = generalErrors;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public Builder fieldErrors(@Nullable Map<String, List<String>> fieldErrors) {
 			this.fieldErrors = fieldErrors;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public Builder metadata(@Nullable Map<String, Object> metadata) {
 			this.metadata = metadata;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public ErrorResponse build() {
 			return new ErrorResponse(this);
 		}
 	}
 
-	@Nonnull
+	@NonNull
 	public String getSummary() {
 		return this.summary;
 	}
 
-	@Nonnull
+	@NonNull
 	public List<String> getGeneralErrors() {
 		return this.generalErrors;
 	}
 
-	@Nonnull
+	@NonNull
 	public Map<String, List<String>> getFieldErrors() {
 		return this.fieldErrors;
 	}
 
-	@Nonnull
+	@NonNull
 	public Map<String, Object> getMetadata() {
 		return this.metadata;
 	}

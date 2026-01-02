@@ -16,7 +16,8 @@
 
 package com.soklet.toystore.util;
 
-import javax.annotation.Nonnull;
+import org.jspecify.annotations.NonNull;
+
 import javax.annotation.concurrent.NotThreadSafe;
 import java.math.BigDecimal;
 import java.util.Currency;
@@ -29,10 +30,10 @@ import static java.util.Objects.requireNonNull;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 public interface CreditCardProcessor {
-	@Nonnull
-	String makePayment(@Nonnull String creditCardNumber,
-										 @Nonnull BigDecimal amount,
-										 @Nonnull Currency currency) throws CreditCardPaymentException;
+	@NonNull
+	String makePayment(@NonNull String creditCardNumber,
+										 @NonNull BigDecimal amount,
+										 @NonNull Currency currency) throws CreditCardPaymentException;
 
 	enum Type {
 		MOCK,
@@ -48,15 +49,15 @@ public interface CreditCardProcessor {
 
 	@NotThreadSafe
 	class CreditCardPaymentException extends Exception {
-		@Nonnull
+		@NonNull
 		CreditCardPaymentFailureReason failureReason;
 
-		public CreditCardPaymentException(@Nonnull CreditCardPaymentFailureReason failureReason) {
+		public CreditCardPaymentException(@NonNull CreditCardPaymentFailureReason failureReason) {
 			super(requireNonNull(failureReason).name());
 			this.failureReason = failureReason;
 		}
 
-		@Nonnull
+		@NonNull
 		public CreditCardPaymentFailureReason getFailureReason() {
 			return this.failureReason;
 		}

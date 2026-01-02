@@ -26,7 +26,6 @@ import com.soklet.toystore.annotation.SuppressRequestLogging;
 import com.soklet.toystore.exception.NotFoundException;
 import org.jspecify.annotations.NonNull;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -44,7 +43,7 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class IndexResource {
-	@Nonnull
+	@NonNull
 	@GET("/")
 	public MarshaledResponse indexPage() throws IOException {
 		Path indexPageFile = Path.of("web/index.html");
@@ -63,7 +62,7 @@ public class IndexResource {
 				.build();
 	}
 
-	@Nonnull
+	@NonNull
 	@SuppressRequestLogging // Custom annotation to ignore standard request logging to reduce log noise
 	@GET("/health-check")
 	public MarshaledResponse healthCheck() {
@@ -89,7 +88,7 @@ public class IndexResource {
 	}
 
 	@GET("/static/{staticFilePath*}")
-	public MarshaledResponse staticFile(@Nonnull @PathParameter String staticFilePath) throws IOException {
+	public MarshaledResponse staticFile(@NonNull @PathParameter String staticFilePath) throws IOException {
 		String contentType = "application/octet-stream";
 
 		if (staticFilePath.endsWith(".js"))
@@ -103,9 +102,9 @@ public class IndexResource {
 				.build();
 	}
 
-	@Nonnull
-	private byte[] safelyReadUserProvidedPath(@Nonnull String userProvidedPath,
-																						@Nonnull Path sandboxDirectory) throws IOException {
+	@NonNull
+	private byte[] safelyReadUserProvidedPath(@NonNull String userProvidedPath,
+																						@NonNull Path sandboxDirectory) throws IOException {
 		requireNonNull(userProvidedPath);
 		requireNonNull(sandboxDirectory);
 

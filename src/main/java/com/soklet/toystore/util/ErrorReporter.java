@@ -16,7 +16,7 @@
 
 package com.soklet.toystore.util;
 
-import javax.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Contract for reporting unexpected errors that bubble out of the system.

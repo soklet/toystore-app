@@ -23,9 +23,9 @@ import com.soklet.toystore.CurrentContext;
 import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.model.db.Role.RoleId;
 import com.soklet.toystore.util.Formatter;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -45,37 +45,37 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class AccountResponse {
-	@Nonnull
+	@NonNull
 	private final UUID accountId;
-	@Nonnull
+	@NonNull
 	private final RoleId roleId;
-	@Nonnull
+	@NonNull
 	private final String name;
 	@Nullable
 	private final String emailAddress;
-	@Nonnull
+	@NonNull
 	private final ZoneId timeZone;
-	@Nonnull
+	@NonNull
 	private final String timeZoneDescription;
-	@Nonnull
+	@NonNull
 	private final Locale locale;
-	@Nonnull
+	@NonNull
 	private final String localeDescription;
-	@Nonnull
+	@NonNull
 	private final Instant createdAt;
-	@Nonnull
+	@NonNull
 	private final String createdAtDescription;
 
 	@ThreadSafe
 	public interface AccountResponseFactory {
-		@Nonnull
-		AccountResponse create(@Nonnull Account account);
+		@NonNull
+		AccountResponse create(@NonNull Account account);
 	}
 
 	@AssistedInject
-	public AccountResponse(@Nonnull Provider<CurrentContext> currentContextProvider,
-												 @Nonnull Formatter formatter,
-												 @Assisted @Nonnull Account account) {
+	public AccountResponse(@NonNull Provider<CurrentContext> currentContextProvider,
+												 @NonNull Formatter formatter,
+												 @Assisted @NonNull Account account) {
 		requireNonNull(currentContextProvider);
 		requireNonNull(formatter);
 		requireNonNull(account);
@@ -100,52 +100,52 @@ public class AccountResponse {
 		this.createdAtDescription = dateTimeFormatter.format(account.createdAt());
 	}
 
-	@Nonnull
+	@NonNull
 	public UUID getAccountId() {
 		return this.accountId;
 	}
 
-	@Nonnull
+	@NonNull
 	public RoleId getRoleId() {
 		return this.roleId;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getName() {
 		return this.name;
 	}
 
-	@Nonnull
+	@NonNull
 	public Optional<String> getEmailAddress() {
 		return Optional.ofNullable(this.emailAddress);
 	}
 
-	@Nonnull
+	@NonNull
 	public ZoneId getTimeZone() {
 		return this.timeZone;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getTimeZoneDescription() {
 		return this.timeZoneDescription;
 	}
 
-	@Nonnull
+	@NonNull
 	public Locale getLocale() {
 		return this.locale;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getLocaleDescription() {
 		return this.localeDescription;
 	}
 
-	@Nonnull
+	@NonNull
 	public Instant getCreatedAt() {
 		return this.createdAt;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getCreatedAtDescription() {
 		return this.createdAtDescription;
 	}

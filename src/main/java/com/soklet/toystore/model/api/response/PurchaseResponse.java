@@ -22,8 +22,8 @@ import com.google.inject.assistedinject.AssistedInject;
 import com.soklet.toystore.CurrentContext;
 import com.soklet.toystore.model.db.Purchase;
 import com.soklet.toystore.util.Formatter;
+import org.jspecify.annotations.NonNull;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
@@ -43,39 +43,39 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class PurchaseResponse {
-	@Nonnull
+	@NonNull
 	private final UUID purchaseId;
-	@Nonnull
+	@NonNull
 	private final UUID accountId;
-	@Nonnull
+	@NonNull
 	private final UUID toyId;
-	@Nonnull
+	@NonNull
 	private final BigDecimal price;
-	@Nonnull
+	@NonNull
 	private final String priceDescription;
-	@Nonnull
+	@NonNull
 	private final String currencyCode;
-	@Nonnull
+	@NonNull
 	private final String currencySymbol;
-	@Nonnull
+	@NonNull
 	private final String currencyDescription;
-	@Nonnull
+	@NonNull
 	private final String creditCardTransactionId;
-	@Nonnull
+	@NonNull
 	private final Instant createdAt;
-	@Nonnull
+	@NonNull
 	private final String createdAtDescription;
 
 	@ThreadSafe
 	public interface PurchaseResponseFactory {
-		@Nonnull
-		PurchaseResponse create(@Nonnull Purchase purchase);
+		@NonNull
+		PurchaseResponse create(@NonNull Purchase purchase);
 	}
 
 	@AssistedInject
-	public PurchaseResponse(@Nonnull Provider<CurrentContext> currentContextProvider,
-													@Nonnull Formatter formatter,
-													@Assisted @Nonnull Purchase purchase) {
+	public PurchaseResponse(@NonNull Provider<CurrentContext> currentContextProvider,
+													@NonNull Formatter formatter,
+													@Assisted @NonNull Purchase purchase) {
 		requireNonNull(currentContextProvider);
 		requireNonNull(formatter);
 		requireNonNull(purchase);
@@ -103,64 +103,64 @@ public class PurchaseResponse {
 	}
 
 	public record PurchaseResponseHolder(
-			@Nonnull PurchaseResponse purchase
+			@NonNull PurchaseResponse purchase
 	) {
 		public PurchaseResponseHolder {
 			requireNonNull(purchase);
 		}
 	}
 
-	@Nonnull
+	@NonNull
 	public UUID getPurchaseId() {
 		return this.purchaseId;
 	}
 
-	@Nonnull
+	@NonNull
 	public UUID getAccountId() {
 		return this.accountId;
 	}
 
-	@Nonnull
+	@NonNull
 	public UUID getToyId() {
 		return this.toyId;
 	}
 
-	@Nonnull
+	@NonNull
 	public BigDecimal getPrice() {
 		return this.price;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getPriceDescription() {
 		return this.priceDescription;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getCurrencyCode() {
 		return this.currencyCode;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getCurrencySymbol() {
 		return this.currencySymbol;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getCurrencyDescription() {
 		return this.currencyDescription;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getCreditCardTransactionId() {
 		return this.creditCardTransactionId;
 	}
 
-	@Nonnull
+	@NonNull
 	public Instant getCreatedAt() {
 		return this.createdAt;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getCreatedAtDescription() {
 		return this.createdAtDescription;
 	}

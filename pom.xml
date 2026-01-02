@@ -124,12 +124,18 @@
             <version>2.0.17</version>
         </dependency>
 
-        <!-- Findbugs to mark @Nonnull, @Nullable, etc. -->
+        <!-- JSpecify for nullability annotations -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
+        <!-- Findbugs for thread-safety annotations -->
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
             <version>3.0.2</version>
-            <scope>compile</scope>
         </dependency>
 
         <!-- JUnit for testing -->

@@ -18,8 +18,8 @@ package com.soklet.toystore.util;
 
 import ch.qos.logback.classic.pattern.MessageConverter;
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import org.jspecify.annotations.NonNull;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.regex.Pattern;
 
@@ -39,7 +39,7 @@ import java.util.regex.Pattern;
  */
 @ThreadSafe
 public class LoggingRedactor extends MessageConverter {
-	@Nonnull
+	@NonNull
 	private static final Pattern JWT_PATTERN;
 
 	static {

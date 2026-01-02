@@ -43,9 +43,9 @@ import com.soklet.toystore.model.db.Purchase;
 import com.soklet.toystore.model.db.Role.RoleId;
 import com.soklet.toystore.model.db.Toy;
 import com.soklet.toystore.service.ToyService;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.List;
 import java.util.UUID;
@@ -60,20 +60,20 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class ToyResource {
-	@Nonnull
+	@NonNull
 	private final ToyService toyService;
-	@Nonnull
+	@NonNull
 	private final ToyResponseFactory toyResponseFactory;
-	@Nonnull
+	@NonNull
 	private final PurchaseResponseFactory purchaseResponseFactory;
-	@Nonnull
+	@NonNull
 	private final Provider<CurrentContext> currentContextProvider;
 
 	@Inject
-	public ToyResource(@Nonnull ToyService toyService,
-										 @Nonnull ToyResponseFactory toyResponseFactory,
-										 @Nonnull PurchaseResponseFactory purchaseResponseFactory,
-										 @Nonnull Provider<CurrentContext> currentContextProvider) {
+	public ToyResource(@NonNull ToyService toyService,
+										 @NonNull ToyResponseFactory toyResponseFactory,
+										 @NonNull PurchaseResponseFactory purchaseResponseFactory,
+										 @NonNull Provider<CurrentContext> currentContextProvider) {
 		requireNonNull(toyService);
 		requireNonNull(toyResponseFactory);
 		requireNonNull(purchaseResponseFactory);
@@ -85,7 +85,7 @@ public class ToyResource {
 		this.currentContextProvider = currentContextProvider;
 	}
 
-	@Nonnull
+	@NonNull
 	@GET("/toys")
 	public ToysResponseHolder findToys(@Nullable @QueryParameter(optional = true) String query) {
 		List<Toy> toys = query == null ? getToyService().findToys() : getToyService().searchToys(query);
@@ -95,10 +95,10 @@ public class ToyResource {
 				.collect(Collectors.toList()));
 	}
 
-	@Nonnull
+	@NonNull
 	@AuthorizationRequired({RoleId.EMPLOYEE, RoleId.ADMINISTRATOR})
 	@POST("/toys")
-	public ToyResponseHolder createToy(@Nonnull @RequestBody ToyCreateRequest request) {
+	public ToyResponseHolder createToy(@NonNull @RequestBody ToyCreateRequest request) {
 		requireNonNull(request);
 
 		UUID toyId = getToyService().createToy(request);
@@ -107,11 +107,11 @@ public class ToyResource {
 		return new ToyResponseHolder(getToyResponseFactory().create(toy));
 	}
 
-	@Nonnull
+	@NonNull
 	@AuthorizationRequired({RoleId.EMPLOYEE, RoleId.ADMINISTRATOR})
 	@PUT("/toys/{toyId}")
-	public ToyResponseHolder updateToy(@Nonnull @PathParameter UUID toyId,
-																		 @Nonnull @RequestBody ToyUpdateRequest request) {
+	public ToyResponseHolder updateToy(@NonNull @PathParameter UUID toyId,
+																		 @NonNull @RequestBody ToyUpdateRequest request) {
 		requireNonNull(toyId);
 		requireNonNull(request);
 
@@ -131,7 +131,7 @@ public class ToyResource {
 
 	@AuthorizationRequired(RoleId.ADMINISTRATOR)
 	@DELETE("/toys/{toyId}")
-	public void deleteToy(@Nonnull @PathParameter UUID toyId) {
+	public void deleteToy(@NonNull @PathParameter UUID toyId) {
 		requireNonNull(toyId);
 
 		Toy toy = getToyService().findToyById(toyId).orElse(null);
@@ -142,11 +142,11 @@ public class ToyResource {
 		getToyService().deleteToy(toyId);
 	}
 
-	@Nonnull
+	@NonNull
 	@AuthorizationRequired
 	@POST("/toys/{toyId}/purchase")
-	public PurchaseResponseHolder purchaseToy(@Nonnull @PathParameter UUID toyId,
-																						@Nonnull @RequestBody ToyPurchaseRequest request) {
+	public PurchaseResponseHolder purchaseToy(@NonNull @PathParameter UUID toyId,
+																						@NonNull @RequestBody ToyPurchaseRequest request) {
 		requireNonNull(toyId);
 		requireNonNull(request);
 
@@ -165,7 +165,7 @@ public class ToyResource {
 		return new PurchaseResponseHolder(getPurchaseResponseFactory().create(purchase));
 	}
 
-	@Nonnull
+	@NonNull
 	@AuthorizationRequired({RoleId.EMPLOYEE, RoleId.ADMINISTRATOR})
 	@ServerSentEventSource("/toys/event-source")
 	public HandshakeResult toysEventSource() {
@@ -175,22 +175,22 @@ public class ToyResource {
 				.build();
 	}
 
-	@Nonnull
+	@NonNull
 	private ToyService getToyService() {
 		return this.toyService;
 	}
 
-	@Nonnull
+	@NonNull
 	private ToyResponseFactory getToyResponseFactory() {
 		return this.toyResponseFactory;
 	}
 
-	@Nonnull
+	@NonNull
 	private PurchaseResponseFactory getPurchaseResponseFactory() {
 		return this.purchaseResponseFactory;
 	}
 
-	@Nonnull
+	@NonNull
 	private CurrentContext getCurrentContext() {
 		return this.currentContextProvider.get();
 	}

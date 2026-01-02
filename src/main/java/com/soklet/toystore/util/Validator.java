@@ -16,8 +16,9 @@
 
 package com.soklet.toystore.util;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.regex.Pattern;
 
@@ -42,7 +43,7 @@ public final class Validator {
 		EMAIL_ADDRESS_DOMAIN_LABEL_PATTERN = Pattern.compile("^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$");
 	}
 
-	@Nonnull
+	@NonNull
 	public static Boolean isValidEmailAddress(@Nullable String emailAddress) {
 		if (emailAddress == null)
 			return false;
@@ -87,7 +88,7 @@ public final class Validator {
 		return true;
 	}
 
-	@Nonnull
+	@NonNull
 	public static Boolean isValidCreditCardNumber(@Nullable String creditCardNumber) {
 		if (creditCardNumber == null)
 			return false;

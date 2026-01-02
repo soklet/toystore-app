@@ -26,11 +26,11 @@ import com.soklet.Soklet;
 import com.soklet.SokletConfig;
 import com.soklet.toystore.model.db.Role.RoleId;
 import com.soklet.toystore.util.PasswordManager;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.time.ZoneId;
 import java.util.List;
@@ -58,14 +58,14 @@ public class App {
 		app.startServer();
 	}
 
-	@Nonnull
+	@NonNull
 	private final Configuration configuration;
-	@Nonnull
+	@NonNull
 	private final Injector injector;
-	@Nonnull
+	@NonNull
 	private final Logger logger;
 
-	public App(@Nonnull Configuration configuration,
+	public App(@NonNull Configuration configuration,
 						 @Nullable Module... testingModules) {
 		requireNonNull(configuration);
 
@@ -230,17 +230,17 @@ public class App {
 				""").execute();
 	}
 
-	@Nonnull
+	@NonNull
 	public Configuration getConfiguration() {
 		return this.configuration;
 	}
 
-	@Nonnull
+	@NonNull
 	public Injector getInjector() {
 		return this.injector;
 	}
 
-	@Nonnull
+	@NonNull
 	private Logger getLogger() {
 		return this.logger;
 	}

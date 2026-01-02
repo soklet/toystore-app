@@ -19,9 +19,9 @@ package com.soklet.toystore.util;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.inject.Singleton;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.RoundingMode;
 import java.text.Collator;
@@ -42,22 +42,22 @@ import static java.util.Objects.requireNonNull;
 @Singleton
 @ThreadSafe
 public class Formatter {
-	@Nonnull
+	@NonNull
 	private static final Cache<DateTimeFormatterConfig, DateTimeFormatter> DATE_TIME_FORMATTERS_BY_CONFIG;
-	@Nonnull
+	@NonNull
 	private static final Cache<IntegerFormatterConfig, NumberFormat> INTEGER_FORMATTERS_BY_CONFIG;
-	@Nonnull
+	@NonNull
 	private static final Cache<NumberFormatterConfig, NumberFormat> NUMBER_FORMATTERS_BY_CONFIG;
-	@Nonnull
+	@NonNull
 	private static final Cache<CurrencyFormatterConfig, NumberFormat> CURRENCY_FORMATTERS_BY_CONFIG;
-	@Nonnull
+	@NonNull
 	private static final Cache<NumberFormatterConfig, NumberFormat> PERCENT_FORMATTERS_BY_CONFIG;
-	@Nonnull
+	@NonNull
 	private static final Cache<Locale, Collator> COLLATORS_BY_LOCALE;
 
 	public record DateTimeFormatterConfig(
-			@Nonnull Locale locale,
-			@Nonnull ZoneId timeZone,
+			@NonNull Locale locale,
+			@NonNull ZoneId timeZone,
 			@Nullable FormatStyle dateFormatStyle,
 			@Nullable FormatStyle timeFormatStyle
 	) {
@@ -66,9 +66,9 @@ public class Formatter {
 			requireNonNull(timeZone);
 		}
 
-		@Nonnull
-		public static DateTimeFormatterConfig forLocaleAndTimeZone(@Nonnull Locale locale,
-																															 @Nonnull ZoneId timeZone) {
+		@NonNull
+		public static DateTimeFormatterConfig forLocaleAndTimeZone(@NonNull Locale locale,
+																															 @NonNull ZoneId timeZone) {
 			requireNonNull(locale);
 			requireNonNull(timeZone);
 
@@ -77,7 +77,7 @@ public class Formatter {
 	}
 
 	public record IntegerFormatterConfig(
-			@Nonnull Locale locale,
+			@NonNull Locale locale,
 			@Nullable Integer minimumIntegerDigits,
 			@Nullable Integer maximumIntegerDigits,
 			@Nullable Boolean groupingUsed
@@ -86,15 +86,15 @@ public class Formatter {
 			requireNonNull(locale);
 		}
 
-		@Nonnull
-		public static IntegerFormatterConfig forLocale(@Nonnull Locale locale) {
+		@NonNull
+		public static IntegerFormatterConfig forLocale(@NonNull Locale locale) {
 			requireNonNull(locale);
 			return new IntegerFormatterConfig(locale, null, null, null);
 		}
 	}
 
 	public record NumberFormatterConfig(
-			@Nonnull Locale locale,
+			@NonNull Locale locale,
 			@Nullable Integer minimumIntegerDigits,
 			@Nullable Integer maximumIntegerDigits,
 			@Nullable Integer minimumFractionDigits,
@@ -106,16 +106,16 @@ public class Formatter {
 			requireNonNull(locale);
 		}
 
-		@Nonnull
-		public static NumberFormatterConfig forLocale(@Nonnull Locale locale) {
+		@NonNull
+		public static NumberFormatterConfig forLocale(@NonNull Locale locale) {
 			requireNonNull(locale);
 			return new NumberFormatterConfig(locale, null, null, null, null, null, null);
 		}
 	}
 
 	public record CurrencyFormatterConfig(
-			@Nonnull Locale locale,
-			@Nonnull Currency currency,
+			@NonNull Locale locale,
+			@NonNull Currency currency,
 			@Nullable Integer minimumIntegerDigits,
 			@Nullable Integer maximumIntegerDigits,
 			@Nullable Integer minimumFractionDigits,
@@ -128,9 +128,9 @@ public class Formatter {
 			requireNonNull(currency);
 		}
 
-		@Nonnull
-		public static CurrencyFormatterConfig forLocaleAndCurrency(@Nonnull Locale locale,
-																															 @Nonnull Currency currency) {
+		@NonNull
+		public static CurrencyFormatterConfig forLocaleAndCurrency(@NonNull Locale locale,
+																															 @NonNull Currency currency) {
 			requireNonNull(locale);
 			requireNonNull(currency);
 
@@ -165,17 +165,17 @@ public class Formatter {
 				.build();
 	}
 
-	@Nonnull
-	public DateTimeFormatter dateTimeFormatter(@Nonnull Locale locale,
-																						 @Nonnull ZoneId timeZone) {
+	@NonNull
+	public DateTimeFormatter dateTimeFormatter(@NonNull Locale locale,
+																						 @NonNull ZoneId timeZone) {
 		requireNonNull(locale);
 		requireNonNull(timeZone);
 
 		return dateTimeFormatter(DateTimeFormatterConfig.forLocaleAndTimeZone(locale, timeZone));
 	}
 
-	@Nonnull
-	public DateTimeFormatter dateTimeFormatter(@Nonnull DateTimeFormatterConfig dateTimeFormatterConfig) {
+	@NonNull
+	public DateTimeFormatter dateTimeFormatter(@NonNull DateTimeFormatterConfig dateTimeFormatterConfig) {
 		requireNonNull(dateTimeFormatterConfig);
 
 		return DATE_TIME_FORMATTERS_BY_CONFIG.get(dateTimeFormatterConfig, dtfc -> {
@@ -192,8 +192,8 @@ public class Formatter {
 	/**
 	 * Careful: {@link NumberFormat} is not threadsafe.
 	 */
-	@Nonnull
-	public NumberFormat integerFormatter(@Nonnull Locale locale) {
+	@NonNull
+	public NumberFormat integerFormatter(@NonNull Locale locale) {
 		requireNonNull(locale);
 		return integerFormatter(IntegerFormatterConfig.forLocale(locale));
 	}
@@ -201,8 +201,8 @@ public class Formatter {
 	/**
 	 * Careful: {@link NumberFormat} is not threadsafe.
 	 */
-	@Nonnull
-	public NumberFormat integerFormatter(@Nonnull IntegerFormatterConfig integerFormatterConfig) {
+	@NonNull
+	public NumberFormat integerFormatter(@NonNull IntegerFormatterConfig integerFormatterConfig) {
 		requireNonNull(integerFormatterConfig);
 
 		// Cloning a cached instance is much faster than creating a new instance.
@@ -224,8 +224,8 @@ public class Formatter {
 	/**
 	 * Careful: {@link NumberFormat} is not threadsafe.
 	 */
-	@Nonnull
-	public NumberFormat numberFormatter(@Nonnull Locale locale) {
+	@NonNull
+	public NumberFormat numberFormatter(@NonNull Locale locale) {
 		requireNonNull(locale);
 		return numberFormatter(NumberFormatterConfig.forLocale(locale));
 	}
@@ -233,8 +233,8 @@ public class Formatter {
 	/**
 	 * Careful: {@link NumberFormat} is not threadsafe.
 	 */
-	@Nonnull
-	public NumberFormat numberFormatter(@Nonnull NumberFormatterConfig numberFormatterConfig) {
+	@NonNull
+	public NumberFormat numberFormatter(@NonNull NumberFormatterConfig numberFormatterConfig) {
 		requireNonNull(numberFormatterConfig);
 
 		// Cloning a cached instance is much faster than creating a new instance.
@@ -262,9 +262,9 @@ public class Formatter {
 	/**
 	 * Careful: {@link NumberFormat} is not threadsafe.
 	 */
-	@Nonnull
-	public NumberFormat currencyFormatter(@Nonnull Locale locale,
-																				@Nonnull Currency currency) {
+	@NonNull
+	public NumberFormat currencyFormatter(@NonNull Locale locale,
+																				@NonNull Currency currency) {
 		requireNonNull(locale);
 		requireNonNull(currency);
 
@@ -274,8 +274,8 @@ public class Formatter {
 	/**
 	 * Careful: {@link NumberFormat} is not threadsafe.
 	 */
-	@Nonnull
-	public NumberFormat currencyFormatter(@Nonnull CurrencyFormatterConfig currencyFormatterConfig) {
+	@NonNull
+	public NumberFormat currencyFormatter(@NonNull CurrencyFormatterConfig currencyFormatterConfig) {
 		requireNonNull(currencyFormatterConfig);
 
 		// Cloning a cached instance is much faster than creating a new instance.
@@ -304,8 +304,8 @@ public class Formatter {
 	/**
 	 * Careful: {@link NumberFormat} is not threadsafe.
 	 */
-	@Nonnull
-	public NumberFormat percentFormatter(@Nonnull Locale locale) {
+	@NonNull
+	public NumberFormat percentFormatter(@NonNull Locale locale) {
 		requireNonNull(locale);
 		return percentFormatter(NumberFormatterConfig.forLocale(locale));
 	}
@@ -313,8 +313,8 @@ public class Formatter {
 	/**
 	 * Careful: {@link NumberFormat} is not threadsafe.
 	 */
-	@Nonnull
-	public NumberFormat percentFormatter(@Nonnull NumberFormatterConfig numberFormatterConfig) {
+	@NonNull
+	public NumberFormat percentFormatter(@NonNull NumberFormatterConfig numberFormatterConfig) {
 		requireNonNull(numberFormatterConfig);
 
 		// Cloning a cached instance is much faster than creating a new instance.
@@ -342,8 +342,8 @@ public class Formatter {
 	/**
 	 * Careful: {@link Collator} is not threadsafe.
 	 */
-	@Nonnull
-	public Collator collator(@Nonnull Locale locale) {
+	@NonNull
+	public Collator collator(@NonNull Locale locale) {
 		requireNonNull(locale);
 
 		// Cloning a cached instance is much faster than creating a new instance.

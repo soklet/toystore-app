@@ -16,8 +16,9 @@
 
 package com.soklet.toystore.util;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.Locale;
 import java.util.Optional;
@@ -30,9 +31,9 @@ import java.util.regex.Pattern;
  */
 @ThreadSafe
 public final class Normalizer {
-	@Nonnull
+	@NonNull
 	private static final Pattern HEAD_WHITESPACE_PATTERN;
-	@Nonnull
+	@NonNull
 	private static final Pattern TAIL_WHITESPACE_PATTERN;
 
 	static {
@@ -40,7 +41,7 @@ public final class Normalizer {
 		TAIL_WHITESPACE_PATTERN = Pattern.compile("(\\p{Z})+$");
 	}
 
-	@Nonnull
+	@NonNull
 	public static Optional<String> normalizeEmailAddress(@Nullable String emailAddress) {
 		emailAddress = trimAggressivelyToNull(emailAddress);
 
@@ -53,7 +54,7 @@ public final class Normalizer {
 	/**
 	 * A "stronger" version of {@link String#trim()} which discards any kind of whitespace or invisible separator.
 	 */
-	@Nonnull
+	@NonNull
 	public static Optional<String> trimAggressively(@Nullable String string) {
 		if (string == null)
 			return Optional.empty();

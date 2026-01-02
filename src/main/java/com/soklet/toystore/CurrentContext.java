@@ -19,10 +19,10 @@ package com.soklet.toystore;
 import com.soklet.Request;
 import com.soklet.ResourceMethod;
 import com.soklet.toystore.model.db.Account;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.annotation.concurrent.ThreadSafe;
 import java.time.ZoneId;
@@ -41,14 +41,14 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public final class CurrentContext {
-	@Nonnull
+	@NonNull
 	private static final ScopedValue<CurrentContext> CURRENT_CONTEXT_SCOPED_VALUE;
 
 	static {
 		CURRENT_CONTEXT_SCOPED_VALUE = ScopedValue.newInstance();
 	}
 
-	@Nonnull
+	@NonNull
 	public static CurrentContext get() {
 		if (!CURRENT_CONTEXT_SCOPED_VALUE.isBound())
 			throw new IllegalStateException(format("No %s is bound to the current scope", CurrentContext.class.getSimpleName()));
@@ -71,67 +71,67 @@ public final class CurrentContext {
 
 		private Builder() {}
 
-		@Nonnull
+		@NonNull
 		public Builder locale(@Nullable Locale locale) {
 			this.locale = locale;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public Builder timeZone(@Nullable ZoneId timeZone) {
 			this.timeZone = timeZone;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public Builder request(@Nullable Request request) {
 			this.request = request;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public Builder resourceMethod(@Nullable ResourceMethod resourceMethod) {
 			this.resourceMethod = resourceMethod;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public Builder account(@Nullable Account account) {
 			this.account = account;
 			return this;
 		}
 
-		@Nonnull
+		@NonNull
 		public CurrentContext build() {
 			return new CurrentContext(this);
 		}
 	}
 
-	@Nonnull
+	@NonNull
 	public static Builder with(@Nullable Locale locale,
 														 @Nullable ZoneId timeZone) {
 		return new Builder().locale(locale).timeZone(timeZone);
 	}
 
-	@Nonnull
+	@NonNull
 	public static Builder withRequest(@Nullable Request request) {
 		return withRequest(request, null);
 	}
 
-	@Nonnull
+	@NonNull
 	public static Builder withRequest(@Nullable Request request,
 																		@Nullable ResourceMethod resourceMethod) {
 		return new Builder().request(request).resourceMethod(resourceMethod);
 	}
 
-	@Nonnull
+	@NonNull
 	public static Builder withAccount(@Nullable Account account) {
 		return new Builder().account(account);
 	}
 
-	@Nonnull
+	@NonNull
 	private final Locale locale;
-	@Nonnull
+	@NonNull
 	private final ZoneId timeZone;
 	@Nullable
 	private final Request request;
@@ -140,7 +140,7 @@ public final class CurrentContext {
 	@Nullable
 	private final Account account;
 
-	private CurrentContext(@Nonnull Builder builder) {
+	private CurrentContext(@NonNull Builder builder) {
 		requireNonNull(builder);
 
 		this.timeZone = builder.timeZone == null ? Configuration.getDefaultTimeZone() : builder.timeZone;
@@ -150,7 +150,7 @@ public final class CurrentContext {
 		this.account = builder.account;
 	}
 
-	public void run(@Nonnull Runnable runnable) {
+	public void run(@NonNull Runnable runnable) {
 		requireNonNull(runnable);
 		run(() -> {
 			runnable.run();
@@ -159,7 +159,7 @@ public final class CurrentContext {
 	}
 
 	@Nullable
-	public <T> T run(@Nonnull Supplier<T> supplier) {
+	public <T> T run(@NonNull Supplier<T> supplier) {
 		requireNonNull(supplier);
 
 		// Capture the previous MDC value to restore it later
@@ -196,32 +196,32 @@ public final class CurrentContext {
 		return joiner.toString();
 	}
 
-	@Nonnull
+	@NonNull
 	public Optional<Request> getRequest() {
 		return Optional.ofNullable(this.request);
 	}
 
-	@Nonnull
+	@NonNull
 	public Optional<ResourceMethod> getResourceMethod() {
 		return Optional.ofNullable(this.resourceMethod);
 	}
 
-	@Nonnull
+	@NonNull
 	public Optional<Account> getAccount() {
 		return Optional.ofNullable(this.account);
 	}
 
-	@Nonnull
+	@NonNull
 	public ZoneId getTimeZone() {
 		return this.timeZone;
 	}
 
-	@Nonnull
+	@NonNull
 	public Locale getLocale() {
 		return this.locale;
 	}
 
-	@Nonnull
+	@NonNull
 	private String determineLoggingDescription() {
 		Request request = this.getRequest().orElse(null);
 		Account account = this.getAccount().orElse(null);

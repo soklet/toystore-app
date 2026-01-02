@@ -17,8 +17,8 @@
 package com.soklet.toystore.model.db;
 
 import com.pyranid.DatabaseColumn;
+import org.jspecify.annotations.NonNull;
 
-import javax.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Currency;
@@ -32,13 +32,13 @@ import static java.util.Objects.requireNonNull;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 public record Purchase(
-		@Nonnull UUID purchaseId,
-		@Nonnull UUID accountId,
-		@Nonnull UUID toyId,
-		@Nonnull BigDecimal price,
-		@Nonnull Currency currency,
-		@Nonnull @DatabaseColumn("credit_card_txn_id") String creditCardTransactionId,
-		@Nonnull Instant createdAt
+		@NonNull UUID purchaseId,
+		@NonNull UUID accountId,
+		@NonNull UUID toyId,
+		@NonNull BigDecimal price,
+		@NonNull Currency currency,
+		@NonNull @DatabaseColumn("credit_card_txn_id") String creditCardTransactionId,
+		@NonNull Instant createdAt
 ) {
 	public Purchase {
 		requireNonNull(purchaseId);

@@ -17,8 +17,7 @@
 package com.soklet.toystore.model.api.request;
 
 import com.soklet.toystore.annotation.SensitiveValue;
-
-import javax.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>

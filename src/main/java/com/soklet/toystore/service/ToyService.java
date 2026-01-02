@@ -40,11 +40,11 @@ import com.soklet.toystore.model.db.Purchase;
 import com.soklet.toystore.model.db.Toy;
 import com.soklet.toystore.util.CreditCardProcessor;
 import com.soklet.toystore.util.CreditCardProcessor.CreditCardPaymentException;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
@@ -69,34 +69,34 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class ToyService {
-	@Nonnull
+	@NonNull
 	private final Provider<CurrentContext> currentContextProvider;
-	@Nonnull
+	@NonNull
 	private final ServerSentEventServer serverSentEventServer;
-	@Nonnull
+	@NonNull
 	private final CreditCardProcessor creditCardProcessor;
-	@Nonnull
+	@NonNull
 	private final ToyResponseFactory toyResponseFactory;
-	@Nonnull
+	@NonNull
 	private final PurchaseResponseFactory purchaseResponseFactory;
-	@Nonnull
+	@NonNull
 	private final Gson gson;
-	@Nonnull
+	@NonNull
 	private final Database database;
-	@Nonnull
+	@NonNull
 	private final Strings strings;
-	@Nonnull
+	@NonNull
 	private final Logger logger;
 
 	@Inject
-	public ToyService(@Nonnull Provider<CurrentContext> currentContextProvider,
-										@Nonnull ServerSentEventServer serverSentEventServer,
-										@Nonnull CreditCardProcessor creditCardProcessor,
-										@Nonnull ToyResponseFactory toyResponseFactory,
-										@Nonnull PurchaseResponseFactory purchaseResponseFactory,
-										@Nonnull Gson gson,
-										@Nonnull Database database,
-										@Nonnull Strings strings) {
+	public ToyService(@NonNull Provider<CurrentContext> currentContextProvider,
+										@NonNull ServerSentEventServer serverSentEventServer,
+										@NonNull CreditCardProcessor creditCardProcessor,
+										@NonNull ToyResponseFactory toyResponseFactory,
+										@NonNull PurchaseResponseFactory purchaseResponseFactory,
+										@NonNull Gson gson,
+										@NonNull Database database,
+										@NonNull Strings strings) {
 		requireNonNull(currentContextProvider);
 		requireNonNull(serverSentEventServer);
 		requireNonNull(creditCardProcessor);
@@ -117,7 +117,7 @@ public class ToyService {
 		this.logger = LoggerFactory.getLogger(getClass());
 	}
 
-	@Nonnull
+	@NonNull
 	public List<Toy> findToys() {
 		return getDatabase().query("""
 						  SELECT *
@@ -127,7 +127,7 @@ public class ToyService {
 				.fetchList(Toy.class);
 	}
 
-	@Nonnull
+	@NonNull
 	public List<Toy> searchToys(@Nullable String query) {
 		query = trimAggressivelyToNull(query);
 
@@ -146,7 +146,7 @@ public class ToyService {
 				.fetchList(Toy.class);
 	}
 
-	@Nonnull
+	@NonNull
 	public Optional<Toy> findToyById(@Nullable UUID toyId) {
 		if (toyId == null)
 			return Optional.empty();
@@ -160,8 +160,8 @@ public class ToyService {
 				.fetchObject(Toy.class);
 	}
 
-	@Nonnull
-	public UUID createToy(@Nonnull ToyCreateRequest request) {
+	@NonNull
+	public UUID createToy(@NonNull ToyCreateRequest request) {
 		requireNonNull(request);
 
 		UUID toyId = UUID.randomUUID();
@@ -204,7 +204,7 @@ public class ToyService {
 
 			Toy toyToBroadcast = findToyById(toyId).get();
 
-			broadcastServerSentEvent((@Nonnull BroadcastKey broadcastKey) -> {
+			broadcastServerSentEvent((@NonNull BroadcastKey broadcastKey) -> {
 				CurrentContext clientCurrentContext = CurrentContext.with(broadcastKey.locale(), broadcastKey.timeZone()).build();
 
 				return clientCurrentContext.run(() ->
@@ -231,8 +231,8 @@ public class ToyService {
 		return toyId;
 	}
 
-	@Nonnull
-	public Boolean updateToy(@Nonnull ToyUpdateRequest request) {
+	@NonNull
+	public Boolean updateToy(@NonNull ToyUpdateRequest request) {
 		requireNonNull(request);
 
 		UUID toyId = request.toyId();
@@ -256,7 +256,7 @@ public class ToyService {
 		if (updated) {
 			Toy toyToBroadcast = findToyById(toyId).get();
 
-			broadcastServerSentEvent((@Nonnull BroadcastKey broadcastKey) -> {
+			broadcastServerSentEvent((@NonNull BroadcastKey broadcastKey) -> {
 				CurrentContext clientCurrentContext = CurrentContext.with(broadcastKey.locale(), broadcastKey.timeZone()).build();
 
 				return clientCurrentContext.run(() ->
@@ -270,8 +270,8 @@ public class ToyService {
 		return updated;
 	}
 
-	@Nonnull
-	public Boolean deleteToy(@Nonnull UUID toyId) {
+	@NonNull
+	public Boolean deleteToy(@NonNull UUID toyId) {
 		requireNonNull(toyId);
 
 		Toy toy = findToyById(toyId).orElse(null);
@@ -284,7 +284,7 @@ public class ToyService {
 				.execute() > 0;
 
 		if (deleted) {
-			broadcastServerSentEvent((@Nonnull BroadcastKey broadcastKey) -> {
+			broadcastServerSentEvent((@NonNull BroadcastKey broadcastKey) -> {
 				CurrentContext clientCurrentContext = CurrentContext.with(broadcastKey.locale(), broadcastKey.timeZone()).build();
 
 				return clientCurrentContext.run(() ->
@@ -298,8 +298,8 @@ public class ToyService {
 		return deleted;
 	}
 
-	@Nonnull
-	public UUID purchaseToy(@Nonnull ToyPurchaseRequest request) {
+	@NonNull
+	public UUID purchaseToy(@NonNull ToyPurchaseRequest request) {
 		requireNonNull(request);
 
 		UUID accountId = request.accountId();
@@ -363,7 +363,7 @@ public class ToyService {
 
 		Purchase purchaseToBroadcast = findPurchaseById(purchaseId).get();
 
-		broadcastServerSentEvent((@Nonnull BroadcastKey broadcastKey) -> {
+		broadcastServerSentEvent((@NonNull BroadcastKey broadcastKey) -> {
 			CurrentContext clientCurrentContext = CurrentContext.with(broadcastKey.locale(), broadcastKey.timeZone()).build();
 
 			return clientCurrentContext.run(() ->
@@ -379,7 +379,7 @@ public class ToyService {
 		return purchaseId;
 	}
 
-	@Nonnull
+	@NonNull
 	public Optional<Purchase> findPurchaseById(@Nullable UUID purchaseId) {
 		if (purchaseId == null)
 			return Optional.empty();
@@ -393,7 +393,7 @@ public class ToyService {
 				.fetchObject(Purchase.class);
 	}
 
-	private void broadcastServerSentEvent(@Nonnull Function<BroadcastKey, ServerSentEvent> serverSentEventProvider) {
+	private void broadcastServerSentEvent(@NonNull Function<BroadcastKey, ServerSentEvent> serverSentEventProvider) {
 		requireNonNull(serverSentEventProvider);
 
 		// Once this transaction successfully commits, fire off a Server-Sent Event to inform listeners.
@@ -418,7 +418,7 @@ public class ToyService {
 				};
 
 				// Then, define how we convert that BroadcastKey into a Server-Sent Event
-				Function<BroadcastKey, ServerSentEvent> serverSentEventGenerator = (@Nonnull BroadcastKey broadcastKey) -> {
+				Function<BroadcastKey, ServerSentEvent> serverSentEventGenerator = (@NonNull BroadcastKey broadcastKey) -> {
 					ServerSentEvent serverSentEvent = serverSentEventProvider.apply(broadcastKey);
 					getLogger().debug("Performing SSE Broadcast on {} with {}...", resourcePath.getPath(), serverSentEvent);
 					return serverSentEvent;
@@ -434,8 +434,8 @@ public class ToyService {
 	// If there are 1000 SSE connections and 999 are `en-US` in `America/New_York`, then there are only 2 keys
 	// (meaning we only need to compute 2 payloads, not 1000).
 	private record BroadcastKey(
-			@Nonnull Locale locale,
-			@Nonnull ZoneId timeZone
+			@NonNull Locale locale,
+			@NonNull ZoneId timeZone
 	) {
 		public BroadcastKey {
 			requireNonNull(locale);
@@ -443,9 +443,9 @@ public class ToyService {
 		}
 	}
 
-	@Nonnull
-	private String formatPriceForDisplay(@Nonnull BigDecimal price,
-																			 @Nonnull Currency currency) {
+	@NonNull
+	private String formatPriceForDisplay(@NonNull BigDecimal price,
+																			 @NonNull Currency currency) {
 		requireNonNull(price);
 		requireNonNull(currency);
 
@@ -454,47 +454,47 @@ public class ToyService {
 		return currencyFormatter.format(price);
 	}
 
-	@Nonnull
+	@NonNull
 	private CurrentContext getCurrentContext() {
 		return this.currentContextProvider.get();
 	}
 
-	@Nonnull
+	@NonNull
 	private ServerSentEventServer getServerSentEventServer() {
 		return this.serverSentEventServer;
 	}
 
-	@Nonnull
+	@NonNull
 	private CreditCardProcessor getCreditCardProcessor() {
 		return this.creditCardProcessor;
 	}
 
-	@Nonnull
+	@NonNull
 	private ToyResponseFactory getToyResponseFactory() {
 		return this.toyResponseFactory;
 	}
 
-	@Nonnull
+	@NonNull
 	private PurchaseResponseFactory getPurchaseResponseFactory() {
 		return this.purchaseResponseFactory;
 	}
 
-	@Nonnull
+	@NonNull
 	private Gson getGson() {
 		return this.gson;
 	}
 
-	@Nonnull
+	@NonNull
 	private Database getDatabase() {
 		return this.database;
 	}
 
-	@Nonnull
+	@NonNull
 	private Strings getStrings() {
 		return this.strings;
 	}
 
-	@Nonnull
+	@NonNull
 	private Logger getLogger() {
 		return this.logger;
 	}

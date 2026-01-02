@@ -31,8 +31,8 @@ import com.soklet.toystore.model.auth.AccessToken.Audience;
 import com.soklet.toystore.model.auth.AccessToken.Scope;
 import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.service.AccountService;
+import org.jspecify.annotations.NonNull;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.time.Instant;
 import java.util.Set;
@@ -46,20 +46,20 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class AccountResource {
-	@Nonnull
+	@NonNull
 	private final AccountService accountService;
-	@Nonnull
+	@NonNull
 	private final AccountResponseFactory accountResponseFactory;
-	@Nonnull
+	@NonNull
 	private final Configuration configuration;
-	@Nonnull
+	@NonNull
 	private final Provider<CurrentContext> currentContextProvider;
 
 	@Inject
-	public AccountResource(@Nonnull AccountService accountService,
-												 @Nonnull AccountResponseFactory accountResponseFactory,
-												 @Nonnull Configuration configuration,
-												 @Nonnull Provider<CurrentContext> currentContextProvider) {
+	public AccountResource(@NonNull AccountService accountService,
+												 @NonNull AccountResponseFactory accountResponseFactory,
+												 @NonNull Configuration configuration,
+												 @NonNull Provider<CurrentContext> currentContextProvider) {
 		requireNonNull(accountService);
 		requireNonNull(accountResponseFactory);
 		requireNonNull(configuration);
@@ -71,9 +71,9 @@ public class AccountResource {
 		this.currentContextProvider = currentContextProvider;
 	}
 
-	@Nonnull
+	@NonNull
 	@POST("/accounts/authenticate")
-	public AccountAuthenticateReponseHolder authenticate(@Nonnull @RequestBody AccountAuthenticateRequest request) {
+	public AccountAuthenticateReponseHolder authenticate(@NonNull @RequestBody AccountAuthenticateRequest request) {
 		requireNonNull(request);
 
 		// Authenticate the email/password, and pull the account information from the JWT assertion
@@ -85,8 +85,8 @@ public class AccountResource {
 	}
 
 	public record AccountAuthenticateReponseHolder(
-			@Nonnull AccessToken authenticationToken,
-			@Nonnull AccountResponse account
+			@NonNull AccessToken authenticationToken,
+			@NonNull AccountResponse account
 	) {
 		public AccountAuthenticateReponseHolder {
 			requireNonNull(authenticationToken);
@@ -94,7 +94,7 @@ public class AccountResource {
 		}
 	}
 
-	@Nonnull
+	@NonNull
 	@AuthorizationRequired
 	@POST("/accounts/sse-access-token")
 	public SseAccessTokenResponseHolder acquireSseAccessToken() {
@@ -115,29 +115,29 @@ public class AccountResource {
 	}
 
 	public record SseAccessTokenResponseHolder(
-			@Nonnull AccessToken accessToken
+			@NonNull AccessToken accessToken
 	) {
 		public SseAccessTokenResponseHolder {
 			requireNonNull(accessToken);
 		}
 	}
 
-	@Nonnull
+	@NonNull
 	private AccountService getAccountService() {
 		return this.accountService;
 	}
 
-	@Nonnull
+	@NonNull
 	private AccountResponseFactory getAccountResponseFactory() {
 		return this.accountResponseFactory;
 	}
 
-	@Nonnull
+	@NonNull
 	private Configuration getConfiguration() {
 		return this.configuration;
 	}
 
-	@Nonnull
+	@NonNull
 	private CurrentContext getCurrentContext() {
 		return this.currentContextProvider.get();
 	}

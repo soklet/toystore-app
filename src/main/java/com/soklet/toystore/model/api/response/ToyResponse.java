@@ -23,8 +23,8 @@ import com.soklet.toystore.CurrentContext;
 import com.soklet.toystore.model.db.Toy;
 import com.soklet.toystore.util.Formatter;
 import com.soklet.toystore.util.Formatter.DateTimeFormatterConfig;
+import org.jspecify.annotations.NonNull;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
@@ -45,35 +45,35 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class ToyResponse {
-	@Nonnull
+	@NonNull
 	private final UUID toyId;
-	@Nonnull
+	@NonNull
 	private final String name;
-	@Nonnull
+	@NonNull
 	private final BigDecimal price;
-	@Nonnull
+	@NonNull
 	private final String priceDescription;
-	@Nonnull
+	@NonNull
 	private final String currencyCode;
-	@Nonnull
+	@NonNull
 	private final String currencySymbol;
-	@Nonnull
+	@NonNull
 	private final String currencyDescription;
-	@Nonnull
+	@NonNull
 	private final Instant createdAt;
-	@Nonnull
+	@NonNull
 	private final String createdAtDescription;
 
 	@ThreadSafe
 	public interface ToyResponseFactory {
-		@Nonnull
-		ToyResponse create(@Nonnull Toy toy);
+		@NonNull
+		ToyResponse create(@NonNull Toy toy);
 	}
 
 	@AssistedInject
-	public ToyResponse(@Nonnull Provider<CurrentContext> currentContextProvider,
-										 @Nonnull Formatter formatter,
-										 @Assisted @Nonnull Toy toy) {
+	public ToyResponse(@NonNull Provider<CurrentContext> currentContextProvider,
+										 @NonNull Formatter formatter,
+										 @Assisted @NonNull Toy toy) {
 		requireNonNull(currentContextProvider);
 		requireNonNull(formatter);
 		requireNonNull(toy);
@@ -99,7 +99,7 @@ public class ToyResponse {
 	}
 
 	public record ToyResponseHolder(
-			@Nonnull ToyResponse toy
+			@NonNull ToyResponse toy
 	) {
 		public ToyResponseHolder {
 			requireNonNull(toy);
@@ -107,54 +107,54 @@ public class ToyResponse {
 	}
 
 	public record ToysResponseHolder(
-			@Nonnull List<ToyResponse> toys
+			@NonNull List<ToyResponse> toys
 	) {
 		public ToysResponseHolder {
 			requireNonNull(toys);
 		}
 	}
 
-	@Nonnull
+	@NonNull
 	public UUID getToyId() {
 		return this.toyId;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getName() {
 		return this.name;
 	}
 
-	@Nonnull
+	@NonNull
 	public BigDecimal getPrice() {
 		return this.price;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getPriceDescription() {
 		return this.priceDescription;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getCurrencyCode() {
 		return this.currencyCode;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getCurrencySymbol() {
 		return this.currencySymbol;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getCurrencyDescription() {
 		return this.currencyDescription;
 	}
 
-	@Nonnull
+	@NonNull
 	public Instant getCreatedAt() {
 		return this.createdAt;
 	}
 
-	@Nonnull
+	@NonNull
 	public String getCreatedAtDescription() {
 		return this.createdAtDescription;
 	}
