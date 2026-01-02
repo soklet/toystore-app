@@ -182,6 +182,7 @@ public final class CurrentContext {
 		});
 	}
 
+	@NonNull
 	@Override
 	public String toString() {
 		StringJoiner joiner = new StringJoiner(", ", format("%s{", CurrentContext.class.getSimpleName()), "}");

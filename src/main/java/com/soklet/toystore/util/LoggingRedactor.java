@@ -48,8 +48,9 @@ public class LoggingRedactor extends MessageConverter {
 		JWT_PATTERN = Pattern.compile("eyJ[A-Za-z0-9_-]*\\.eyJ[A-Za-z0-9_-]*\\.[A-Za-z0-9_-]+");
 	}
 
+	@NonNull
 	@Override
-	public String convert(ILoggingEvent event) {
+	public String convert(@NonNull ILoggingEvent event) {
 		String message = super.convert(event);
 		return JWT_PATTERN.matcher(message).replaceAll("[REDACTED]");
 	}

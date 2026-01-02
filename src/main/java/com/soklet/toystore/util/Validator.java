@@ -32,7 +32,9 @@ public final class Validator {
 	private static final int EMAIL_ADDRESS_MAX_LENGTH;
 	private static final int EMAIL_ADDRESS_MAX_LOCAL_PART_LENGTH;
 	private static final int EMAIL_ADDRESS_MAX_DOMAIN_LENGTH;
+	@NonNull
 	private static final Pattern EMAIL_ADDRESS_LOCAL_PART_PATTERN;
+	@NonNull
 	private static final Pattern EMAIL_ADDRESS_DOMAIN_LABEL_PATTERN;
 
 	static {

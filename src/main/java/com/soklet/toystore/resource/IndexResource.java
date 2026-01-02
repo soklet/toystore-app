@@ -73,6 +73,7 @@ public class IndexResource {
 				.build();
 	}
 
+	@NonNull
 	@GET("/metrics")
 	public MarshaledResponse getMetrics(@NonNull MetricsCollector metricsCollector) {
 		SnapshotTextOptions snapshotTextOptions = SnapshotTextOptions.withMetricsFormat(MetricsFormat.PROMETHEUS).build();
@@ -87,6 +88,7 @@ public class IndexResource {
 				.build();
 	}
 
+	@NonNull
 	@GET("/static/{staticFilePath*}")
 	public MarshaledResponse staticFile(@NonNull @PathParameter String staticFilePath) throws IOException {
 		String contentType = "application/octet-stream";

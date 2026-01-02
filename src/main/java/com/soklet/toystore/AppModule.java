@@ -775,6 +775,7 @@ public class AppModule extends AbstractModule {
 					}
 
 					@Override
+					@NonNull
 					public Locale read(@NonNull JsonReader jsonReader) throws IOException {
 						return Locale.forLanguageTag(jsonReader.nextString());
 					}
