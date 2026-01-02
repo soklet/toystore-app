@@ -47,7 +47,7 @@ public record AccessToken(
 		@NonNull Instant issuedAt,
 		@NonNull Instant expiresAt,
 		@NonNull Audience audience,
-		@NonNull Set<Scope> scopes
+		@NonNull Set<@NonNull Scope> scopes
 ) {
 	// Manage our own internal GSON instance because our needs are simple - no need to inject one
 	@NonNull
@@ -130,13 +130,13 @@ public record AccessToken(
 
 		record Expired(@NonNull AccessToken accessToken, @NonNull Instant expiredAt) implements AccessTokenResult {}
 
-		record MissingHeaders(@NonNull Set<String> headers) implements AccessTokenResult {}
+		record MissingHeaders(@NonNull Set<@NonNull String> headers) implements AccessTokenResult {}
 
-		record InvalidHeaders(@NonNull Set<String> headers) implements AccessTokenResult {}
+		record InvalidHeaders(@NonNull Set<@NonNull String> headers) implements AccessTokenResult {}
 
-		record MissingClaims(@NonNull Set<String> claims) implements AccessTokenResult {}
+		record MissingClaims(@NonNull Set<@NonNull String> claims) implements AccessTokenResult {}
 
-		record InvalidClaims(@NonNull Set<String> claims) implements AccessTokenResult {}
+		record InvalidClaims(@NonNull Set<@NonNull String> claims) implements AccessTokenResult {}
 	}
 
 	@NonNull
@@ -313,7 +313,7 @@ public record AccessToken(
 																							@NonNull Instant issuedAt,
 																							@NonNull Instant expiresAt,
 																							@NonNull Audience audience,
-																							@NonNull Set<Scope> scopes,
+																							@NonNull Set<@NonNull Scope> scopes,
 																							@NonNull PrivateKey privateKey) {
 		requireNonNull(accountId);
 		requireNonNull(issuedAt);

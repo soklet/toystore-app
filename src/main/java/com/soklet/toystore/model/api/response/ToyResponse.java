@@ -107,7 +107,7 @@ public class ToyResponse {
 	}
 
 	public record ToysResponseHolder(
-			@NonNull List<ToyResponse> toys
+			@NonNull List<@NonNull ToyResponse> toys
 	) {
 		public ToysResponseHolder {
 			requireNonNull(toys);

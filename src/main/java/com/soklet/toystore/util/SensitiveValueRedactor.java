@@ -47,7 +47,7 @@ public class SensitiveValueRedactor {
 	@NonNull
 	private final Gson gson;
 	@NonNull
-	private final ConcurrentHashMap<Class<?>, Set<String>> sensitivePathsCache;
+	private final ConcurrentHashMap<@NonNull Class<?>, @NonNull Set<@NonNull String>> sensitivePathsCache;
 
 	@Inject
 	public SensitiveValueRedactor(@NonNull Gson gson) {
@@ -65,7 +65,7 @@ public class SensitiveValueRedactor {
 		requireNonNull(json);
 		requireNonNull(targetType);
 
-		Set<String> sensitivePaths = determineSensitivePaths(targetType);
+		Set<@NonNull String> sensitivePaths = determineSensitivePaths(targetType);
 
 		if (sensitivePaths.isEmpty())
 			return json;
@@ -83,14 +83,14 @@ public class SensitiveValueRedactor {
 	}
 
 	@NonNull
-	private Set<String> determineSensitivePaths(@NonNull Class<?> containingType) {
+	private Set<@NonNull String> determineSensitivePaths(@NonNull Class<?> containingType) {
 		requireNonNull(containingType);
 
 		return getSensitivePathsCache().computeIfAbsent(containingType, clazz -> {
 			if (!clazz.isRecord())
 				return Set.of();
 
-			Set<String> paths = new LinkedHashSet<>();
+			Set<@NonNull String> paths = new LinkedHashSet<>();
 			collectSensitivePathsRecursively(clazz, "", paths, new HashSet<>());
 			return Set.copyOf(paths);
 		});
@@ -98,8 +98,8 @@ public class SensitiveValueRedactor {
 
 	private void collectSensitivePathsRecursively(@NonNull Class<?> recordType,
 																								@NonNull String pathPrefix,
-																								@NonNull Set<String> accumulator,
-																								@NonNull Set<Class<?>> visited) {
+																								@NonNull Set<@NonNull String> accumulator,
+																								@NonNull Set<@NonNull Class<?>> visited) {
 		requireNonNull(recordType);
 		requireNonNull(pathPrefix);
 		requireNonNull(accumulator);
@@ -140,7 +140,7 @@ public class SensitiveValueRedactor {
 	}
 
 	private void redactRecursively(@NonNull JsonObject jsonObject,
-																 @NonNull Set<String> sensitivePaths,
+																 @NonNull Set<@NonNull String> sensitivePaths,
 																 @NonNull String currentPath) {
 		requireNonNull(jsonObject);
 		requireNonNull(sensitivePaths);
@@ -170,7 +170,7 @@ public class SensitiveValueRedactor {
 	}
 
 	@NonNull
-	private ConcurrentHashMap<Class<?>, Set<String>> getSensitivePathsCache() {
+	private ConcurrentHashMap<@NonNull Class<?>, @NonNull Set<@NonNull String>> getSensitivePathsCache() {
 		return this.sensitivePathsCache;
 	}
 }

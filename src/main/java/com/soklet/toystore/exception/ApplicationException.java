@@ -48,11 +48,11 @@ public class ApplicationException extends RuntimeException {
 	@NonNull
 	private final Integer statusCode;
 	@NonNull
-	private final List<String> generalErrors;
+	private final List<@NonNull String> generalErrors;
 	@NonNull
-	private final Map<String, List<String>> fieldErrors;
+	private final Map<@NonNull String, @NonNull List<@NonNull String>> fieldErrors;
 	@NonNull
-	private final Map<String, Object> metadata;
+	private final Map<@NonNull String, @NonNull Object> metadata;
 
 	@NonNull
 	public static Builder withStatusCode(@NonNull Integer statusCode) {
@@ -101,9 +101,9 @@ public class ApplicationException extends RuntimeException {
 	@NotThreadSafe
 	public static class ErrorCollector {
 		@NonNull
-		private final List<String> generalErrors;
+		private final List<@NonNull String> generalErrors;
 		@NonNull
-		private final Map<String, List<String>> fieldErrors;
+		private final Map<@NonNull String, @NonNull List<@NonNull String>> fieldErrors;
 
 		public ErrorCollector() {
 			this.generalErrors = new ArrayList<>();
@@ -120,7 +120,7 @@ public class ApplicationException extends RuntimeException {
 			requireNonNull(field);
 			requireNonNull(error);
 
-			List<String> errors = this.fieldErrors.get(field);
+			List<@NonNull String> errors = this.fieldErrors.get(field);
 
 			if (errors == null) {
 				errors = new ArrayList<>(4);
@@ -142,11 +142,11 @@ public class ApplicationException extends RuntimeException {
 		@NonNull
 		private Integer statusCode;
 		@Nullable
-		private List<String> generalErrors;
+		private List<@NonNull String> generalErrors;
 		@Nullable
-		private Map<String, List<String>> fieldErrors;
+		private Map<@NonNull String, @NonNull List<@NonNull String>> fieldErrors;
 		@Nullable
-		private Map<String, Object> metadata;
+		private Map<@NonNull String, @NonNull Object> metadata;
 
 		private Builder(@NonNull Integer statusCode) {
 			requireNonNull(statusCode);
@@ -167,19 +167,19 @@ public class ApplicationException extends RuntimeException {
 		}
 
 		@NonNull
-		public Builder generalErrors(@Nullable List<String> generalErrors) {
+		public Builder generalErrors(@Nullable List<@NonNull String> generalErrors) {
 			this.generalErrors = generalErrors;
 			return this;
 		}
 
 		@NonNull
-		public Builder fieldErrors(@Nullable Map<String, List<String>> fieldErrors) {
+		public Builder fieldErrors(@Nullable Map<@NonNull String, @NonNull List<@NonNull String>> fieldErrors) {
 			this.fieldErrors = fieldErrors;
 			return this;
 		}
 
 		@NonNull
-		public Builder metadata(@Nullable Map<String, Object> metadata) {
+		public Builder metadata(@Nullable Map<@NonNull String, @NonNull Object> metadata) {
 			this.metadata = metadata;
 			return this;
 		}
@@ -211,17 +211,17 @@ public class ApplicationException extends RuntimeException {
 	}
 
 	@NonNull
-	public List<String> getGeneralErrors() {
+	public List<@NonNull String> getGeneralErrors() {
 		return this.generalErrors;
 	}
 
 	@NonNull
-	public Map<String, List<String>> getFieldErrors() {
+	public Map<@NonNull String, @NonNull List<@NonNull String>> getFieldErrors() {
 		return this.fieldErrors;
 	}
 
 	@NonNull
-	public Map<String, Object> getMetadata() {
+	public Map<@NonNull String, @NonNull Object> getMetadata() {
 		return this.metadata;
 	}
 }

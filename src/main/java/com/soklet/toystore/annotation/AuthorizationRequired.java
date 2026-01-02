@@ -17,7 +17,7 @@
 package com.soklet.toystore.annotation;
 
 import com.soklet.toystore.model.db.Role.RoleId;
-import org.jspecify.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -32,5 +32,5 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface AuthorizationRequired {
-	@Nullable RoleId[] value() default {};
+	@NonNull RoleId[] value() default {};
 }

@@ -88,7 +88,7 @@ public class Configuration {
 	private final CreditCardProcessor.@NonNull Type creditCardProcessorType;
 	private final ErrorReporter.@NonNull Type errorReporterType;
 	@NonNull
-	private final Set<String> corsWhitelistedOrigins;
+	private final Set<@NonNull String> corsWhitelistedOrigins;
 
 	public Configuration(@NonNull String environment) {
 		requireNonNull(environment);
@@ -162,7 +162,7 @@ public class Configuration {
 	private record ConfigFile(
 			@NonNull Integer port,
 			@NonNull Integer serverSentEventPort,
-			@NonNull Set<String> corsWhitelistedOrigins,
+			@NonNull Set<@NonNull String> corsWhitelistedOrigins,
 			@NonNull Integer accessTokenExpirationInSeconds,
 			@NonNull Integer sseAccessTokenExpirationInSeconds,
 			@NonNull ConfigKeyPair keyPair,
@@ -280,7 +280,7 @@ public class Configuration {
 	}
 
 	@NonNull
-	public Set<String> getCorsWhitelistedOrigins() {
+	public Set<@NonNull String> getCorsWhitelistedOrigins() {
 		return this.corsWhitelistedOrigins;
 	}
 }

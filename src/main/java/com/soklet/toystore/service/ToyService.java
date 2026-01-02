@@ -118,7 +118,7 @@ public class ToyService {
 	}
 
 	@NonNull
-	public List<Toy> findToys() {
+	public List<@NonNull Toy> findToys() {
 		return getDatabase().query("""
 						  SELECT *
 						  FROM toy
@@ -128,7 +128,7 @@ public class ToyService {
 	}
 
 	@NonNull
-	public List<Toy> searchToys(@Nullable String query) {
+	public List<@NonNull Toy> searchToys(@Nullable String query) {
 		query = trimAggressivelyToNull(query);
 
 		if (query == null)
