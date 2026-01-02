@@ -23,6 +23,12 @@ import com.google.inject.Singleton;
 import com.soklet.HttpMethod;
 import com.soklet.MarshaledResponse;
 import com.soklet.Request;
+import com.soklet.ServerSentEvent;
+import com.soklet.ServerSentEventRequestResult;
+import com.soklet.ServerSentEventRequestResult.HandshakeAccepted;
+import com.soklet.ServerSentEventRequestResult.HandshakeRejected;
+import com.soklet.ServerSentEventRequestResult.RequestFailed;
+import com.soklet.Simulator;
 import com.soklet.Soklet;
 import com.soklet.SokletConfig;
 import com.soklet.toystore.App;
@@ -32,8 +38,11 @@ import com.soklet.toystore.model.api.request.AccountAuthenticateRequest;
 import com.soklet.toystore.model.api.request.ToyCreateRequest;
 import com.soklet.toystore.model.api.response.ErrorResponse;
 import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseHolder;
+import com.soklet.toystore.model.api.response.ToyResponse;
 import com.soklet.toystore.model.api.response.ToyResponse.ToyResponseHolder;
+import com.soklet.toystore.model.api.response.ToyResponse.ToysResponseHolder;
 import com.soklet.toystore.model.auth.AccessToken;
+import com.soklet.toystore.resource.AccountResource.SseAccessTokenResponseHolder;
 import com.soklet.toystore.service.AccountService;
 import com.soklet.toystore.util.CreditCardProcessor;
 import com.soklet.toystore.util.CreditCardProcessor.CreditCardPaymentFailureReason;
@@ -44,8 +53,11 @@ import org.junit.jupiter.api.Test;
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.security.PrivateKey;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Currency;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -262,5 +274,203 @@ public class ToyResourceTests {
 		});
 
 		return holder.get();
+	}
+
+	@Test
+	public void testLocalizationFromRequestHeaders() {
+		App app = new App(new Configuration("local"));
+		Gson gson = app.getInjector().getInstance(Gson.class);
+		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
+
+		Soklet.runSimulator(config, (simulator -> {
+			String authenticationToken = acquireAuthenticationToken(app, "admin@soklet.com", "administrator-password");
+
+			String requestBodyJson = gson.toJson(new ToyCreateRequest("Localized Toy", BigDecimal.valueOf(12.34), Currency.getInstance("USD")));
+
+			Request createRequest = Request.withPath(HttpMethod.POST, "/toys")
+					.headers(Map.of("Authorization", Set.of("Bearer " + authenticationToken)))
+					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
+					.build();
+
+			simulator.performRequest(createRequest);
+
+			Request usRequest = Request.withPath(HttpMethod.GET, "/toys")
+					.headers(Map.of(
+							"Accept-Language", Set.of("en-US"),
+							"Time-Zone", Set.of("America/New_York")
+					))
+					.build();
+
+			MarshaledResponse usResponse = simulator.performRequest(usRequest).getMarshaledResponse();
+			Assertions.assertEquals(200, usResponse.getStatusCode().intValue(), "Bad status code");
+
+			String usBody = new String(usResponse.getBody().get(), StandardCharsets.UTF_8);
+			ToyResponse usToy = extractFirstToy(gson, usBody);
+			String usPriceDescription = usToy.getPriceDescription();
+			String usCreatedAtDescription = usToy.getCreatedAtDescription();
+
+			Request deRequest = Request.withPath(HttpMethod.GET, "/toys")
+					.headers(Map.of(
+							"Accept-Language", Set.of("de-DE"),
+							"Time-Zone", Set.of("Europe/Berlin")
+					))
+					.build();
+
+			MarshaledResponse deResponse = simulator.performRequest(deRequest).getMarshaledResponse();
+			Assertions.assertEquals(200, deResponse.getStatusCode().intValue(), "Bad status code");
+
+			String deBody = new String(deResponse.getBody().get(), StandardCharsets.UTF_8);
+			ToyResponse deToy = extractFirstToy(gson, deBody);
+			String dePriceDescription = deToy.getPriceDescription();
+			String deCreatedAtDescription = deToy.getCreatedAtDescription();
+
+			Assertions.assertTrue(usPriceDescription.contains("."), "Expected US price to use '.' decimal separator");
+			Assertions.assertTrue(dePriceDescription.contains(","), "Expected DE price to use ',' decimal separator");
+			Assertions.assertNotEquals(usCreatedAtDescription, deCreatedAtDescription, "Expected time zone to affect createdAtDescription");
+		}));
+	}
+
+	@Test
+	public void testSseBroadcastLocalizationPerAccount() {
+		App app = new App(new Configuration("local"));
+		Gson gson = app.getInjector().getInstance(Gson.class);
+		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
+
+		List<ServerSentEvent> adminEvents = new ArrayList<>();
+		List<ServerSentEvent> employeeEvents = new ArrayList<>();
+
+		Soklet.runSimulator(config, (simulator -> {
+			String adminAuthenticationToken = acquireAuthenticationToken(app, "admin@soklet.com", "administrator-password");
+			String employeeAuthenticationToken = acquireAuthenticationToken(app, "employee@soklet.com", "employee-password");
+
+			PrivateKey privateKey = app.getConfiguration().getKeyPair().getPrivate();
+			AccessToken adminSseAccessToken = acquireSseAccessToken(simulator, gson, adminAuthenticationToken);
+			AccessToken employeeSseAccessToken = acquireSseAccessToken(simulator, gson, employeeAuthenticationToken);
+
+			HandshakeAccepted adminHandshake = performSseHandshake(simulator, adminSseAccessToken.toStringRepresentation(privateKey),
+					Map.of(
+							"Accept-Language", Set.of("de-DE"),
+							"Time-Zone", Set.of("Europe/Berlin")
+					));
+
+			HandshakeAccepted employeeHandshake = performSseHandshake(simulator, employeeSseAccessToken.toStringRepresentation(privateKey),
+					Map.of(
+							"Accept-Language", Set.of("en-US"),
+							"Time-Zone", Set.of("America/New_York")
+					));
+
+			adminHandshake.registerEventConsumer(adminEvents::add);
+			employeeHandshake.registerEventConsumer(employeeEvents::add);
+
+			String requestBodyJson = gson.toJson(new ToyCreateRequest("Sse Toy", BigDecimal.valueOf(12.34), Currency.getInstance("USD")));
+
+			Request createRequest = Request.withPath(HttpMethod.POST, "/toys")
+					.headers(Map.of("Authorization", Set.of("Bearer " + adminAuthenticationToken)))
+					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
+					.build();
+
+			simulator.performRequest(createRequest);
+		}));
+
+		Assertions.assertEquals(1, adminEvents.size(), "Wrong number of admin SSE events");
+		Assertions.assertEquals(1, employeeEvents.size(), "Wrong number of employee SSE events");
+		Assertions.assertEquals("toy-created", adminEvents.get(0).getEvent().orElse(null), "Unexpected admin SSE event type");
+		Assertions.assertEquals("toy-created", employeeEvents.get(0).getEvent().orElse(null), "Unexpected employee SSE event type");
+
+		String adminPriceDescription = extractToyFromServerSentEvent(gson, adminEvents.get(0)).getPriceDescription();
+		String employeePriceDescription = extractToyFromServerSentEvent(gson, employeeEvents.get(0)).getPriceDescription();
+
+		Assertions.assertTrue(adminPriceDescription.contains("."), "Expected admin price to use '.' decimal separator");
+		Assertions.assertTrue(employeePriceDescription.contains(","), "Expected employee price to use ',' decimal separator");
+		Assertions.assertNotEquals(adminPriceDescription, employeePriceDescription, "Expected locale-specific price formatting");
+	}
+
+	@NonNull
+	private AccessToken acquireSseAccessToken(@NonNull Simulator simulator,
+																						@NonNull Gson gson,
+																						@NonNull String authenticationToken) {
+		requireNonNull(simulator);
+		requireNonNull(gson);
+		requireNonNull(authenticationToken);
+
+		Request request = Request.withPath(HttpMethod.POST, "/accounts/sse-access-token")
+				.headers(Map.of("Authorization", Set.of("Bearer " + authenticationToken)))
+				.build();
+
+		MarshaledResponse marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
+
+		Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Bad status code");
+
+		String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+		SseAccessTokenResponseHolder response = gson.fromJson(responseBody, SseAccessTokenResponseHolder.class);
+
+		Assertions.assertNotNull(response, "Missing SSE access token response");
+
+		return response.accessToken();
+	}
+
+	@NonNull
+	private HandshakeAccepted performSseHandshake(@NonNull Simulator simulator,
+																								@NonNull String sseAccessToken,
+																								@NonNull Map<String, Set<String>> headers) {
+		requireNonNull(simulator);
+		requireNonNull(sseAccessToken);
+		requireNonNull(headers);
+
+		Request request = Request.withPath(HttpMethod.GET, "/toys/event-source")
+				.queryParameters(Map.of("sse-access-token", Set.of(sseAccessToken)))
+				.headers(headers)
+				.build();
+
+		ServerSentEventRequestResult requestResult = simulator.performServerSentEventRequest(request);
+
+		if (requestResult instanceof HandshakeAccepted handshakeAccepted)
+			return handshakeAccepted;
+		if (requestResult instanceof HandshakeRejected handshakeRejected)
+			Assertions.fail("SSE handshake rejected: " + handshakeRejected);
+		if (requestResult instanceof RequestFailed requestFailed)
+			Assertions.fail("SSE request failed: " + requestFailed);
+
+		throw new IllegalStateException(format("Unexpected SSE result: %s", requestResult.getClass()));
+	}
+
+	@NonNull
+	private ToyResponse extractFirstToy(@NonNull Gson gson,
+																			@NonNull String responseBody) {
+		requireNonNull(gson);
+		requireNonNull(responseBody);
+
+		ToysResponseHolder response = gson.fromJson(responseBody, ToysResponseHolder.class);
+
+		Assertions.assertNotNull(response, "Missing toys response");
+		Assertions.assertTrue(response.toys().size() > 0, "No toys in response");
+
+		return response.toys().get(0);
+	}
+
+	@NonNull
+	private ToyResponse extractToyFromServerSentEvent(@NonNull Gson gson,
+																										@NonNull ServerSentEvent event) {
+		requireNonNull(gson);
+		requireNonNull(event);
+
+		String data = event.getData().orElse(null);
+
+		if (data == null)
+			throw new AssertionError("Missing SSE data");
+
+		ToyServerSentEventPayload payload = gson.fromJson(data, ToyServerSentEventPayload.class);
+
+		Assertions.assertNotNull(payload, "Missing toy SSE payload");
+
+		return payload.toy();
+	}
+
+	private record ToyServerSentEventPayload(
+			@NonNull ToyResponse toy
+	) {
+		private ToyServerSentEventPayload {
+			requireNonNull(toy);
+		}
 	}
 }
