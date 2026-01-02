@@ -50,6 +50,7 @@ import com.soklet.Server;
 import com.soklet.ServerSentEventConnection;
 import com.soklet.ServerSentEventConnection.TerminationReason;
 import com.soklet.ServerSentEventServer;
+import com.soklet.ServerType;
 import com.soklet.Soklet;
 import com.soklet.SokletConfig;
 import com.soklet.exception.BadRequestException;
@@ -161,14 +162,16 @@ public class AppModule extends AbstractModule {
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.LifecycleObserver");
 
 					@Override
-					public void didStartRequestHandling(@Nonnull Request request,
+					public void didStartRequestHandling(@NonNull ServerType serverType,
+																							@Nonnull Request request,
 																							@Nullable ResourceMethod resourceMethod) {
 						if (shouldPerformRequestLogging(request, resourceMethod))
 							logger.debug("Received {} {}", request.getHttpMethod(), request.getRawPathAndQuery());
 					}
 
 					@Override
-					public void didFinishRequestHandling(@Nonnull Request request,
+					public void didFinishRequestHandling(@NonNull ServerType serverType,
+																							 @Nonnull Request request,
 																							 @Nullable ResourceMethod resourceMethod,
 																							 @Nonnull MarshaledResponse marshaledResponse,
 																							 @Nonnull Duration processingDuration,
