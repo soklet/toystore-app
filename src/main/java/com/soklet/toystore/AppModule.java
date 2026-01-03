@@ -86,6 +86,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
 import java.lang.reflect.Parameter;
@@ -253,8 +254,10 @@ public class AppModule extends AbstractModule {
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.RequestInterceptor");
 
 					@Override
-					public void wrapRequest(@NonNull Request request,
+					public void wrapRequest(@Nonnull ServerType serverType,
+																	@NonNull Request request,
 																	@NonNull Consumer<Request> requestProcessor) {
+						requireNonNull(serverType);
 						requireNonNull(request);
 						requireNonNull(requestProcessor);
 
@@ -272,10 +275,12 @@ public class AppModule extends AbstractModule {
 					}
 
 					@Override
-					public void interceptRequest(@NonNull Request request,
+					public void interceptRequest(@Nonnull ServerType serverType,
+																			 @NonNull Request request,
 																			 @Nullable ResourceMethod resourceMethod,
 																			 @NonNull Function<Request, MarshaledResponse> responseGenerator,
 																			 @NonNull Consumer<MarshaledResponse> responseWriter) {
+						requireNonNull(serverType);
 						requireNonNull(request);
 						requireNonNull(responseGenerator);
 						requireNonNull(responseWriter);
