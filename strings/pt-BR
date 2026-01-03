@@ -1,7 +1,7 @@
 {
   "Hello, world!": "Olá Mundo!",
   "Sorry, we could not authenticate you.": "Desculpe, não foi possível autenticá-lo.",
-  "Illegal value '{{parameterValue}}' specified for query parameter '{{parameterName}}'": "Valor ilegal '{{parameterValue}}' especificado para o parâmetro de consulta '{{parameterName}}'",
+  "Illegal value '{{parameterValue}}' specified for query parameter '{{parameterName}}'.": "Valor ilegal '{{parameterValue}}' especificado para o parâmetro de consulta '{{parameterName}}'.",
   "[not provided]": "[não fornecido]",
   "You must be authenticated to perform this action.": "Você deve estar autenticado para executar esta ação.",
   "You are not authorized to perform this action.": "Você não está autorizado a executar esta ação.",

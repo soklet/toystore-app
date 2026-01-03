@@ -1,7 +1,7 @@
 {
   "Hello, world!": "Hallo, Welt!",
   "Sorry, we could not authenticate you.": "Entschuldigung, wir konnten Sie nicht authentifizieren.",
-  "Illegal value '{{parameterValue}}' specified for query parameter '{{parameterName}}'": "Unzulässiger Wert '{{parameterValue}}' für den Abfrageparameter '{{parameterName}}' angegeben.",
+  "Illegal value '{{parameterValue}}' specified for query parameter '{{parameterName}}'.": "Unzulässiger Wert '{{parameterValue}}' für den Abfrageparameter '{{parameterName}}' angegeben.",
   "[not provided]": "[nicht angegeben]",
   "You must be authenticated to perform this action.": "Sie müssen authentifiziert sein, um diese Aktion auszuführen.",
   "You are not authorized to perform this action.": "Sie sind nicht berechtigt, diese Aktion auszuführen.",
