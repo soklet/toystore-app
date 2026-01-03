@@ -89,7 +89,7 @@ public class PurchaseResponse {
 				new Formatter.DateTimeFormatterConfig(currentLocale, currentTimeZone, FormatStyle.MEDIUM, FormatStyle.SHORT)
 		);
 
-		this.purchaseId = purchase.toyId();
+		this.purchaseId = purchase.purchaseId();
 		this.accountId = purchase.accountId();
 		this.toyId = purchase.toyId();
 		this.price = purchase.price();

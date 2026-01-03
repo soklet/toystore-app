@@ -239,19 +239,52 @@ public class ToyService {
 		String name = trimAggressivelyToNull(request.name());
 		BigDecimal price = request.price();
 		Currency currency = request.currency();
+		ErrorCollector errorCollector = new ErrorCollector();
 
-		// Not shown: validation similar to createToy(ToyCreateRequest) above
+		if (name == null)
+			errorCollector.addFieldError("name", getStrings().get("Name is required."));
 
-		boolean updated = getDatabase().query("""
-						UPDATE toy
-						SET name=:name, price=:price, currency=:currency
-						WHERE toy_id=:toyId
-						""")
-				.bind("name", name)
-				.bind("price", price)
-				.bind("currency", currency)
-				.bind("toyId", toyId)
-				.execute() > 0;
+		if (price == null)
+			errorCollector.addFieldError("price", getStrings().get("Price is required."));
+		else if (price.compareTo(BigDecimal.ZERO) < 0)
+			errorCollector.addFieldError("price", getStrings().get("Price cannot be negative."));
+
+		if (currency == null)
+			errorCollector.addFieldError("currency", getStrings().get("Currency is required."));
+
+		if (errorCollector.hasErrors())
+			throw ApplicationException.withStatusCodeAndErrors(422, errorCollector).build();
+
+		if (getLogger().isInfoEnabled())
+			getLogger().info("Updating toy ID {} to '{}', which costs {}", toyId, name, formatPriceForDisplay(price, currency));
+
+		boolean updated;
+
+		try {
+			updated = getDatabase().query("""
+							UPDATE toy
+							SET name=:name, price=:price, currency=:currency
+							WHERE toy_id=:toyId
+							""")
+					.bind("name", name)
+					.bind("price", price)
+					.bind("currency", currency)
+					.bind("toyId", toyId)
+					.execute() > 0;
+		} catch (DatabaseException e) {
+			// If this is a unique constraint violation on the 'name' field, handle it specially
+			// by exposing a helpful message to the caller
+			if (e.getMessage().contains("TOY_NAME_UNIQUE_IDX")) {
+				throw ApplicationException.withStatusCode(422)
+						.fieldErrors(Map.of(
+								"name", List.of(getStrings().get("There is already a toy named '{{name}}'.", Map.of("name", name)))
+						))
+						.build();
+			} else {
+				// Some other problem; just bubble out
+				throw e;
+			}
+		}
 
 		if (updated) {
 			Toy toyToBroadcast = findToyById(toyId).get();

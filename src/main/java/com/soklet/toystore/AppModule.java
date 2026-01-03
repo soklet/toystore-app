@@ -145,7 +145,8 @@ public class AppModule extends AbstractModule {
 																					@NonNull AccountService accountService,
 																					@NonNull SensitiveValueRedactor sensitiveValueRedactor,
 																					@NonNull Strings strings,
-																					@NonNull Gson gson) {
+																					@NonNull Gson gson,
+																					@NonNull ErrorReporter errorReporter) {
 		requireNonNull(injector);
 		requireNonNull(configuration);
 		requireNonNull(database);
@@ -153,6 +154,7 @@ public class AppModule extends AbstractModule {
 		requireNonNull(sensitiveValueRedactor);
 		requireNonNull(strings);
 		requireNonNull(gson);
+		requireNonNull(errorReporter);
 
 		return SokletConfig.withServer(Server.withPort(configuration.getPort()).build())
 				.serverSentEventServer(ServerSentEventServer.withPort(configuration.getServerSentEventPort()).build())
@@ -486,7 +488,7 @@ public class AppModule extends AbstractModule {
 							logger.debug("Request body:\n{}", sensitiveValueRedactor.performRedactions(requestBodyAsString, parameter.getType()));
 
 						// Use Gson to turn the request body JSON into a Java type
-						return Optional.of(gson.fromJson(requestBodyAsString, requestBodyType));
+						return Optional.ofNullable(gson.fromJson(requestBodyAsString, requestBodyType));
 					}
 				})
 				.responseMarshaler(ResponseMarshaler.withDefaults()
@@ -541,7 +543,7 @@ public class AppModule extends AbstractModule {
 									statusCode = 400;
 									generalErrors.add(strings.get("Illegal value '{{parameterValue}}' specified for query parameter '{{parameterName}}'.",
 											Map.of(
-													"parameterValue", ex.getQueryParameterValue().orElse(strings.get("(not provided)")),
+													"parameterValue", ex.getQueryParameterValue().orElse(strings.get("[not provided]")),
 													"parameterName", ex.getQueryParameterName()
 											)
 									));
@@ -577,6 +579,8 @@ public class AppModule extends AbstractModule {
 								default -> {
 									statusCode = 500;
 									generalErrors.add(strings.get("An unexpected error occurred."));
+									errorReporter.reportError(format("Unexpected error handling %s %s (request ID %s)",
+											request.getHttpMethod(), request.getRawPathAndQuery(), request.getId()), throwable);
 								}
 							}
 

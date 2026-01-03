@@ -36,6 +36,7 @@ import com.soklet.toystore.Configuration;
 import com.soklet.toystore.CurrentContext;
 import com.soklet.toystore.model.api.request.AccountAuthenticateRequest;
 import com.soklet.toystore.model.api.request.ToyCreateRequest;
+import com.soklet.toystore.model.api.request.ToyUpdateRequest;
 import com.soklet.toystore.model.api.response.ErrorResponse;
 import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseHolder;
 import com.soklet.toystore.model.api.response.ToyResponse;
@@ -44,6 +45,7 @@ import com.soklet.toystore.model.api.response.ToyResponse.ToysResponseHolder;
 import com.soklet.toystore.model.auth.AccessToken;
 import com.soklet.toystore.resource.AccountResource.SseAccessTokenResponseHolder;
 import com.soklet.toystore.service.AccountService;
+import com.soklet.toystore.service.ToyService;
 import com.soklet.toystore.util.CreditCardProcessor;
 import com.soklet.toystore.util.CreditCardProcessor.CreditCardPaymentFailureReason;
 import org.jspecify.annotations.NonNull;
@@ -123,6 +125,59 @@ public class ToyResourceTests {
 
 			Assertions.assertTrue(errorResponse.getFieldErrors().keySet().contains("name"),
 					"Error response was missing a 'name' field error message");
+		}));
+	}
+
+	@Test
+	public void testUpdateToyValidationAndUniqueness() {
+		App app = new App(new Configuration("local"));
+		Gson gson = app.getInjector().getInstance(Gson.class);
+		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
+
+		Soklet.runSimulator(config, (simulator -> {
+			AccessToken accessToken = acquireAccessToken(app, "admin@soklet.com", "administrator-password");
+			String accessTokenAsString = accessToken.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate());
+
+			ToyResponseHolder toyA = createToy(simulator, gson, accessTokenAsString, "Update Toy A", BigDecimal.valueOf(9.99),
+					Currency.getInstance("USD"));
+			ToyResponseHolder toyB = createToy(simulator, gson, accessTokenAsString, "Update Toy B", BigDecimal.valueOf(19.99),
+					Currency.getInstance("USD"));
+
+			ToyUpdateRequest duplicateUpdateRequest = new ToyUpdateRequest(null, toyB.toy().getName(), BigDecimal.valueOf(9.99),
+					Currency.getInstance("USD"));
+
+			Request updateRequest = Request.withPath(HttpMethod.PUT, format("/toys/%s", toyA.toy().getToyId()))
+					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
+					.body(gson.toJson(duplicateUpdateRequest).getBytes(StandardCharsets.UTF_8))
+					.build();
+
+			MarshaledResponse marshaledResponse = simulator.performRequest(updateRequest).getMarshaledResponse();
+
+			Assertions.assertEquals(422, marshaledResponse.getStatusCode().intValue(), "Duplicate toy name was allowed");
+
+			String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+			ErrorResponse errorResponse = gson.fromJson(responseBody, ErrorResponse.class);
+
+			Assertions.assertTrue(errorResponse.getFieldErrors().containsKey("name"),
+					"Error response was missing a 'name' field error message");
+
+			ToyUpdateRequest invalidUpdateRequest = new ToyUpdateRequest(null, "Update Toy A", BigDecimal.valueOf(-5),
+					Currency.getInstance("USD"));
+
+			updateRequest = Request.withPath(HttpMethod.PUT, format("/toys/%s", toyA.toy().getToyId()))
+					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
+					.body(gson.toJson(invalidUpdateRequest).getBytes(StandardCharsets.UTF_8))
+					.build();
+
+			marshaledResponse = simulator.performRequest(updateRequest).getMarshaledResponse();
+
+			Assertions.assertEquals(422, marshaledResponse.getStatusCode().intValue(), "Negative toy price was allowed");
+
+			responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+			errorResponse = gson.fromJson(responseBody, ErrorResponse.class);
+
+			Assertions.assertTrue(errorResponse.getFieldErrors().containsKey("price"),
+					"Error response was missing a 'price' field error message");
 		}));
 	}
 
@@ -249,6 +304,10 @@ public class ToyResourceTests {
 
 			Assertions.assertEquals(price, purchaseResponseHolder.purchase().getPrice(), "Cheap toy purchase amount mismatch");
 			Assertions.assertEquals(currency.getCurrencyCode(), purchaseResponseHolder.purchase().getCurrencyCode(), "Cheap toy purchase currency mismatch");
+
+			ToyService toyService = app.getInjector().getInstance(ToyService.class);
+			Assertions.assertTrue(toyService.findPurchaseById(purchaseResponseHolder.purchase().getPurchaseId()).isPresent(),
+					"Purchase ID was not found in the database");
 		}));
 	}
 
@@ -275,6 +334,39 @@ public class ToyResourceTests {
 		});
 
 		return holder.get();
+	}
+
+	@NonNull
+	private ToyResponseHolder createToy(@NonNull Simulator simulator,
+																			@NonNull Gson gson,
+																			@NonNull String accessToken,
+																			@NonNull String name,
+																			@NonNull BigDecimal price,
+																			@NonNull Currency currency) {
+		requireNonNull(simulator);
+		requireNonNull(gson);
+		requireNonNull(accessToken);
+		requireNonNull(name);
+		requireNonNull(price);
+		requireNonNull(currency);
+
+		String requestBodyJson = gson.toJson(new ToyCreateRequest(name, price, currency));
+
+		Request request = Request.withPath(HttpMethod.POST, "/toys")
+				.headers(Map.of("Authorization", Set.of("Bearer " + accessToken)))
+				.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
+				.build();
+
+		MarshaledResponse marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
+
+		Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Toy creation failed");
+
+		String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+		ToyResponseHolder response = gson.fromJson(responseBody, ToyResponseHolder.class);
+
+		Assertions.assertNotNull(response, "Missing toy response");
+
+		return response;
 	}
 
 	@Test
