@@ -95,7 +95,7 @@
         <dependency>
             <groupId>com.pyranid</groupId>
             <artifactId>pyranid</artifactId>
-            <version>4.0.1</version>
+            <version>4.0.2</version>
         </dependency>
 
         <!-- Lokalized for text localization -->
