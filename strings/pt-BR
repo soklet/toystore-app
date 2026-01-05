@@ -14,6 +14,8 @@
   "Currency is required.": "A moeda é obrigatória.",
   "There is already a toy named '{{name}}'.": "Já existe um brinquedo chamado '{{name}}'.",
   "Account ID is required.": "O identificador da conta é obrigatório.",
+  "Toy ID is required.": "O identificador do brinquedo é obrigatório.",
+  "Toy not found.": "Brinquedo não encontrado.",
   "Credit card number is required.": "O número do cartão de crédito é obrigatório.",
   "Credit card number is invalid.": "O número do cartão de crédito é inválido.",
   "Credit card expiration is required.": "A expiração do cartão de crédito é obrigatória.",

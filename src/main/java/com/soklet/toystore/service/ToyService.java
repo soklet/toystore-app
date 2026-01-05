@@ -338,12 +338,22 @@ public class ToyService {
 		UUID accountId = request.accountId();
 		String creditCardNumber = trimAggressivelyToNull(request.creditCardNumber());
 		YearMonth creditCardExpiration = request.creditCardExpiration();
-		Toy toy = findToyById(request.toyId()).orElse(null);
+		UUID toyId = request.toyId();
 		String creditCardTransactionId;
+		Toy toy = null;
 		ErrorCollector errorCollector = new ErrorCollector();
 
 		if (accountId == null)
 			errorCollector.addFieldError("accountId", getStrings().get("Account ID is required."));
+
+		if (toyId == null) {
+			errorCollector.addFieldError("toyId", getStrings().get("Toy ID is required."));
+		} else {
+			toy = findToyById(toyId).orElse(null);
+
+			if (toy == null)
+				errorCollector.addFieldError("toyId", getStrings().get("Toy not found."));
+		}
 
 		if (creditCardNumber == null)
 			errorCollector.addFieldError("creditCardNumber", getStrings().get("Credit card number is required."));
@@ -395,6 +405,7 @@ public class ToyService {
 				.execute();
 
 		Purchase purchaseToBroadcast = findPurchaseById(purchaseId).get();
+		Toy toyToBroadcast = toy; // Pin to final variable
 
 		broadcastServerSentEvent((@NonNull BroadcastKey broadcastKey) -> {
 			CurrentContext clientCurrentContext = CurrentContext.with(broadcastKey.locale(), broadcastKey.timeZone()).build();
@@ -402,7 +413,7 @@ public class ToyService {
 			return clientCurrentContext.run(() ->
 					ServerSentEvent.withEvent("toy-purchased")
 							.data(getGson().toJson(Map.of(
-									"toy", getToyResponseFactory().create(toy),
+									"toy", getToyResponseFactory().create(toyToBroadcast),
 									"purchase", getPurchaseResponseFactory().create(purchaseToBroadcast)
 							)))
 							.build()

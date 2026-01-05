@@ -18,6 +18,7 @@ package com.soklet.toystore;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParseException;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
@@ -55,6 +56,7 @@ import com.soklet.Soklet;
 import com.soklet.SokletConfig;
 import com.soklet.exception.BadRequestException;
 import com.soklet.exception.IllegalQueryParameterException;
+import com.soklet.exception.IllegalRequestBodyException;
 import com.soklet.toystore.annotation.AuthorizationRequired;
 import com.soklet.toystore.annotation.SuppressRequestLogging;
 import com.soklet.toystore.exception.ApplicationException;
@@ -493,7 +495,11 @@ public class AppModule extends AbstractModule {
 							logger.debug("Request body:\n{}", sensitiveValueRedactor.performRedactions(requestBodyAsString, parameter.getType()));
 
 						// Use Gson to turn the request body JSON into a Java type
-						return Optional.ofNullable(gson.fromJson(requestBodyAsString, requestBodyType));
+						try {
+							return Optional.ofNullable(gson.fromJson(requestBodyAsString, requestBodyType));
+						} catch (JsonParseException e) {
+							throw new IllegalRequestBodyException("Malformed JSON", e);
+						}
 					}
 				})
 				.responseMarshaler(ResponseMarshaler.withDefaults()
