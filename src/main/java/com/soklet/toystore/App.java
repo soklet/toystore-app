@@ -87,7 +87,7 @@ public class App {
 	public void startServer() throws InterruptedException {
 		SokletConfig config = getInjector().getInstance(SokletConfig.class);
 
-		try (Soklet soklet = Soklet.withConfig(config)) {
+		try (Soklet soklet = Soklet.fromConfig(config)) {
 			soklet.start();
 
 			if (getConfiguration().getStopOnKeypress()) {

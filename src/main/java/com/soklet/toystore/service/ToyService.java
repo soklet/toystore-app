@@ -444,7 +444,7 @@ public class ToyService {
 		// Note: distributed systems would put the Server-Sent Event on an event bus so each node can consume and broadcast to its own SSE connections
 		getDatabase().currentTransaction().get().addPostTransactionOperation((TransactionResult transactionResult) -> {
 			if (transactionResult == TransactionResult.COMMITTED) {
-				ResourcePath resourcePath = ResourcePath.withPath("/toys/event-source");
+				ResourcePath resourcePath = ResourcePath.fromPath("/toys/event-source");
 				ServerSentEventBroadcaster serverSentEventBroadcaster = getServerSentEventServer().acquireBroadcaster(resourcePath).get();
 
 				// Instead of broadcasting the same message to everyone via #broadcastEvent(ServerSentEvent), we create separate broadcasts

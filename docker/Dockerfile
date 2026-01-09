@@ -27,6 +27,8 @@ COPY --from=builder /app/target/classes target/classes
 COPY --from=builder /app/target/dependency target/dependency
 COPY strings strings
 COPY config config
+# Demo-only: bake secrets into the image for local runs. Remove for real deployments.
+COPY secrets secrets
 COPY web web
 
 EXPOSE 8080 8081

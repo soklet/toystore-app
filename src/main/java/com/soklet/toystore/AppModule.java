@@ -502,7 +502,7 @@ public class AppModule extends AbstractModule {
 						}
 					}
 				})
-				.responseMarshaler(ResponseMarshaler.withDefaults()
+				.responseMarshaler(ResponseMarshaler.withCharset(StandardCharsets.UTF_8)
 						.resourceMethodHandler((@NonNull Request request,
 																		@NonNull Response response,
 																		@NonNull ResourceMethod resourceMethod) -> {
@@ -630,7 +630,7 @@ public class AppModule extends AbstractModule {
 						}).build()
 				)
 				// Permit CORS for only the specified origins
-				.corsAuthorizer(CorsAuthorizer.withWhitelistedOrigins(configuration.getCorsWhitelistedOrigins()))
+				.corsAuthorizer(CorsAuthorizer.fromWhitelistedOrigins(configuration.getCorsWhitelistedOrigins()))
 				// Use Google Guice when Soklet needs to vend instances
 				.instanceProvider(injector::getInstance)
 				.build();
