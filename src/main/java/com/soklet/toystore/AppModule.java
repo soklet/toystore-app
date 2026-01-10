@@ -266,7 +266,7 @@ public class AppModule extends AbstractModule {
 						// As soon as a request arrives wrap it in a "current context" scope.
 						// Pick the best-matching locale and timezone based on information we have from the request (i.e. headers).
 						// We will apply a new "current context" downstream with updated info if we authenticate an account for this request
-						Localization localization = resolveLocalization(request, null);
+						Localization localization = resolveLocalization(request);
 
 						CurrentContext.withRequest(request)
 								.locale(localization.locale())
@@ -417,6 +417,12 @@ public class AppModule extends AbstractModule {
 							case GET, HEAD, OPTIONS -> Set.of(Scope.API_READ);
 							case POST, PUT, PATCH, DELETE -> Set.of(Scope.API_WRITE);
 						};
+					}
+
+					@NonNull
+					private Localization resolveLocalization(@NonNull Request request) {
+						requireNonNull(request);
+						return resolveLocalization(request, null);
 					}
 
 					@NonNull
