@@ -159,8 +159,8 @@ public class AppModule extends AbstractModule {
 		requireNonNull(gson);
 		requireNonNull(errorReporter);
 
-		return SokletConfig.withServer(Server.withPort(configuration.getPort()).build())
-				.serverSentEventServer(ServerSentEventServer.withPort(configuration.getServerSentEventPort()).build())
+		return SokletConfig.withServer(Server.fromPort(configuration.getPort()))
+				.serverSentEventServer(ServerSentEventServer.fromPort(configuration.getServerSentEventPort()))
 				.lifecycleObserver(new LifecycleObserver() {
 					@NonNull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.LifecycleObserver");
