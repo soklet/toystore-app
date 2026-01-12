@@ -128,7 +128,7 @@ public class Configuration {
 					throw new UnsupportedOperationException(format("TODO: pull from a real %s implementation", SecretsManager.class.getSimpleName()));
 		}
 
-		// Keypair generation is documented at https://www.soklet.com/docs/toy-store-app#generating-keypairs
+		// Keypair generation is documented at https://www.soklet.com/docs/toystore-app#generating-keypairs
 		try {
 			KeyFactory keyFactory = KeyFactory.getInstance(algorithm);
 

@@ -1,4 +1,4 @@
-<a href="https://www.soklet.com/docs/toy-store-app">
+<a href="https://www.soklet.com/docs/toystore-app">
     <picture>
         <source media="(prefers-color-scheme: dark)" srcset="https://cdn.soklet.com/soklet-gh-logo-dark-v2.png">
         <img alt="Soklet" src="https://cdn.soklet.com/soklet-gh-logo-light-v2.png" width="300" height="101">
@@ -25,7 +25,7 @@ Feature highlights include:
 If you'd like fewer moving parts, [a single-file "barebones" example is also available](https://github.com/soklet/barebones-app).
 
 **Note: this README provides a high-level overview of the Toy Store App.**<br/>
-**For details, please refer to the official documentation at [https://www.soklet.com/docs/toy-store-app](https://www.soklet.com/docs/toy-store-app).**
+**For details, please refer to the official documentation at [https://www.soklet.com/docs/toystore-app](https://www.soklet.com/docs/toystore-app).**
 
 ### Build and Run
 
@@ -311,4 +311,4 @@ data: }
 
 Please refer to the official Soklet website [https://www.soklet.com](https://www.soklet.com) for detailed documentation.
 
-The Toy Store App has its own dedicated section at [https://www.soklet.com/docs/toy-store-app](https://www.soklet.com/docs/toy-store-app).
+The Toy Store App has its own dedicated section at [https://www.soklet.com/docs/toystore-app](https://www.soklet.com/docs/toystore-app).
