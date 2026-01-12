@@ -49,10 +49,10 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class App {
 	public static void main(String[] args) throws Exception {
-		String environment = System.getenv("APP_ENVIRONMENT");
+		String environment = System.getenv("TOYSTORE_ENVIRONMENT");
 
 		if (environment == null)
-			throw new IllegalArgumentException("You must specify the APP_ENVIRONMENT environment variable");
+			throw new IllegalArgumentException("You must specify the TOYSTORE_ENVIRONMENT environment variable");
 
 		App app = new App(new Configuration(environment));
 		app.startServer();

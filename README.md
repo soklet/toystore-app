@@ -54,7 +54,7 @@ You likely will want to have your app run inside of a Docker Container using thi
 
 ```shell
 # Press Ctrl+C to stop the interactive container session
-% docker run -e APP_ENVIRONMENT="local" -p 8080:8080 -p 8081:8081 soklet/toystore    
+% docker run -e TOYSTORE_ENVIRONMENT="local" -p 8080:8080 -p 8081:8081 soklet/toystore    
 ```
 
 ##### **Test**
@@ -82,7 +82,7 @@ The Toy Store App requires [Apache Maven](https://maven.apache.org/) (you can sk
 ##### **Run**
 
 ```shell
-% APP_ENVIRONMENT="local" MAVEN_OPTS="--sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED --add-opens java.base/java.time=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED" mvn -e exec:java -Dexec.mainClass="com.soklet.toystore.App"
+% TOYSTORE_ENVIRONMENT="local" MAVEN_OPTS="--sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED --add-opens java.base/java.time=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED" mvn -e exec:java -Dexec.mainClass="com.soklet.toystore.App"
 ```
 
 ### API Demonstration

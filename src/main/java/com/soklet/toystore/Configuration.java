@@ -96,7 +96,7 @@ public class Configuration {
 		ConfigFile configFile = loadConfigFileForEnvironment(environment);
 
 		this.environment = environment;
-		this.runningInDocker = "true".equalsIgnoreCase(System.getenv("APP_RUNNING_IN_DOCKER"));
+		this.runningInDocker = "true".equalsIgnoreCase(System.getenv("TOYSTORE_RUNNING_IN_DOCKER"));
 		this.stopOnKeypress = !this.runningInDocker;
 		this.port = requireNonNull(configFile.port());
 		this.serverSentEventPort = requireNonNull(configFile.serverSentEventPort());

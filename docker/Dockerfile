@@ -2,7 +2,7 @@
 # docker build . --file docker/Dockerfile --tag soklet/toystore
 
 # To run (use Ctrl+C to stop):
-# docker run -e APP_ENVIRONMENT="local" -p 8080:8080 -p 8081:8081 soklet/toystore
+# docker run -e TOYSTORE_ENVIRONMENT="local" -p 8080:8080 -p 8081:8081 soklet/toystore
 
 # Build stage
 FROM amazoncorretto:25 AS builder
@@ -20,7 +20,7 @@ RUN mvn compile && mvn dependency:copy-dependencies
 
 # Runtime stage
 FROM amazoncorretto:25
-ENV APP_RUNNING_IN_DOCKER=true
+ENV TOYSTORE_RUNNING_IN_DOCKER=true
 RUN yum clean all
 WORKDIR /app
 COPY --from=builder /app/target/classes target/classes
