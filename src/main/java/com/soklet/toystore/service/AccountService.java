@@ -110,7 +110,7 @@ public class AccountService {
 			errorCollector.addFieldError("password", getStrings().get("Password is required."));
 
 		if (errorCollector.hasErrors())
-			throw ApplicationException.withStatusCodeAndErrors(422, errorCollector).build();
+			throw ApplicationException.fromStatusCodeAndErrors(422, errorCollector);
 
 		String normalizedEmailAddress = normalizeEmailAddress(emailAddress).orElseThrow();
 
@@ -120,7 +120,7 @@ public class AccountService {
 						WHERE email_address=:emailAddress
 						""")
 				.bind("emailAddress", normalizedEmailAddress)
-				.executeForObject(Account.class)
+				.fetchObject(Account.class)
 				.orElse(null);
 
 		// Reject if no account, or account's hashed password does not match

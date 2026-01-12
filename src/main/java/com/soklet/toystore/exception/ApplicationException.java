@@ -75,6 +75,22 @@ public class ApplicationException extends RuntimeException {
 		return builder;
 	}
 
+	// Non-builder variant of the above
+	@NonNull
+	public static ApplicationException fromStatusCodeAndErrors(@NonNull Integer statusCode,
+																														 @Nullable ErrorCollector errorCollector) {
+		requireNonNull(statusCode);
+
+		Builder builder = new Builder(statusCode);
+
+		if (errorCollector != null) {
+			builder.generalErrors(errorCollector.generalErrors);
+			builder.fieldErrors(errorCollector.fieldErrors);
+		}
+
+		return builder.build();
+	}
+
 	@NonNull
 	public static Builder withStatusCodeAndGeneralError(@NonNull Integer statusCode,
 																											@NonNull String generalError) {
@@ -85,6 +101,19 @@ public class ApplicationException extends RuntimeException {
 		builder.generalErrors(List.of(generalError));
 
 		return builder;
+	}
+
+	// Non-builder variant of the above
+	@NonNull
+	public static ApplicationException fromStatusCodeAndGeneralError(@NonNull Integer statusCode,
+																																	 @NonNull String generalError) {
+		requireNonNull(statusCode);
+		requireNonNull(generalError);
+
+		Builder builder = new Builder(statusCode);
+		builder.generalErrors(List.of(generalError));
+
+		return builder.build();
 	}
 
 	private ApplicationException(@NonNull String message,

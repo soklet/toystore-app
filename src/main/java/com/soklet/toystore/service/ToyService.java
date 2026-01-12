@@ -27,7 +27,6 @@ import com.soklet.ResourcePath;
 import com.soklet.ServerSentEvent;
 import com.soklet.ServerSentEventBroadcaster;
 import com.soklet.ServerSentEventServer;
-import com.soklet.toystore.Configuration;
 import com.soklet.toystore.CurrentContext;
 import com.soklet.toystore.exception.ApplicationException;
 import com.soklet.toystore.exception.ApplicationException.ErrorCollector;
@@ -182,7 +181,7 @@ public class ToyService {
 			errorCollector.addFieldError("currency", getStrings().get("Currency is required."));
 
 		if (errorCollector.hasErrors())
-			throw ApplicationException.withStatusCodeAndErrors(422, errorCollector).build();
+			throw ApplicationException.fromStatusCodeAndErrors(422, errorCollector);
 
 		if (getLogger().isInfoEnabled())
 			getLogger().info("Creating toy '{}', which costs {}", name, formatPriceForDisplay(price, currency));
@@ -253,7 +252,7 @@ public class ToyService {
 			errorCollector.addFieldError("currency", getStrings().get("Currency is required."));
 
 		if (errorCollector.hasErrors())
-			throw ApplicationException.withStatusCodeAndErrors(422, errorCollector).build();
+			throw ApplicationException.fromStatusCodeAndErrors(422, errorCollector);
 
 		if (getLogger().isInfoEnabled())
 			getLogger().info("Updating toy ID {} to '{}', which costs {}", toyId, name, formatPriceForDisplay(price, currency));
@@ -366,7 +365,7 @@ public class ToyService {
 			errorCollector.addFieldError("creditCardExpiration", getStrings().get("Credit card is expired."));
 
 		if (errorCollector.hasErrors())
-			throw ApplicationException.withStatusCodeAndErrors(422, errorCollector).build();
+			throw ApplicationException.fromStatusCodeAndErrors(422, errorCollector);
 
 		// Charge the card, then record the transaction.
 		// NOTE: A real system would have more thorough recordkeeping in order to detect scenarios
@@ -456,7 +455,7 @@ public class ToyService {
 					CurrentContext currentContext = (CurrentContext) clientContext;
 
 					if (currentContext == null)
-						return new BroadcastKey(Configuration.getDefaultLocale(), Configuration.getDefaultTimeZone());
+						throw new IllegalStateException();
 
 					return new BroadcastKey(currentContext.getLocale(), currentContext.getTimeZone());
 				};
