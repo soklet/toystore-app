@@ -22,11 +22,11 @@ Feature highlights include:
 * Automated unit and integration tests via [JUnit](https://junit.org)
 * Ability to run in [Docker](https://www.docker.com/)
 
-If you'd like fewer moving parts, [a single-file "barebones" example is also available](https://github.com/soklet/barebones-app).
-
 The app also includes a web frontend which makes it easy to kick the tires:
 
 ![Toy Store App demo](https://cdn.soklet.com/soklet-toy-store-demo.gif)
+
+If you'd like fewer moving parts, [a single-file "barebones" example is also available](https://github.com/soklet/barebones-app).
 
 **Note: this README provides a high-level overview of the Toy Store App.**<br/>
 **For details, please refer to the official documentation at [https://www.soklet.com/docs/toystore-app](https://www.soklet.com/docs/toystore-app).**
