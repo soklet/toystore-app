@@ -41,6 +41,12 @@ import com.soklet.HttpMethod;
 import com.soklet.LifecycleObserver;
 import com.soklet.LogEvent;
 import com.soklet.MarshaledResponse;
+import com.soklet.McpHandlerInvocation;
+import com.soklet.McpHandlerResolver;
+import com.soklet.McpRequestContext;
+import com.soklet.McpRequestInterceptor;
+import com.soklet.McpServer;
+import com.soklet.McpSessionContext;
 import com.soklet.Request;
 import com.soklet.RequestBodyMarshaler;
 import com.soklet.RequestInterceptor;
@@ -65,6 +71,7 @@ import com.soklet.toystore.exception.NotFoundException;
 import com.soklet.toystore.mock.MockCreditCardProcessor;
 import com.soklet.toystore.mock.MockErrorReporter;
 import com.soklet.toystore.mock.MockSecretsManager;
+import com.soklet.toystore.mcp.ToyStoreMcpEndpoint;
 import com.soklet.toystore.model.api.response.AccountResponse.AccountResponseFactory;
 import com.soklet.toystore.model.api.response.ErrorResponse;
 import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseFactory;
@@ -160,6 +167,90 @@ public class AppModule extends AbstractModule {
 
 		return SokletConfig.withHttpServer(HttpServer.withPort(configuration.getPort()).build())
 				.sseServer(SseServer.withPort(configuration.getServerSentEventPort()).build())
+				.mcpServer(McpServer.withPort(configuration.getMcpServerPort())
+						.handlerResolver(McpHandlerResolver.fromClasses(Set.of(ToyStoreMcpEndpoint.class)))
+						.requestInterceptor(new McpRequestInterceptor() {
+							@Override
+							@Nullable
+							public <T> T interceptRequest(@NonNull McpRequestContext context,
+																				@NonNull McpHandlerInvocation<T> invocation) throws Exception {
+								requireNonNull(context);
+								requireNonNull(invocation);
+
+								CurrentContext currentContext = resolveCurrentContext(context);
+
+								try {
+									return currentContext.run(() -> {
+										try {
+											return invocation.invoke();
+										} catch (RuntimeException e) {
+											throw e;
+										} catch (Exception e) {
+											throw new CompletionException(e);
+										}
+									});
+								} catch (CompletionException e) {
+									Throwable cause = e.getCause();
+
+									if (cause instanceof Exception exception)
+										throw exception;
+
+									throw e;
+								}
+							}
+
+							@NonNull
+							private CurrentContext resolveCurrentContext(@NonNull McpRequestContext context) {
+								requireNonNull(context);
+
+								Request request = context.getRequest();
+								Account account = resolveAccount(context.getSessionContext().orElse(null));
+								Localization localization = new Localization(
+										Optional.ofNullable(account)
+												.map(Account::locale)
+												.or(() -> request.getLocales().stream().findFirst())
+												.orElse(Configuration.getDefaultLocale()),
+										Optional.ofNullable(account)
+												.map(Account::timeZone)
+												.or(() -> resolveTimeZoneHeader(request))
+												.orElse(Configuration.getDefaultTimeZone())
+								);
+
+								return CurrentContext.withRequest(request)
+										.locale(localization.locale())
+										.timeZone(localization.timeZone())
+										.account(account)
+										.build();
+							}
+
+							@Nullable
+							private Account resolveAccount(@Nullable McpSessionContext sessionContext) {
+								if (sessionContext == null)
+									return null;
+
+								UUID accountId = sessionContext.get("accountId", UUID.class).orElse(null);
+
+								return accountService.findAccountById(accountId).orElse(null);
+							}
+
+							@NonNull
+							private Optional<ZoneId> resolveTimeZoneHeader(@NonNull Request request) {
+								requireNonNull(request);
+
+								String timeZoneHeader = request.getHeader("Time-Zone").orElse(null);
+
+								if (timeZoneHeader != null) {
+									try {
+										return Optional.of(ZoneId.of(timeZoneHeader));
+									} catch (Exception ignored) {
+										// Illegal timezone specified
+									}
+								}
+
+								return Optional.empty();
+							}
+						})
+						.build())
 				.lifecycleObserver(new LifecycleObserver() {
 					@NonNull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.LifecycleObserver");
@@ -227,6 +318,11 @@ public class AppModule extends AbstractModule {
 					}
 
 					@Override
+					public void didStartMcpServer(@NonNull McpServer mcpServer) {
+						logger.debug("MCP server started on port {}", configuration.getMcpServerPort());
+					}
+
+					@Override
 					public void didEstablishSseConnection(@NonNull SseConnection sseConnection) {
 						CurrentContext currentContext = (CurrentContext) sseConnection.getClientContext().get();
 						logger.debug("Server-Sent Event Connection ID {} established for {}. Context: {}",
@@ -251,9 +347,6 @@ public class AppModule extends AbstractModule {
 					}
 				})
 				.requestInterceptor(new RequestInterceptor() {
-					@NonNull
-					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.RequestInterceptor");
-
 					@Override
 					public void wrapRequest(@Nonnull ServerType serverType,
 																	@NonNull Request request,
@@ -285,6 +378,19 @@ public class AppModule extends AbstractModule {
 						requireNonNull(request);
 						requireNonNull(responseGenerator);
 						requireNonNull(responseWriter);
+
+						if (serverType == ServerType.MCP) {
+							Localization localization = resolveLocalization(request);
+
+							CurrentContext.withRequest(request, resourceMethod)
+									.locale(localization.locale())
+									.timeZone(localization.timeZone())
+									.build()
+									.run(() -> {
+										responseWriter.accept(responseGenerator.apply(request));
+									});
+							return;
+						}
 
 						// We'll pull an account to tie to our "current context" if the request has a valid access token
 						Account account;
@@ -357,36 +463,7 @@ public class AppModule extends AbstractModule {
 						requireNonNull(expectedAudience);
 						requireNonNull(requiredScopes);
 
-						if (accessTokenAsString == null)
-							return Optional.empty();
-
-						AccessTokenResult accessTokenResult = AccessToken.fromStringRepresentation(accessTokenAsString, configuration.getKeyPair().getPublic());
-
-						switch (accessTokenResult) {
-							case AccessTokenResult.Succeeded(@NonNull AccessToken accessToken) -> {
-								if (!accessToken.audience().equals(expectedAudience)) {
-									logger.warn("{} Access Token audience is invalid: {}", expectedAudience.name(), accessToken.audience());
-									return Optional.empty();
-								}
-
-								if (!accessToken.scopes().containsAll(requiredScopes)) {
-									logger.warn("{} Access Token missing required scopes: {}", expectedAudience.name(), requiredScopes);
-									return Optional.empty();
-								}
-
-								return accountService.findAccountById(accessToken.accountId());
-							}
-
-							case AccessTokenResult.Expired(@NonNull AccessToken accessToken, @NonNull Instant expiredAt) ->
-									logger.debug("{} Access Token for account ID {} expired at {}", expectedAudience.name(), accessToken.accountId(), expiredAt);
-
-							case AccessTokenResult.SignatureMismatch() ->
-									logger.warn("{} Access Token signature is invalid: {}", expectedAudience.name(), accessTokenAsString);
-
-							default -> logger.warn("{} Access Token is invalid: {}", expectedAudience.name(), accessTokenAsString);
-						}
-
-						return Optional.empty();
+						return accountService.findAccountByAccessToken(accessTokenAsString, expectedAudience, requiredScopes);
 					}
 
 					@Nullable

@@ -1,9 +1,11 @@
 {
   "port": 8080,
   "serverSentEventPort": 8081,
+  "mcpServerPort": 8082,
   "corsWhitelistedOrigins": ["https://my.dev.webapp"],
   "accessTokenExpirationInSeconds": 259200,
   "sseAccessTokenExpirationInSeconds": 60,
+  "mcpAccessTokenExpirationInSeconds": 300,
   "keyPair": {
     "algorithm": "Ed25519",
     "publicKey": "MCowBQYDK2VwAyEApv8tMZ0EW4t7sauPkus0aHfwosV1Lv1SAyvACucl1HY="

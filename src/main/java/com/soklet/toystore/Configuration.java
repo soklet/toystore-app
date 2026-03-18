@@ -79,9 +79,13 @@ public class Configuration {
 	@NonNull
 	private final Integer serverSentEventPort;
 	@NonNull
+	private final Integer mcpServerPort;
+	@NonNull
 	private final Duration accessTokenExpiration;
 	@NonNull
 	private final Duration sseAccessTokenExpiration;
+	@NonNull
+	private final Duration mcpAccessTokenExpiration;
 	@NonNull
 	private final KeyPair keyPair;
 	private final SecretsManager.@NonNull Type secretsManagerType;
@@ -100,8 +104,10 @@ public class Configuration {
 		this.stopOnKeypress = !this.runningInDocker;
 		this.port = requireNonNull(configFile.port());
 		this.serverSentEventPort = requireNonNull(configFile.serverSentEventPort());
+		this.mcpServerPort = requireNonNull(configFile.mcpServerPort());
 		this.accessTokenExpiration = Duration.ofSeconds(configFile.accessTokenExpirationInSeconds());
 		this.sseAccessTokenExpiration = Duration.ofSeconds(configFile.sseAccessTokenExpirationInSeconds());
+		this.mcpAccessTokenExpiration = Duration.ofSeconds(configFile.mcpAccessTokenExpirationInSeconds());
 		this.corsWhitelistedOrigins = configFile.corsWhitelistedOrigins() == null ? Set.of() : configFile.corsWhitelistedOrigins();
 		this.secretsManagerType = configFile.secretsManager.type();
 		this.creditCardProcessorType = configFile.creditCardProcessor.type();
@@ -162,9 +168,11 @@ public class Configuration {
 	private record ConfigFile(
 			@NonNull Integer port,
 			@NonNull Integer serverSentEventPort,
+			@NonNull Integer mcpServerPort,
 			@NonNull Set<@NonNull String> corsWhitelistedOrigins,
 			@NonNull Integer accessTokenExpirationInSeconds,
 			@NonNull Integer sseAccessTokenExpirationInSeconds,
+			@NonNull Integer mcpAccessTokenExpirationInSeconds,
 			@NonNull ConfigKeyPair keyPair,
 			@NonNull ConfigSecretsManager secretsManager,
 			@NonNull ConfigCreditCardProcessor creditCardProcessor,
@@ -173,9 +181,11 @@ public class Configuration {
 		public ConfigFile {
 			requireNonNull(port);
 			requireNonNull(serverSentEventPort);
+			requireNonNull(mcpServerPort);
 			requireNonNull(corsWhitelistedOrigins);
 			requireNonNull(accessTokenExpirationInSeconds);
 			requireNonNull(sseAccessTokenExpirationInSeconds);
+			requireNonNull(mcpAccessTokenExpirationInSeconds);
 			requireNonNull(keyPair);
 			requireNonNull(secretsManager);
 			requireNonNull(creditCardProcessor);
@@ -253,6 +263,11 @@ public class Configuration {
 	}
 
 	@NonNull
+	public Integer getMcpServerPort() {
+		return this.mcpServerPort;
+	}
+
+	@NonNull
 	public Duration getAccessTokenExpiration() {
 		return this.accessTokenExpiration;
 	}
@@ -260,6 +275,11 @@ public class Configuration {
 	@NonNull
 	public Duration getSseAccessTokenExpiration() {
 		return this.sseAccessTokenExpiration;
+	}
+
+	@NonNull
+	public Duration getMcpAccessTokenExpiration() {
+		return this.mcpAccessTokenExpiration;
 	}
 
 	@NonNull

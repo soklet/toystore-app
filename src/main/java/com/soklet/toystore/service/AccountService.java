@@ -24,6 +24,7 @@ import com.soklet.toystore.exception.ApplicationException;
 import com.soklet.toystore.exception.ApplicationException.ErrorCollector;
 import com.soklet.toystore.model.api.request.AccountAuthenticateRequest;
 import com.soklet.toystore.model.auth.AccessToken;
+import com.soklet.toystore.model.auth.AccessToken.AccessTokenResult;
 import com.soklet.toystore.model.auth.AccessToken.Audience;
 import com.soklet.toystore.model.auth.AccessToken.Scope;
 import com.soklet.toystore.model.db.Account;
@@ -34,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.concurrent.ThreadSafe;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
@@ -129,20 +131,76 @@ public class AccountService {
 					.generalError(getStrings().get("Sorry, we could not authenticate you."))
 					.build();
 
-		// Generate a JWT
-		Instant issuedAt = Instant.now();
-		Instant expiresAt = issuedAt.plus(getConfiguration().getAccessTokenExpiration());
-
-		return new AccessToken(
-				account.accountId(),
-				issuedAt,
-				expiresAt,
+		return issueAccessToken(
+				account,
+				getConfiguration().getAccessTokenExpiration(),
 				Audience.API,
 				Set.of(
 						Scope.API_READ,
 						Scope.API_WRITE
 				)
 		);
+	}
+
+	@NonNull
+	public AccessToken issueAccessToken(@NonNull Account account,
+																			@NonNull Duration expiration,
+																			@NonNull Audience audience,
+																			@NonNull Set<@NonNull Scope> scopes) {
+		requireNonNull(account);
+		requireNonNull(expiration);
+		requireNonNull(audience);
+		requireNonNull(scopes);
+
+		Instant issuedAt = Instant.now();
+		Instant expiresAt = issuedAt.plus(expiration);
+
+		return new AccessToken(
+				account.accountId(),
+				issuedAt,
+				expiresAt,
+				audience,
+				scopes
+		);
+	}
+
+	@NonNull
+	public Optional<Account> findAccountByAccessToken(@Nullable String accessTokenAsString,
+																										@NonNull Audience expectedAudience,
+																										@NonNull Set<@NonNull Scope> requiredScopes) {
+		requireNonNull(expectedAudience);
+		requireNonNull(requiredScopes);
+
+		if (accessTokenAsString == null)
+			return Optional.empty();
+
+		AccessTokenResult accessTokenResult = AccessToken.fromStringRepresentation(accessTokenAsString, getConfiguration().getKeyPair().getPublic());
+
+		switch (accessTokenResult) {
+			case AccessTokenResult.Succeeded(@NonNull AccessToken accessToken) -> {
+				if (!accessToken.audience().equals(expectedAudience)) {
+					getLogger().warn("{} Access Token audience is invalid: {}", expectedAudience.name(), accessToken.audience());
+					return Optional.empty();
+				}
+
+				if (!accessToken.scopes().containsAll(requiredScopes)) {
+					getLogger().warn("{} Access Token missing required scopes: {}", expectedAudience.name(), requiredScopes);
+					return Optional.empty();
+				}
+
+				return findAccountById(accessToken.accountId());
+			}
+
+			case AccessTokenResult.Expired(@NonNull AccessToken accessToken, @NonNull Instant expiredAt) ->
+					getLogger().debug("{} Access Token for account ID {} expired at {}", expectedAudience.name(), accessToken.accountId(), expiredAt);
+
+			case AccessTokenResult.SignatureMismatch() ->
+					getLogger().warn("{} Access Token signature is invalid: {}", expectedAudience.name(), accessTokenAsString);
+
+			default -> getLogger().warn("{} Access Token is invalid: {}", expectedAudience.name(), accessTokenAsString);
+		}
+
+		return Optional.empty();
 	}
 
 	@NonNull

@@ -100,13 +100,9 @@ public class AccountResource {
 	public SseAccessTokenResponseHolder acquireSseAccessToken() {
 		CurrentContext currentContext = getCurrentContext();
 		Account account = currentContext.getAccount().get();
-		Instant issuedAt = Instant.now();
-		Instant expiresAt = issuedAt.plus(getConfiguration().getSseAccessTokenExpiration());
-
-		AccessToken sseAccessToken = new AccessToken(
-				account.accountId(),
-				issuedAt,
-				expiresAt,
+		AccessToken sseAccessToken = getAccountService().issueAccessToken(
+				account,
+				getConfiguration().getSseAccessTokenExpiration(),
 				Audience.SSE,
 				Set.of(Scope.SSE_HANDSHAKE)
 		);
@@ -118,6 +114,31 @@ public class AccountResource {
 			@NonNull AccessToken accessToken
 	) {
 		public SseAccessTokenResponseHolder {
+			requireNonNull(accessToken);
+		}
+	}
+
+	@NonNull
+	@AuthorizationRequired
+	@POST("/accounts/mcp-access-token")
+	public McpAccessTokenResponseHolder acquireMcpAccessToken() {
+		CurrentContext currentContext = getCurrentContext();
+		Account account = currentContext.getAccount().get();
+
+		AccessToken mcpAccessToken = getAccountService().issueAccessToken(
+				account,
+				getConfiguration().getMcpAccessTokenExpiration(),
+				Audience.MCP,
+				Set.of(Scope.MCP_READ)
+		);
+
+		return new McpAccessTokenResponseHolder(mcpAccessToken);
+	}
+
+	public record McpAccessTokenResponseHolder(
+			@NonNull AccessToken accessToken
+	) {
+		public McpAccessTokenResponseHolder {
 			requireNonNull(accessToken);
 		}
 	}

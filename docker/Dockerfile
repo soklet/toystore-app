@@ -2,7 +2,7 @@
 # docker build . --file docker/Dockerfile --tag soklet/toystore
 
 # To run (use Ctrl+C to stop):
-# docker run -e TOYSTORE_ENVIRONMENT="local" -p 8080:8080 -p 8081:8081 soklet/toystore
+# docker run -e TOYSTORE_ENVIRONMENT="local" -p 8080:8080 -p 8081:8081 -p 8082:8082 soklet/toystore
 
 # Build stage
 FROM amazoncorretto:25 AS builder
@@ -31,7 +31,7 @@ COPY config config
 COPY secrets secrets
 COPY web web
 
-EXPOSE 8080 8081
+EXPOSE 8080 8081 8082
 USER 1000
 
 # Healthcheck for regular server

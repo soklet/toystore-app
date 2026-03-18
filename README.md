@@ -18,6 +18,7 @@ Feature highlights include:
 * Context-awareness via [ScopedValue (JEP 506)](https://openjdk.org/jeps/506)
 * Internationalization via [Lokalized](https://www.lokalized.com) and the JDK
 * JSON requests/responses via [Gson](https://github.com/google/gson)
+* Server-Sent Events (SSE) and Model Context Protocol (MCP)
 * Logging via [SLF4J](https://slf4j.org/) / [Logback](https://logback.qos.ch/)
 * Automated unit and integration tests via [JUnit](https://junit.org)
 * Ability to run in [Docker](https://www.docker.com/)
@@ -58,8 +59,10 @@ You likely will want to have your app run inside of a Docker Container using thi
 
 ```shell
 # Press Ctrl+C to stop the interactive container session
-% docker run -e TOYSTORE_ENVIRONMENT="local" -p 8080:8080 -p 8081:8081 soklet/toystore    
+% docker run -e TOYSTORE_ENVIRONMENT="local" -p 8080:8080 -p 8081:8081 -p 8082:8082 soklet/toystore
 ```
+
+This starts the regular HTTP API on port `8080`, the SSE server on `8081`, and the MCP server on `8082`.
 
 ##### **Test**
 
@@ -310,6 +313,72 @@ data:     "createdAtDescription": "12 de dez. de 2025 19:19"
 data:   }
 data: }
 ```
+
+#### Model Context Protocol (MCP)
+
+The Toy Store App also exposes a read-only MCP endpoint on port `8082` at `/mcp`.
+
+Like SSE, MCP uses its own short-lived audience-specific token instead of the long-lived API token. First, ask the HTTP API to mint one:
+
+```shell
+% curl -i -X POST 'http://localhost:8080/accounts/mcp-access-token' \
+  -H "Authorization: Bearer eyJhbG...c76fxc"
+HTTP/1.1 200 OK
+Content-Type: application/json;charset=UTF-8
+
+{
+  "accessToken": "eyJ...mcp"
+}
+```
+
+Next, initialize an MCP session with the MCP token:
+
+```shell
+% curl -i -X POST 'http://localhost:8082/mcp' \
+  -H "Authorization: Bearer eyJ...mcp" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc":"2.0",
+    "id":"req-1",
+    "method":"initialize",
+    "params":{
+      "protocolVersion":"2025-11-25",
+      "capabilities":{},
+      "clientInfo":{"name":"curl","version":"1.0.0"}
+    }
+  }'
+```
+
+Copy the `MCP-Session-Id` response header, then finish initialization and call a tool:
+
+```shell
+% curl -X POST 'http://localhost:8082/mcp' \
+  -H "Content-Type: application/json" \
+  -H "MCP-Session-Id: s_abc123" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
+  -d '{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}'
+
+% curl -X POST 'http://localhost:8082/mcp' \
+  -H "Content-Type: application/json" \
+  -H "MCP-Session-Id: s_abc123" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
+  -d '{
+    "jsonrpc":"2.0",
+    "id":"req-2",
+    "method":"tools/call",
+    "params":{
+      "name":"list_toys",
+      "arguments":{}
+    }
+  }'
+```
+
+The first MCP surface is intentionally narrow:
+
+* `list_toys`
+* `get_toy`
+* `resources/list`
+* `resources/read` for `toystore://toys/{toyId}`
 
 ### Learning More
 

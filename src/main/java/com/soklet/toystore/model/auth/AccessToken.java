@@ -67,7 +67,8 @@ public record AccessToken(
 
 	public enum Audience {
 		API("api"),
-		SSE("sse");
+		SSE("sse"),
+		MCP("mcp");
 
 		@NonNull
 		private final String wireValue;
@@ -95,7 +96,8 @@ public record AccessToken(
 	public enum Scope {
 		API_READ("api:read"),
 		API_WRITE("api:write"),
-		SSE_HANDSHAKE("sse:handshake");
+		SSE_HANDSHAKE("sse:handshake"),
+		MCP_READ("mcp:read");
 
 		@NonNull
 		private final String wireValue;
