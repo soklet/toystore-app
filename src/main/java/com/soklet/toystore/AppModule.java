@@ -47,13 +47,12 @@ import com.soklet.RequestInterceptor;
 import com.soklet.ResourceMethod;
 import com.soklet.Response;
 import com.soklet.ResponseMarshaler;
-import com.soklet.Server;
-import com.soklet.ServerSentEventConnection;
-import com.soklet.ServerSentEventConnection.TerminationReason;
-import com.soklet.ServerSentEventServer;
 import com.soklet.ServerType;
+import com.soklet.HttpServer;
 import com.soklet.Soklet;
 import com.soklet.SokletConfig;
+import com.soklet.SseConnection;
+import com.soklet.SseServer;
 import com.soklet.exception.BadRequestException;
 import com.soklet.exception.IllegalQueryParameterException;
 import com.soklet.exception.IllegalRequestBodyException;
@@ -159,8 +158,8 @@ public class AppModule extends AbstractModule {
 		requireNonNull(gson);
 		requireNonNull(errorReporter);
 
-		return SokletConfig.withServer(Server.fromPort(configuration.getPort()))
-				.serverSentEventServer(ServerSentEventServer.fromPort(configuration.getServerSentEventPort()))
+		return SokletConfig.withHttpServer(HttpServer.withPort(configuration.getPort()).build())
+				.sseServer(SseServer.withPort(configuration.getServerSentEventPort()).build())
 				.lifecycleObserver(new LifecycleObserver() {
 					@NonNull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.LifecycleObserver");
@@ -218,30 +217,30 @@ public class AppModule extends AbstractModule {
 					}
 
 					@Override
-					public void didStartServer(@NonNull Server server) {
+					public void didStartHttpServer(@NonNull HttpServer httpServer) {
 						logger.debug("Server started on port {}", configuration.getPort());
 					}
 
 					@Override
-					public void didStartServerSentEventServer(@NonNull ServerSentEventServer serverSentEventServer) {
+					public void didStartSseServer(@NonNull SseServer sseServer) {
 						logger.debug("Server-Sent Event server started on port {}", configuration.getServerSentEventPort());
 					}
 
 					@Override
-					public void didEstablishServerSentEventConnection(@NonNull ServerSentEventConnection serverSentEventConnection) {
-						CurrentContext currentContext = (CurrentContext) serverSentEventConnection.getClientContext().get();
+					public void didEstablishSseConnection(@NonNull SseConnection sseConnection) {
+						CurrentContext currentContext = (CurrentContext) sseConnection.getClientContext().get();
 						logger.debug("Server-Sent Event Connection ID {} established for {}. Context: {}",
-								serverSentEventConnection.getRequest().getId(), serverSentEventConnection.getRequest().getPath(), currentContext);
+								sseConnection.getRequest().getId(), sseConnection.getRequest().getPath(), currentContext);
 					}
 
 					@Override
-					public void didTerminateServerSentEventConnection(@NonNull ServerSentEventConnection serverSentEventConnection,
-																														@NonNull Duration connectionDuration,
-																														@NonNull TerminationReason terminationReason,
-																														@Nullable Throwable throwable) {
-						CurrentContext currentContext = (CurrentContext) serverSentEventConnection.getClientContext().get();
+					public void didTerminateSseConnection(@NonNull SseConnection sseConnection,
+																										 @NonNull Duration connectionDuration,
+																										 SseConnection.@NonNull TerminationReason terminationReason,
+																										 @Nullable Throwable throwable) {
+						CurrentContext currentContext = (CurrentContext) sseConnection.getClientContext().get();
 						logger.debug("Server-Sent Event Connection ID {} terminated for {} (reason: {}). Context: {}",
-								serverSentEventConnection.getRequest().getId(), serverSentEventConnection.getRequest().getPath(), terminationReason.name(),
+								sseConnection.getRequest().getId(), sseConnection.getRequest().getPath(), terminationReason.name(),
 								currentContext);
 					}
 
@@ -290,7 +289,7 @@ public class AppModule extends AbstractModule {
 						// We'll pull an account to tie to our "current context" if the request has a valid access token
 						Account account;
 
-						if (resourceMethod != null && resourceMethod.isServerSentEventSource()) {
+						if (resourceMethod != null && resourceMethod.isSseEventSource()) {
 							// Is this an SSE resource method? If so, auth comes from a query parameter (SSE spec does not permit headers)...
 							String sseAccessTokenAsString = request.getQueryParameter("sse-access-token").orElse(null);
 
@@ -646,9 +645,9 @@ public class AppModule extends AbstractModule {
 	@NonNull
 	@Provides
 	@Singleton
-	public ServerSentEventServer provideServerSentEventServer(@NonNull SokletConfig sokletConfig) {
+	public SseServer provideSseServer(@NonNull SokletConfig sokletConfig) {
 		requireNonNull(sokletConfig);
-		return sokletConfig.getServerSentEventServer().get();
+		return sokletConfig.getSseServer().get();
 	}
 
 	// What context is bound to the current execution scope?

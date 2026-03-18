@@ -18,7 +18,7 @@ package com.soklet.toystore.resource;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import com.soklet.HandshakeResult;
+import com.soklet.SseHandshakeResult;
 import com.soklet.annotation.DELETE;
 import com.soklet.annotation.GET;
 import com.soklet.annotation.POST;
@@ -26,7 +26,7 @@ import com.soklet.annotation.PUT;
 import com.soklet.annotation.PathParameter;
 import com.soklet.annotation.QueryParameter;
 import com.soklet.annotation.RequestBody;
-import com.soklet.annotation.ServerSentEventSource;
+import com.soklet.annotation.SseEventSource;
 import com.soklet.toystore.CurrentContext;
 import com.soklet.toystore.annotation.AuthorizationRequired;
 import com.soklet.toystore.exception.NotFoundException;
@@ -167,10 +167,10 @@ public class ToyResource {
 
 	@NonNull
 	@AuthorizationRequired({RoleId.EMPLOYEE, RoleId.ADMINISTRATOR})
-	@ServerSentEventSource("/toys/event-source")
-	public HandshakeResult toysEventSource() {
+	@SseEventSource("/toys/event-source")
+	public SseHandshakeResult toysEventSource() {
 		// Accept the handshake and store off the current context so we can appropriately localize our SSE broadcasts
-		return HandshakeResult.acceptWithClientContext(getCurrentContext());
+		return SseHandshakeResult.acceptWithClientContext(getCurrentContext());
 	}
 
 	@NonNull

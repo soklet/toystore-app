@@ -24,9 +24,9 @@ import com.pyranid.Database;
 import com.pyranid.DatabaseException;
 import com.pyranid.TransactionResult;
 import com.soklet.ResourcePath;
-import com.soklet.ServerSentEvent;
-import com.soklet.ServerSentEventBroadcaster;
-import com.soklet.ServerSentEventServer;
+import com.soklet.SseBroadcaster;
+import com.soklet.SseEvent;
+import com.soklet.SseServer;
 import com.soklet.toystore.CurrentContext;
 import com.soklet.toystore.exception.ApplicationException;
 import com.soklet.toystore.exception.ApplicationException.ErrorCollector;
@@ -71,7 +71,7 @@ public class ToyService {
 	@NonNull
 	private final Provider<CurrentContext> currentContextProvider;
 	@NonNull
-	private final ServerSentEventServer serverSentEventServer;
+	private final SseServer sseServer;
 	@NonNull
 	private final CreditCardProcessor creditCardProcessor;
 	@NonNull
@@ -89,7 +89,7 @@ public class ToyService {
 
 	@Inject
 	public ToyService(@NonNull Provider<CurrentContext> currentContextProvider,
-										@NonNull ServerSentEventServer serverSentEventServer,
+										@NonNull SseServer sseServer,
 										@NonNull CreditCardProcessor creditCardProcessor,
 										@NonNull ToyResponseFactory toyResponseFactory,
 										@NonNull PurchaseResponseFactory purchaseResponseFactory,
@@ -97,7 +97,7 @@ public class ToyService {
 										@NonNull Database database,
 										@NonNull Strings strings) {
 		requireNonNull(currentContextProvider);
-		requireNonNull(serverSentEventServer);
+		requireNonNull(sseServer);
 		requireNonNull(creditCardProcessor);
 		requireNonNull(toyResponseFactory);
 		requireNonNull(purchaseResponseFactory);
@@ -106,7 +106,7 @@ public class ToyService {
 		requireNonNull(strings);
 
 		this.currentContextProvider = currentContextProvider;
-		this.serverSentEventServer = serverSentEventServer;
+		this.sseServer = sseServer;
 		this.creditCardProcessor = creditCardProcessor;
 		this.toyResponseFactory = toyResponseFactory;
 		this.purchaseResponseFactory = purchaseResponseFactory;
@@ -203,11 +203,11 @@ public class ToyService {
 
 			Toy toyToBroadcast = findToyById(toyId).get();
 
-			broadcastServerSentEvent((@NonNull BroadcastKey broadcastKey) -> {
+			broadcastSseEvent((@NonNull BroadcastKey broadcastKey) -> {
 				CurrentContext clientCurrentContext = CurrentContext.with(broadcastKey.locale(), broadcastKey.timeZone()).build();
 
 				return clientCurrentContext.run(() ->
-						ServerSentEvent.withEvent("toy-created")
+						SseEvent.withEvent("toy-created")
 								.data(getGson().toJson(Map.of("toy", getToyResponseFactory().create(toyToBroadcast))))
 								.build()
 				);
@@ -288,11 +288,11 @@ public class ToyService {
 		if (updated) {
 			Toy toyToBroadcast = findToyById(toyId).get();
 
-			broadcastServerSentEvent((@NonNull BroadcastKey broadcastKey) -> {
+			broadcastSseEvent((@NonNull BroadcastKey broadcastKey) -> {
 				CurrentContext clientCurrentContext = CurrentContext.with(broadcastKey.locale(), broadcastKey.timeZone()).build();
 
 				return clientCurrentContext.run(() ->
-						ServerSentEvent.withEvent("toy-updated")
+						SseEvent.withEvent("toy-updated")
 								.data(getGson().toJson(Map.of("toy", getToyResponseFactory().create(toyToBroadcast))))
 								.build()
 				);
@@ -316,11 +316,11 @@ public class ToyService {
 				.execute() > 0;
 
 		if (deleted) {
-			broadcastServerSentEvent((@NonNull BroadcastKey broadcastKey) -> {
+			broadcastSseEvent((@NonNull BroadcastKey broadcastKey) -> {
 				CurrentContext clientCurrentContext = CurrentContext.with(broadcastKey.locale(), broadcastKey.timeZone()).build();
 
 				return clientCurrentContext.run(() ->
-						ServerSentEvent.withEvent("toy-deleted")
+						SseEvent.withEvent("toy-deleted")
 								.data(getGson().toJson(Map.of("toy", getToyResponseFactory().create(toy))))
 								.build()
 				);
@@ -406,11 +406,11 @@ public class ToyService {
 		Purchase purchaseToBroadcast = findPurchaseById(purchaseId).get();
 		Toy toyToBroadcast = toy; // Pin to final variable
 
-		broadcastServerSentEvent((@NonNull BroadcastKey broadcastKey) -> {
+		broadcastSseEvent((@NonNull BroadcastKey broadcastKey) -> {
 			CurrentContext clientCurrentContext = CurrentContext.with(broadcastKey.locale(), broadcastKey.timeZone()).build();
 
 			return clientCurrentContext.run(() ->
-					ServerSentEvent.withEvent("toy-purchased")
+					SseEvent.withEvent("toy-purchased")
 							.data(getGson().toJson(Map.of(
 									"toy", getToyResponseFactory().create(toyToBroadcast),
 									"purchase", getPurchaseResponseFactory().create(purchaseToBroadcast)
@@ -436,17 +436,17 @@ public class ToyService {
 				.fetchObject(Purchase.class);
 	}
 
-	private void broadcastServerSentEvent(@NonNull Function<BroadcastKey, ServerSentEvent> serverSentEventProvider) {
-		requireNonNull(serverSentEventProvider);
+	private void broadcastSseEvent(@NonNull Function<BroadcastKey, SseEvent> sseEventProvider) {
+		requireNonNull(sseEventProvider);
 
 		// Once this transaction successfully commits, fire off a Server-Sent Event to inform listeners.
 		// Note: distributed systems would put the Server-Sent Event on an event bus so each node can consume and broadcast to its own SSE connections
 		getDatabase().currentTransaction().get().addPostTransactionOperation((TransactionResult transactionResult) -> {
 			if (transactionResult == TransactionResult.COMMITTED) {
 				ResourcePath resourcePath = ResourcePath.fromPath("/toys/event-source");
-				ServerSentEventBroadcaster serverSentEventBroadcaster = getServerSentEventServer().acquireBroadcaster(resourcePath).get();
+				SseBroadcaster sseBroadcaster = getSseServer().acquireBroadcaster(resourcePath).get();
 
-				// Instead of broadcasting the same message to everyone via #broadcastEvent(ServerSentEvent), we create separate broadcasts
+				// Instead of broadcasting the same message to everyone via #broadcastEvent(SseEvent), we create separate broadcasts
 				// based on client-specific context.  For example, we should broadcast Brazilian Portuguese to clients who had pt-BR locale
 				// at SSE handshake time.
 
@@ -461,14 +461,14 @@ public class ToyService {
 				};
 
 				// Then, define how we convert that BroadcastKey into a Server-Sent Event
-				Function<BroadcastKey, ServerSentEvent> serverSentEventGenerator = (@NonNull BroadcastKey broadcastKey) -> {
-					ServerSentEvent serverSentEvent = serverSentEventProvider.apply(broadcastKey);
-					getLogger().debug("Performing SSE Broadcast on {} with {}...", resourcePath.getPath(), serverSentEvent);
-					return serverSentEvent;
+				Function<BroadcastKey, SseEvent> sseEventGenerator = (@NonNull BroadcastKey broadcastKey) -> {
+					SseEvent sseEvent = sseEventProvider.apply(broadcastKey);
+					getLogger().debug("Performing SSE Broadcast on {} with {}...", resourcePath.getPath(), sseEvent);
+					return sseEvent;
 				};
 
 				// With those two methods, we can now efficiently broadcast the event to all locale/timezone combinations
-				serverSentEventBroadcaster.broadcastEvent(broadcastKeySelector, serverSentEventGenerator);
+				sseBroadcaster.broadcastEvent(broadcastKeySelector, sseEventGenerator);
 			}
 		});
 	}
@@ -503,8 +503,8 @@ public class ToyService {
 	}
 
 	@NonNull
-	private ServerSentEventServer getServerSentEventServer() {
-		return this.serverSentEventServer;
+	private SseServer getSseServer() {
+		return this.sseServer;
 	}
 
 	@NonNull

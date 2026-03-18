@@ -23,14 +23,14 @@ import com.google.inject.Singleton;
 import com.soklet.HttpMethod;
 import com.soklet.MarshaledResponse;
 import com.soklet.Request;
-import com.soklet.ServerSentEvent;
-import com.soklet.ServerSentEventRequestResult;
-import com.soklet.ServerSentEventRequestResult.HandshakeAccepted;
-import com.soklet.ServerSentEventRequestResult.HandshakeRejected;
-import com.soklet.ServerSentEventRequestResult.RequestFailed;
 import com.soklet.Simulator;
 import com.soklet.Soklet;
 import com.soklet.SokletConfig;
+import com.soklet.SseEvent;
+import com.soklet.SseRequestResult;
+import com.soklet.SseRequestResult.HandshakeAccepted;
+import com.soklet.SseRequestResult.HandshakeRejected;
+import com.soklet.SseRequestResult.RequestFailed;
 import com.soklet.toystore.App;
 import com.soklet.toystore.Configuration;
 import com.soklet.toystore.CurrentContext;
@@ -98,7 +98,7 @@ public class ToyResourceTests {
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			MarshaledResponse marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
+			MarshaledResponse marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
 
 			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Bad status code");
 
@@ -116,7 +116,7 @@ public class ToyResourceTests {
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
+			marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
 
 			Assertions.assertEquals(422, marshaledResponse.getStatusCode().intValue(), "Bad status code");
 
@@ -151,7 +151,7 @@ public class ToyResourceTests {
 					.body(gson.toJson(duplicateUpdateRequest).getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			MarshaledResponse marshaledResponse = simulator.performRequest(updateRequest).getMarshaledResponse();
+			MarshaledResponse marshaledResponse = simulator.performHttpRequest(updateRequest).getMarshaledResponse();
 
 			Assertions.assertEquals(422, marshaledResponse.getStatusCode().intValue(), "Duplicate toy name was allowed");
 
@@ -169,7 +169,7 @@ public class ToyResourceTests {
 					.body(gson.toJson(invalidUpdateRequest).getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			marshaledResponse = simulator.performRequest(updateRequest).getMarshaledResponse();
+			marshaledResponse = simulator.performHttpRequest(updateRequest).getMarshaledResponse();
 
 			Assertions.assertEquals(422, marshaledResponse.getStatusCode().intValue(), "Negative toy price was allowed");
 
@@ -233,7 +233,7 @@ public class ToyResourceTests {
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			MarshaledResponse marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
+			MarshaledResponse marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
 
 			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Expensive toy creation failed");
 
@@ -252,7 +252,7 @@ public class ToyResourceTests {
 					)).getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
+			marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
 
 			Assertions.assertEquals(422, marshaledResponse.getStatusCode().intValue(), "Expensive toy purchase did not fail as expected");
 
@@ -276,7 +276,7 @@ public class ToyResourceTests {
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
+			marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
 
 			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Cheap toy creation failed");
 
@@ -295,7 +295,7 @@ public class ToyResourceTests {
 					)).getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
+			marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
 
 			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Cheap toy purchase did not succeed");
 
@@ -357,7 +357,7 @@ public class ToyResourceTests {
 				.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 				.build();
 
-		MarshaledResponse marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
+		MarshaledResponse marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
 
 		Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Toy creation failed");
 
@@ -386,7 +386,7 @@ public class ToyResourceTests {
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			simulator.performRequest(createRequest);
+			simulator.performHttpRequest(createRequest);
 
 			Request usRequest = Request.withPath(HttpMethod.GET, "/toys")
 					.headers(Map.of(
@@ -395,7 +395,7 @@ public class ToyResourceTests {
 					))
 					.build();
 
-			MarshaledResponse usResponse = simulator.performRequest(usRequest).getMarshaledResponse();
+			MarshaledResponse usResponse = simulator.performHttpRequest(usRequest).getMarshaledResponse();
 			Assertions.assertEquals(200, usResponse.getStatusCode().intValue(), "Bad status code");
 
 			String usBody = new String(usResponse.getBody().get(), StandardCharsets.UTF_8);
@@ -410,7 +410,7 @@ public class ToyResourceTests {
 					))
 					.build();
 
-			MarshaledResponse deResponse = simulator.performRequest(deRequest).getMarshaledResponse();
+			MarshaledResponse deResponse = simulator.performHttpRequest(deRequest).getMarshaledResponse();
 			Assertions.assertEquals(200, deResponse.getStatusCode().intValue(), "Bad status code");
 
 			String deBody = new String(deResponse.getBody().get(), StandardCharsets.UTF_8);
@@ -430,8 +430,8 @@ public class ToyResourceTests {
 		Gson gson = app.getInjector().getInstance(Gson.class);
 		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
 
-		List<ServerSentEvent> adminEvents = new ArrayList<>();
-		List<ServerSentEvent> employeeEvents = new ArrayList<>();
+		List<SseEvent> adminEvents = new ArrayList<>();
+		List<SseEvent> employeeEvents = new ArrayList<>();
 
 		Soklet.runSimulator(config, (simulator -> {
 			PrivateKey privateKey = app.getConfiguration().getKeyPair().getPrivate();
@@ -466,7 +466,7 @@ public class ToyResourceTests {
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
-			simulator.performRequest(createRequest);
+			simulator.performHttpRequest(createRequest);
 		}));
 
 		Assertions.assertEquals(1, adminEvents.size(), "Wrong number of admin SSE events");
@@ -474,8 +474,8 @@ public class ToyResourceTests {
 		Assertions.assertEquals("toy-created", adminEvents.get(0).getEvent().orElse(null), "Unexpected admin SSE event type");
 		Assertions.assertEquals("toy-created", employeeEvents.get(0).getEvent().orElse(null), "Unexpected employee SSE event type");
 
-		String adminPriceDescription = extractToyFromServerSentEvent(gson, adminEvents.get(0)).getPriceDescription();
-		String employeePriceDescription = extractToyFromServerSentEvent(gson, employeeEvents.get(0)).getPriceDescription();
+		String adminPriceDescription = extractToyFromSseEvent(gson, adminEvents.get(0)).getPriceDescription();
+		String employeePriceDescription = extractToyFromSseEvent(gson, employeeEvents.get(0)).getPriceDescription();
 
 		Assertions.assertTrue(adminPriceDescription.contains("."), "Expected admin price to use '.' decimal separator");
 		Assertions.assertTrue(employeePriceDescription.contains(","), "Expected employee price to use ',' decimal separator");
@@ -494,7 +494,7 @@ public class ToyResourceTests {
 				.headers(Map.of("Authorization", Set.of("Bearer " + accessToken)))
 				.build();
 
-		MarshaledResponse marshaledResponse = simulator.performRequest(request).getMarshaledResponse();
+		MarshaledResponse marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
 
 		Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Bad status code");
 
@@ -519,7 +519,7 @@ public class ToyResourceTests {
 				.headers(headers)
 				.build();
 
-		ServerSentEventRequestResult requestResult = simulator.performServerSentEventRequest(request);
+		SseRequestResult requestResult = simulator.performSseRequest(request);
 
 		if (requestResult instanceof HandshakeAccepted handshakeAccepted)
 			return handshakeAccepted;
@@ -546,8 +546,8 @@ public class ToyResourceTests {
 	}
 
 	@NonNull
-	private ToyResponse extractToyFromServerSentEvent(@NonNull Gson gson,
-																										@NonNull ServerSentEvent event) {
+	private ToyResponse extractToyFromSseEvent(@NonNull Gson gson,
+																						@NonNull SseEvent event) {
 		requireNonNull(gson);
 		requireNonNull(event);
 
@@ -556,17 +556,17 @@ public class ToyResourceTests {
 		if (data == null)
 			throw new AssertionError("Missing SSE data");
 
-		ToyServerSentEventPayload payload = gson.fromJson(data, ToyServerSentEventPayload.class);
+		ToySseEventPayload payload = gson.fromJson(data, ToySseEventPayload.class);
 
 		Assertions.assertNotNull(payload, "Missing toy SSE payload");
 
 		return payload.toy();
 	}
 
-	private record ToyServerSentEventPayload(
+	private record ToySseEventPayload(
 			@NonNull ToyResponse toy
 	) {
-		private ToyServerSentEventPayload {
+		private ToySseEventPayload {
 			requireNonNull(toy);
 		}
 	}
