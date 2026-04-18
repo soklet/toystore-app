@@ -67,6 +67,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.soklet.toystore.TestMarshaledResponses.responseBodyAsString;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -102,7 +103,7 @@ public class ToyResourceTests {
 
 			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Bad status code");
 
-			String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+			String responseBody = responseBodyAsString(marshaledResponse);
 			ToyResponseHolder response = gson.fromJson(responseBody, ToyResponseHolder.class);
 
 			// Verify that the toy was created and looks like we expect
@@ -120,7 +121,7 @@ public class ToyResourceTests {
 
 			Assertions.assertEquals(422, marshaledResponse.getStatusCode().intValue(), "Bad status code");
 
-			responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+			responseBody = responseBodyAsString(marshaledResponse);
 			ErrorResponse errorResponse = gson.fromJson(responseBody, ErrorResponse.class);
 
 			Assertions.assertTrue(errorResponse.getFieldErrors().keySet().contains("name"),
@@ -155,7 +156,7 @@ public class ToyResourceTests {
 
 			Assertions.assertEquals(422, marshaledResponse.getStatusCode().intValue(), "Duplicate toy name was allowed");
 
-			String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+			String responseBody = responseBodyAsString(marshaledResponse);
 			ErrorResponse errorResponse = gson.fromJson(responseBody, ErrorResponse.class);
 
 			Assertions.assertTrue(errorResponse.getFieldErrors().containsKey("name"),
@@ -173,7 +174,7 @@ public class ToyResourceTests {
 
 			Assertions.assertEquals(422, marshaledResponse.getStatusCode().intValue(), "Negative toy price was allowed");
 
-			responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+			responseBody = responseBodyAsString(marshaledResponse);
 			errorResponse = gson.fromJson(responseBody, ErrorResponse.class);
 
 			Assertions.assertTrue(errorResponse.getFieldErrors().containsKey("price"),
@@ -237,7 +238,7 @@ public class ToyResourceTests {
 
 			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Expensive toy creation failed");
 
-			String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+			String responseBody = responseBodyAsString(marshaledResponse);
 			ToyResponseHolder expensiveToyResponse = gson.fromJson(responseBody, ToyResponseHolder.class);
 
 			// Keep a handle to the expensive toy so we can try to purchase it
@@ -256,7 +257,7 @@ public class ToyResourceTests {
 
 			Assertions.assertEquals(422, marshaledResponse.getStatusCode().intValue(), "Expensive toy purchase did not fail as expected");
 
-			responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+			responseBody = responseBodyAsString(marshaledResponse);
 			ErrorResponse errorResponse = gson.fromJson(responseBody, ErrorResponse.class);
 
 			// Ensure the metadata returned in the API response says that the card was declined
@@ -280,7 +281,7 @@ public class ToyResourceTests {
 
 			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Cheap toy creation failed");
 
-			responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+			responseBody = responseBodyAsString(marshaledResponse);
 			ToyResponseHolder cheapToyResponse = gson.fromJson(responseBody, ToyResponseHolder.class);
 
 			// Keep a handle to the cheap toy so we can try to purchase it
@@ -299,7 +300,7 @@ public class ToyResourceTests {
 
 			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Cheap toy purchase did not succeed");
 
-			responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+			responseBody = responseBodyAsString(marshaledResponse);
 			PurchaseResponseHolder purchaseResponseHolder = gson.fromJson(responseBody, PurchaseResponseHolder.class);
 
 			Assertions.assertEquals(price, purchaseResponseHolder.purchase().getPrice(), "Cheap toy purchase amount mismatch");
@@ -361,7 +362,7 @@ public class ToyResourceTests {
 
 		Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Toy creation failed");
 
-		String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+		String responseBody = responseBodyAsString(marshaledResponse);
 		ToyResponseHolder response = gson.fromJson(responseBody, ToyResponseHolder.class);
 
 		Assertions.assertNotNull(response, "Missing toy response");
@@ -398,7 +399,7 @@ public class ToyResourceTests {
 			MarshaledResponse usResponse = simulator.performHttpRequest(usRequest).getMarshaledResponse();
 			Assertions.assertEquals(200, usResponse.getStatusCode().intValue(), "Bad status code");
 
-			String usBody = new String(usResponse.getBody().get(), StandardCharsets.UTF_8);
+			String usBody = responseBodyAsString(usResponse);
 			ToyResponse usToy = extractFirstToy(gson, usBody);
 			String usPriceDescription = usToy.getPriceDescription();
 			String usCreatedAtDescription = usToy.getCreatedAtDescription();
@@ -413,7 +414,7 @@ public class ToyResourceTests {
 			MarshaledResponse deResponse = simulator.performHttpRequest(deRequest).getMarshaledResponse();
 			Assertions.assertEquals(200, deResponse.getStatusCode().intValue(), "Bad status code");
 
-			String deBody = new String(deResponse.getBody().get(), StandardCharsets.UTF_8);
+			String deBody = responseBodyAsString(deResponse);
 			ToyResponse deToy = extractFirstToy(gson, deBody);
 			String dePriceDescription = deToy.getPriceDescription();
 			String deCreatedAtDescription = deToy.getCreatedAtDescription();
@@ -498,7 +499,7 @@ public class ToyResourceTests {
 
 		Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Bad status code");
 
-		String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+		String responseBody = responseBodyAsString(marshaledResponse);
 		SseAccessTokenResponseHolder response = gson.fromJson(responseBody, SseAccessTokenResponseHolder.class);
 
 		Assertions.assertNotNull(response, "Missing SSE access token response");

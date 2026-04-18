@@ -32,6 +32,8 @@ import org.junit.jupiter.api.Test;
 import javax.annotation.concurrent.ThreadSafe;
 import java.nio.charset.StandardCharsets;
 
+import static com.soklet.toystore.TestMarshaledResponses.responseBodyAsString;
+
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
@@ -53,7 +55,7 @@ public class AccountResourceTests {
 
 			MarshaledResponse marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
 
-			String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+			String responseBody = responseBodyAsString(marshaledResponse);
 			AccountAuthenticateReponseHolder response = gson.fromJson(responseBody, AccountAuthenticateReponseHolder.class);
 
 			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Bad status code");

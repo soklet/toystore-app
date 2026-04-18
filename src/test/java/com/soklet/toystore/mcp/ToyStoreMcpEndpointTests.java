@@ -55,6 +55,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.soklet.toystore.TestMarshaledResponses.responseBodyAsString;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -110,7 +111,7 @@ public class ToyStoreMcpEndpointTests {
 					.build();
 
 			MarshaledResponse marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
-			ToysResponseHolder response = gson.fromJson(new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8), ToysResponseHolder.class);
+			ToysResponseHolder response = gson.fromJson(responseBodyAsString(marshaledResponse), ToysResponseHolder.class);
 			ToyResponse httpToy = response.toys().get(0);
 
 			Assertions.assertEquals(httpToy.getName(), stringValue(firstToy, "name"), "Toy name mismatch");
@@ -235,7 +236,7 @@ public class ToyStoreMcpEndpointTests {
 		MarshaledResponse marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
 		Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "MCP access token issuance failed");
 
-		String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+		String responseBody = responseBodyAsString(marshaledResponse);
 		McpAccessTokenResponseHolder response = gson.fromJson(responseBody, McpAccessTokenResponseHolder.class);
 		return response.accessToken();
 	}
@@ -264,7 +265,7 @@ public class ToyStoreMcpEndpointTests {
 		MarshaledResponse marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
 		Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Toy creation failed");
 
-		String responseBody = new String(marshaledResponse.getBody().get(), StandardCharsets.UTF_8);
+		String responseBody = responseBodyAsString(marshaledResponse);
 		return gson.fromJson(responseBody, ToyResponseHolder.class);
 	}
 
@@ -346,8 +347,7 @@ public class ToyStoreMcpEndpointTests {
 	private JsonObject jsonBody(McpRequestResult.ResponseCompleted responseCompleted) {
 		requireNonNull(responseCompleted);
 
-		String body = new String(responseCompleted.getHttpRequestResult().getMarshaledResponse().getBody().orElseThrow(),
-				StandardCharsets.UTF_8);
+		String body = responseBodyAsString(responseCompleted.getHttpRequestResult().getMarshaledResponse());
 
 		return JsonParser.parseString(body).getAsJsonObject();
 	}

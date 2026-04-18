@@ -596,11 +596,13 @@ public class AppModule extends AbstractModule {
 							Map<String, Set<String>> headers = new HashMap<>(response.getHeaders());
 							headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
 
-							return MarshaledResponse.withStatusCode(response.getStatusCode())
+							MarshaledResponse.Builder builder = MarshaledResponse.withStatusCode(response.getStatusCode())
 									.headers(headers)
-									.cookies(response.getCookies())
-									.body(body)
-									.build();
+									.cookies(response.getCookies());
+
+							return body == null
+									? builder.build()
+									: builder.body(body).build();
 						})
 						.notFoundHandler((@NonNull Request request) -> {
 							// Use Gson to turn the error response into JSON
