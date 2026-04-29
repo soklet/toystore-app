@@ -130,6 +130,47 @@ public class ToyResourceTests {
 	}
 
 	@Test
+	public void testExportToysStreamingNdjson() {
+		App app = new App(new Configuration("local"));
+		Gson gson = app.getInjector().getInstance(Gson.class);
+		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
+
+		Soklet.runSimulator(config, (simulator -> {
+			AccessToken accessToken = acquireAccessToken(app, "admin@soklet.com", "administrator-password");
+			String accessTokenAsString = accessToken.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate());
+			String namePrefix = format("Streaming Export Toy %s", UUID.randomUUID());
+			String firstToyName = format("%s A", namePrefix);
+			String secondToyName = format("%s B", namePrefix);
+
+			createToy(simulator, gson, accessTokenAsString, firstToyName, BigDecimal.valueOf(12.34), Currency.getInstance("USD"));
+			createToy(simulator, gson, accessTokenAsString, secondToyName, BigDecimal.valueOf(56.78), Currency.getInstance("USD"));
+
+			Request request = Request.withPath(HttpMethod.GET, "/toys/export.ndjson")
+					.queryParameters(Map.of("query", Set.of(namePrefix)))
+					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
+					.build();
+
+			MarshaledResponse marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
+
+			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Bad status code");
+			Assertions.assertEquals(Set.of("application/x-ndjson; charset=UTF-8"),
+					marshaledResponse.getHeaders().get("Content-Type"), "Wrong content type");
+
+			String responseBody = responseBodyAsString(marshaledResponse);
+			List<ToyResponse> toys = responseBody.lines()
+					.filter(line -> !line.isBlank())
+					.map(line -> gson.fromJson(line, ToyResponse.class))
+					.toList();
+
+			Assertions.assertEquals(2, toys.size(), "Wrong number of exported toys");
+			Assertions.assertTrue(toys.stream().anyMatch(toy -> firstToyName.equals(toy.getName())),
+					"Missing first exported toy");
+			Assertions.assertTrue(toys.stream().anyMatch(toy -> secondToyName.equals(toy.getName())),
+					"Missing second exported toy");
+		}));
+	}
+
+	@Test
 	public void testUpdateToyValidationAndUniqueness() {
 		App app = new App(new Configuration("local"));
 		Gson gson = app.getInjector().getInstance(Gson.class);

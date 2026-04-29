@@ -16,8 +16,13 @@
 
 package com.soklet.toystore.resource;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParser;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.soklet.MarshaledResponse;
+import com.soklet.StreamingResponseBody;
 import com.soklet.SseHandshakeResult;
 import com.soklet.annotation.DELETE;
 import com.soklet.annotation.GET;
@@ -35,6 +40,7 @@ import com.soklet.toystore.model.api.request.ToyPurchaseRequest;
 import com.soklet.toystore.model.api.request.ToyUpdateRequest;
 import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseFactory;
 import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseHolder;
+import com.soklet.toystore.model.api.response.ToyResponse;
 import com.soklet.toystore.model.api.response.ToyResponse.ToyResponseFactory;
 import com.soklet.toystore.model.api.response.ToyResponse.ToyResponseHolder;
 import com.soklet.toystore.model.api.response.ToyResponse.ToysResponseHolder;
@@ -47,7 +53,10 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import javax.annotation.concurrent.ThreadSafe;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -61,6 +70,9 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class ToyResource {
 	@NonNull
+	private static final Gson COMPACT_GSON = new GsonBuilder().disableHtmlEscaping().create();
+
+	@NonNull
 	private final ToyService toyService;
 	@NonNull
 	private final ToyResponseFactory toyResponseFactory;
@@ -68,21 +80,26 @@ public class ToyResource {
 	private final PurchaseResponseFactory purchaseResponseFactory;
 	@NonNull
 	private final Provider<CurrentContext> currentContextProvider;
+	@NonNull
+	private final Gson gson;
 
 	@Inject
 	public ToyResource(@NonNull ToyService toyService,
 										 @NonNull ToyResponseFactory toyResponseFactory,
 										 @NonNull PurchaseResponseFactory purchaseResponseFactory,
-										 @NonNull Provider<CurrentContext> currentContextProvider) {
+										 @NonNull Provider<CurrentContext> currentContextProvider,
+										 @NonNull Gson gson) {
 		requireNonNull(toyService);
 		requireNonNull(toyResponseFactory);
 		requireNonNull(purchaseResponseFactory);
 		requireNonNull(currentContextProvider);
+		requireNonNull(gson);
 
 		this.toyService = toyService;
 		this.toyResponseFactory = toyResponseFactory;
 		this.purchaseResponseFactory = purchaseResponseFactory;
 		this.currentContextProvider = currentContextProvider;
+		this.gson = gson;
 	}
 
 	@NonNull
@@ -93,6 +110,30 @@ public class ToyResource {
 		return new ToysResponseHolder(toys.stream()
 				.map(toy -> getToyResponseFactory().create(toy))
 				.collect(Collectors.toList()));
+	}
+
+	@NonNull
+	@AuthorizationRequired({RoleId.EMPLOYEE, RoleId.ADMINISTRATOR})
+	@GET("/toys/export.ndjson")
+	public MarshaledResponse exportToys(@Nullable @QueryParameter(optional = true) String query) {
+		List<ToyResponse> toys = (query == null ? getToyService().findToys() : getToyService().searchToys(query)).stream()
+				.map(toy -> getToyResponseFactory().create(toy))
+				.collect(Collectors.toList());
+
+		return MarshaledResponse.withStatusCode(200)
+				.headers(Map.of(
+						"Content-Type", Set.of("application/x-ndjson; charset=UTF-8"),
+						"Cache-Control", Set.of("no-transform")
+				))
+				.stream(StreamingResponseBody.fromWriter((output, context) -> {
+					for (ToyResponse toy : toys) {
+						context.throwIfCanceled();
+						output.write(compactJson(toy).getBytes(StandardCharsets.UTF_8));
+						output.write(new byte[]{'\n'});
+						output.flush();
+					}
+				}))
+				.build();
 	}
 
 	@NonNull
@@ -191,5 +232,17 @@ public class ToyResource {
 	@NonNull
 	private CurrentContext getCurrentContext() {
 		return this.currentContextProvider.get();
+	}
+
+	@NonNull
+	private Gson getGson() {
+		return this.gson;
+	}
+
+	@NonNull
+	private String compactJson(@NonNull Object value) {
+		requireNonNull(value);
+
+		return COMPACT_GSON.toJson(JsonParser.parseString(getGson().toJson(value)));
 	}
 }

@@ -18,6 +18,7 @@ Feature highlights include:
 * Context-awareness via [ScopedValue (JEP 506)](https://openjdk.org/jeps/506)
 * Internationalization via [Lokalized](https://www.lokalized.com) and the JDK
 * JSON requests/responses via [Gson](https://github.com/google/gson)
+* HTTP response streaming for large or incremental exports
 * Server-Sent Events (SSE) and Model Context Protocol (MCP)
 * Logging via [SLF4J](https://slf4j.org/) / [Logback](https://logback.qos.ch/)
 * Automated unit and integration tests via [JUnit](https://junit.org)
@@ -243,6 +244,18 @@ Date: Sun, 09 Jun 2024 14:45:17 GMT
   },
   "metadata": {}
 }
+```
+
+#### Streaming Toy Export
+
+The Toy Store App includes an authenticated streaming export endpoint at `/toys/export.ndjson`.  It writes one compact JSON toy per line using Soklet's `MarshaledResponse.stream(...)` API.
+
+This is different from Server-Sent Events: it is a single HTTP response on the regular API port, useful for exports where clients can process each item as it arrives.
+
+```shell
+% curl -N 'http://localhost:8080/toys/export.ndjson?query=Test' \
+  -H "Authorization: Bearer eyJhbG...c76fxc"
+{"toyId":"9bd5ea4d-ebd1-47f7-a8b4-0531b8655e5d","name":"Test","price":1234.50,"priceDescription":"£1,234.50","currencyCode":"GBP","currencySymbol":"£","currencyDescription":"British Pound","createdAt":"2024-06-09T13:44:26.388364Z","createdAtDescription":"Jun 9, 2024, 9:44 AM"}
 ```
 
 #### Server-Sent Events

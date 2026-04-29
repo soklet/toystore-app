@@ -34,13 +34,10 @@ COPY web web
 EXPOSE 8080 8081 8082
 USER 1000
 
-# Healthcheck for regular server
+# Healthcheck for regular and SSE servers. Docker supports only one HEALTHCHECK.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health-check || exit 1
-
-# Healthcheck for SSE server (uses OPTIONS * instead of explict URL)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -X OPTIONS --request-target "*" http://localhost:8081 || exit 1
+    CMD curl -f http://localhost:8080/health-check && \
+        curl -f -X OPTIONS --request-target "*" http://localhost:8081 || exit 1
 
 CMD ["sh", "-c", "exec java -Xms128m -Xmx512m \
     -cp 'target/classes:target/dependency/*' \
