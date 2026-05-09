@@ -59,6 +59,7 @@ import com.soklet.Soklet;
 import com.soklet.SokletConfig;
 import com.soklet.SseConnection;
 import com.soklet.SseServer;
+import com.soklet.StreamTermination;
 import com.soklet.exception.BadRequestException;
 import com.soklet.exception.IllegalQueryParameterException;
 import com.soklet.exception.IllegalRequestBodyException;
@@ -331,12 +332,10 @@ public class AppModule extends AbstractModule {
 
 					@Override
 					public void didTerminateSseConnection(@NonNull SseConnection sseConnection,
-																										 @NonNull Duration connectionDuration,
-																										 SseConnection.@NonNull TerminationReason terminationReason,
-																										 @Nullable Throwable throwable) {
+																										 @NonNull StreamTermination termination) {
 						CurrentContext currentContext = (CurrentContext) sseConnection.getClientContext().get();
 						logger.debug("Server-Sent Event Connection ID {} terminated for {} (reason: {}). Context: {}",
-								sseConnection.getRequest().getId(), sseConnection.getRequest().getPath(), terminationReason.name(),
+								sseConnection.getRequest().getId(), sseConnection.getRequest().getPath(), termination.getReason().name(),
 								currentContext);
 					}
 

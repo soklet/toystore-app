@@ -20,10 +20,11 @@ import com.soklet.MarshaledResponse;
 import com.soklet.MetricsCollector;
 import com.soklet.MetricsCollector.MetricsFormat;
 import com.soklet.MetricsCollector.SnapshotTextOptions;
+import com.soklet.Request;
+import com.soklet.StaticFiles;
 import com.soklet.annotation.GET;
 import com.soklet.annotation.PathParameter;
 import com.soklet.toystore.annotation.SuppressRequestLogging;
-import com.soklet.toystore.exception.NotFoundException;
 import org.jspecify.annotations.NonNull;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -31,18 +32,23 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Set;
 
 import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe
 public class IndexResource {
+	@NonNull
+	private final StaticFiles staticFiles;
+
+	public IndexResource() {
+		this.staticFiles = StaticFiles.withRoot(Path.of("web/static")).build();
+	}
+
 	@NonNull
 	@GET("/")
 	public MarshaledResponse indexPage() throws IOException {
@@ -90,36 +96,9 @@ public class IndexResource {
 
 	@NonNull
 	@GET("/static/{staticFilePath*}")
-	public MarshaledResponse staticFile(@NonNull @PathParameter String staticFilePath) throws IOException {
-		String contentType = "application/octet-stream";
-
-		if (staticFilePath.endsWith(".js"))
-			contentType = "text/js;charset=UTF-8";
-		else if (staticFilePath.endsWith(".css"))
-			contentType = "text/css;charset=UTF-8";
-
-		return MarshaledResponse.withStatusCode(200)
-				.headers(Map.of("Content-Type", Set.of(contentType)))
-				.body(safelyReadUserProvidedPath(staticFilePath, Paths.get("web/static")))
-				.build();
-	}
-
-	@NonNull
-	private byte[] safelyReadUserProvidedPath(@NonNull String userProvidedPath,
-																						@NonNull Path sandboxDirectory) throws IOException {
-		requireNonNull(userProvidedPath);
-		requireNonNull(sandboxDirectory);
-
-		// Resolve the user-supplied path relative to the public directory sandbox, prevents attacks like "../../etc/password" as user-entered filename
-		Path realSandboxDirectory = sandboxDirectory.toRealPath();
-		Path resolvedPath = realSandboxDirectory.resolve(userProvidedPath).normalize();
-
-		if (!resolvedPath.startsWith(realSandboxDirectory))
-			throw new SecurityException(format("Illegal attempt to access a file outside of %s (user-provided filename was %s)", sandboxDirectory, userProvidedPath));
-
-		if (!Files.exists(resolvedPath) || !Files.isRegularFile(resolvedPath))
-			throw new NotFoundException(format("Unable to resolve file in public directory at %s (user-provided filename was %s)", resolvedPath.toAbsolutePath(), userProvidedPath));
-
-		return Files.readAllBytes(resolvedPath);
+	public MarshaledResponse staticFile(@NonNull Request request,
+																			@NonNull @PathParameter String staticFilePath) {
+		return this.staticFiles.marshaledResponseFor(staticFilePath, request)
+				.orElseGet(() -> MarshaledResponse.fromStatusCode(404));
 	}
 }
