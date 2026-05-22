@@ -80,7 +80,7 @@
         <dependency>
             <groupId>com.pyranid</groupId>
             <artifactId>pyranid</artifactId>
-            <version>4.0.3</version>
+            <version>4.1.0</version>
         </dependency>
 
         <!-- Lokalized for text localization -->
