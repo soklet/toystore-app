@@ -41,12 +41,22 @@ import com.soklet.HttpMethod;
 import com.soklet.LifecycleObserver;
 import com.soklet.LogEvent;
 import com.soklet.MarshaledResponse;
-import com.soklet.McpHandlerInvocation;
-import com.soklet.McpHandlerResolver;
-import com.soklet.McpRequestContext;
-import com.soklet.McpRequestInterceptor;
+import com.soklet.McpAdmissionController;
+import com.soklet.McpAdmissionDecision;
+import com.soklet.McpAdmissionIdentity;
+import com.soklet.McpCompleteResult;
+import com.soklet.McpEndpointRegistry;
+import com.soklet.McpJsonObject;
+import com.soklet.McpJsonRpcError;
+import com.soklet.McpJsonRpcException;
+import com.soklet.McpJsonString;
+import com.soklet.McpLocalizer;
+import com.soklet.McpOperationResult;
+import com.soklet.McpRateLimiter;
+import com.soklet.McpAdmissionRejection;
 import com.soklet.McpServer;
-import com.soklet.McpSessionContext;
+import com.soklet.McpTextContent;
+import com.soklet.McpToolOutput;
 import com.soklet.Request;
 import com.soklet.RequestBodyMarshaler;
 import com.soklet.RequestInterceptor;
@@ -54,6 +64,8 @@ import com.soklet.ResourceMethod;
 import com.soklet.Response;
 import com.soklet.ResponseMarshaler;
 import com.soklet.ServerType;
+import com.soklet.ShutdownResult;
+import com.soklet.SimulatorConfig;
 import com.soklet.HttpServer;
 import com.soklet.Soklet;
 import com.soklet.SokletConfig;
@@ -73,6 +85,7 @@ import com.soklet.toystore.mock.MockCreditCardProcessor;
 import com.soklet.toystore.mock.MockErrorReporter;
 import com.soklet.toystore.mock.MockSecretsManager;
 import com.soklet.toystore.mcp.ToyStoreMcpEndpoint;
+import com.soklet.toystore.mcp.ToyStoreMcpLocalizationContextProvider;
 import com.soklet.toystore.model.api.response.AccountResponse.AccountResponseFactory;
 import com.soklet.toystore.model.api.response.ErrorResponse;
 import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseFactory;
@@ -84,6 +97,7 @@ import com.soklet.toystore.model.auth.AccessToken.Scope;
 import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.model.db.Role.RoleId;
 import com.soklet.toystore.service.AccountService;
+import com.soklet.toystore.service.AccountService.AccessTokenEvaluation;
 import com.soklet.toystore.util.CreditCardProcessor;
 import com.soklet.toystore.util.ErrorReporter;
 import com.soklet.toystore.util.PasswordManager;
@@ -133,6 +147,8 @@ import static java.util.Objects.requireNonNull;
 public class AppModule extends AbstractModule {
 	@NonNull
 	private final Configuration configuration;
+	@Nullable
+	private volatile SseServer configuredSseServer;
 
 	public AppModule(@NonNull Configuration configuration) {
 		requireNonNull(configuration);
@@ -150,13 +166,76 @@ public class AppModule extends AbstractModule {
 	@Provides
 	@Singleton
 	public SokletConfig provideSokletConfig(@NonNull Injector injector,
-																					@NonNull Configuration configuration,
-																					@NonNull Database database,
+																		@NonNull Configuration configuration,
+																		@NonNull Database database,
 																					@NonNull AccountService accountService,
 																					@NonNull SensitiveValueRedactor sensitiveValueRedactor,
-																					@NonNull Strings strings,
-																					@NonNull Gson gson,
-																					@NonNull ErrorReporter errorReporter) {
+																			@NonNull Strings strings,
+																		@NonNull Gson gson,
+																		@NonNull ErrorReporter errorReporter) {
+		ApplicationConfigComponents components = createApplicationConfigComponents(
+				injector, configuration, database,
+				accountService, sensitiveValueRedactor, strings, gson,
+				errorReporter);
+		HttpServer httpServer = HttpServer.withPort(configuration.getPort()).build();
+		SseServer sseServer = SseServer.withPort(
+				configuration.getServerSentEventPort()).build();
+		this.configuredSseServer = sseServer;
+		McpServer mcpServer = components.mcpServerConfiguration()
+				.createServer(configuration.getMcpServerPort());
+
+		return SokletConfig.withHttpServer(httpServer)
+				.sseServer(sseServer)
+				.mcpServer(mcpServer)
+				.lifecycleObserver(components.lifecycleObserver())
+				.requestInterceptor(components.requestInterceptor())
+				.requestBodyMarshaler(components.requestBodyMarshaler())
+				.responseMarshaler(components.responseMarshaler())
+				.corsAuthorizer(components.corsAuthorizer())
+				.instanceProvider(components.instanceProvider())
+				.build();
+	}
+
+	@NonNull
+	SimulatorConfig provideSimulatorSokletConfig(@NonNull Injector injector,
+			@NonNull Configuration configuration,
+			SimulatorConfig.@NonNull Builder builder) {
+		requireNonNull(injector);
+		requireNonNull(configuration);
+		requireNonNull(builder);
+
+		ApplicationConfigComponents components = createApplicationConfigComponents(
+				injector, configuration,
+				injector.getInstance(Database.class),
+				injector.getInstance(AccountService.class),
+				injector.getInstance(SensitiveValueRedactor.class),
+				injector.getInstance(Strings.class),
+				injector.getInstance(Gson.class),
+				injector.getInstance(ErrorReporter.class));
+
+		return builder.httpServer()
+				.sseServer(sseServer -> this.configuredSseServer = sseServer)
+				.mcpServer(configuration.getMcpServerPort(),
+						components.mcpServerConfiguration().endpointRegistry(),
+						components.mcpServerConfiguration().admissionController(),
+						components.mcpServerConfiguration().builderConfigurer())
+				.lifecycleObserver(components.lifecycleObserver())
+				.requestInterceptor(components.requestInterceptor())
+				.requestBodyMarshaler(components.requestBodyMarshaler())
+				.responseMarshaler(components.responseMarshaler())
+				.corsAuthorizer(components.corsAuthorizer())
+				.instanceProvider(components.instanceProvider())
+				.build();
+	}
+
+	@NonNull
+	private ApplicationConfigComponents createApplicationConfigComponents(
+			@NonNull Injector injector,
+			@NonNull Configuration configuration, @NonNull Database database,
+			@NonNull AccountService accountService,
+			@NonNull SensitiveValueRedactor sensitiveValueRedactor,
+			@NonNull Strings strings, @NonNull Gson gson,
+			@NonNull ErrorReporter errorReporter) {
 		requireNonNull(injector);
 		requireNonNull(configuration);
 		requireNonNull(database);
@@ -166,93 +245,99 @@ public class AppModule extends AbstractModule {
 		requireNonNull(gson);
 		requireNonNull(errorReporter);
 
-		return SokletConfig.withHttpServer(HttpServer.withPort(configuration.getPort()).build())
-				.sseServer(SseServer.withPort(configuration.getServerSentEventPort()).build())
-				.mcpServer(McpServer.withPort(configuration.getMcpServerPort())
-						.handlerResolver(McpHandlerResolver.fromClasses(Set.of(ToyStoreMcpEndpoint.class)))
-						.requestInterceptor(new McpRequestInterceptor() {
-							@Override
-							@Nullable
-							public <T> T interceptRequest(@NonNull McpRequestContext context,
-																				@NonNull McpHandlerInvocation<T> invocation) throws Exception {
-								requireNonNull(context);
-								requireNonNull(invocation);
+		McpEndpointRegistry mcpEndpointRegistry = McpEndpointRegistry.fromClasses(
+				ToyStoreMcpEndpoint.class);
+		McpAdmissionController mcpAdmissionController = context -> {
+			AccessTokenEvaluation evaluation = accountService.evaluateAccessToken(
+							resolveBearerToken(context.getRequest()),
+							Audience.MCP,
+							Set.of(Scope.MCP_READ));
 
-								CurrentContext currentContext = resolveCurrentContext(context);
+			return switch (evaluation) {
+				case AccessTokenEvaluation.AuthenticationFailed ignored ->
+						McpAdmissionDecision.rejected(
+								McpAdmissionRejection.withStatusCodeAndError(
+										401,
+										McpJsonRpcError.fromApplication(-31901,
+												"Sorry, we could not authenticate you."))
+								.addHeader("WWW-Authenticate", "Bearer")
+								.build());
+				case AccessTokenEvaluation.InsufficientScope insufficient ->
+						McpAdmissionDecision.rejected(
+								McpAdmissionRejection.withStatusCodeAndError(
+										403,
+										McpJsonRpcError.fromApplication(-31903,
+												"Sorry, you are not authorized to perform this action."))
+								.addHeader("WWW-Authenticate",
+										insufficientScopeChallenge(
+												insufficient.requiredScopes()))
+								.build());
+				case AccessTokenEvaluation.Authenticated authenticated -> {
+					Account account = authenticated.account();
+					String partitionKey = "account:" + account.accountId();
+					yield McpAdmissionDecision.accepted(
+							McpAdmissionIdentity.withRateLimitPartitionKey(
+									partitionKey)
+									.authorizationPartitionKey(partitionKey)
+									.principal(account)
+									.build());
+				}
+			};
+		};
+		Consumer<McpServer.Builder> mcpServerConfigurer =
+				mcpServerBuilder -> mcpServerBuilder
+						.handlerInterceptor((context, features, continuation) -> {
+							Account account = context.getAdmissionIdentity()
+									.getPrincipal()
+									.filter(Account.class::isInstance)
+									.map(Account.class::cast)
+									.orElseThrow(() -> new IllegalStateException(
+											"An admitted Toy Store account is required."));
+							CurrentContext currentContext = CurrentContext
+									.withRequest(context.getRequest())
+									.locale(account.locale())
+									.timeZone(account.timeZone())
+									.account(account)
+									.build();
 
-								try {
-									return currentContext.run(() -> {
-										try {
-											return invocation.invoke();
-										} catch (RuntimeException e) {
-											throw e;
-										} catch (Exception e) {
-											throw new CompletionException(e);
-										}
-									});
-								} catch (CompletionException e) {
-									Throwable cause = e.getCause();
-
-									if (cause instanceof Exception exception)
-										throw exception;
-
-									throw e;
-								}
-							}
-
-							@NonNull
-							private CurrentContext resolveCurrentContext(@NonNull McpRequestContext context) {
-								requireNonNull(context);
-
-								Request request = context.getRequest();
-								Account account = resolveAccount(context.getSessionContext().orElse(null));
-								Localization localization = new Localization(
-										Optional.ofNullable(account)
-												.map(Account::locale)
-												.or(() -> request.getLocales().stream().findFirst())
-												.orElse(Configuration.getDefaultLocale()),
-										Optional.ofNullable(account)
-												.map(Account::timeZone)
-												.or(() -> resolveTimeZoneHeader(request))
-												.orElse(Configuration.getDefaultTimeZone())
-								);
-
-								return CurrentContext.withRequest(request)
-										.locale(localization.locale())
-										.timeZone(localization.timeZone())
-										.account(account)
-										.build();
-							}
-
-							@Nullable
-							private Account resolveAccount(@Nullable McpSessionContext sessionContext) {
-								if (sessionContext == null)
-									return null;
-
-								UUID accountId = sessionContext.get("accountId", UUID.class).orElse(null);
-
-								return accountService.findAccountById(accountId).orElse(null);
-							}
-
-							@NonNull
-							private Optional<ZoneId> resolveTimeZoneHeader(@NonNull Request request) {
-								requireNonNull(request);
-
-								String timeZoneHeader = request.getHeader("Time-Zone").orElse(null);
-
-								if (timeZoneHeader != null) {
+							try {
+								return currentContext.run(() -> {
 									try {
-										return Optional.of(ZoneId.of(timeZoneHeader));
-									} catch (Exception ignored) {
-										// Illegal timezone specified
+										return withMcpToolSummary(
+												continuation.proceed());
+									} catch (NotFoundException exception) {
+										if ("tools/call".equals(
+												context.getJsonRpcMethod()))
+											return McpCompleteResult.fromToolErrorText(
+													strings.get("Toy not found."));
+										throw exception;
+									} catch (McpJsonRpcException exception) {
+										if ("tools/call".equals(
+												context.getJsonRpcMethod()))
+											return McpCompleteResult.fromToolErrorText(
+													exception.getError().getMessage());
+										throw exception;
+									} catch (RuntimeException exception) {
+										throw exception;
+									} catch (Exception exception) {
+										throw new CompletionException(exception);
 									}
-								}
-
-								return Optional.empty();
+								});
+							} catch (CompletionException exception) {
+								if (exception.getCause() instanceof Exception cause)
+									throw cause;
+								throw exception;
 							}
 						})
-						.build())
-				.lifecycleObserver(new LifecycleObserver() {
+						.toolRateLimiter(McpRateLimiter.fromInMemoryDefaults())
+						.localizer(McpLocalizer.withFallbackLocale(Locale.US,
+								new ToyStoreMcpLocalizationContextProvider(strings))
+								.build());
+		McpServerConfiguration mcpServerConfiguration =
+				new McpServerConfiguration(mcpEndpointRegistry,
+						mcpAdmissionController, mcpServerConfigurer);
+
+		LifecycleObserver lifecycleObserver = new LifecycleObserver() {
 					@NonNull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.LifecycleObserver");
 
@@ -304,7 +389,8 @@ public class AppModule extends AbstractModule {
 					}
 
 					@Override
-					public void didStopSoklet(@NonNull Soklet soklet) {
+					public void didStopSoklet(@NonNull Soklet soklet,
+							@NonNull ShutdownResult result) {
 						logger.debug("Toystore app stopped.");
 					}
 
@@ -344,8 +430,8 @@ public class AppModule extends AbstractModule {
 						requireNonNull(logEvent);
 						logger.warn(logEvent.getMessage(), logEvent.getThrowable().orElse(null));
 					}
-				})
-				.requestInterceptor(new RequestInterceptor() {
+				};
+		RequestInterceptor requestInterceptor = new RequestInterceptor() {
 					@Override
 					public void wrapRequest(@Nonnull ServerType serverType,
 																	@NonNull Request request,
@@ -377,19 +463,6 @@ public class AppModule extends AbstractModule {
 						requireNonNull(request);
 						requireNonNull(responseGenerator);
 						requireNonNull(responseWriter);
-
-						if (serverType == ServerType.MCP) {
-							Localization localization = resolveLocalization(request);
-
-							CurrentContext.withRequest(request, resourceMethod)
-									.locale(localization.locale())
-									.timeZone(localization.timeZone())
-									.build()
-									.run(() -> {
-										responseWriter.accept(responseGenerator.apply(request));
-									});
-							return;
-						}
 
 						// We'll pull an account to tie to our "current context" if the request has a valid access token
 						Account account;
@@ -468,20 +541,8 @@ public class AppModule extends AbstractModule {
 					@Nullable
 					private String resolveAccessTokenFromAuthorization(@NonNull Request request) {
 						requireNonNull(request);
-
-						String authorizationHeader = request.getHeader("Authorization").orElse(null);
-
-						if (authorizationHeader == null)
-							return null;
-
-						String trimmed = authorizationHeader.trim();
-
-						if (trimmed.length() < 7 || !trimmed.regionMatches(true, 0, "Bearer", 0, 6))
-							return null;
-
-						String token = trimmed.substring(6).trim();
-
-						return token.isEmpty() ? null : token;
+						return resolveBearerToken(
+								request.getHeader("Authorization").orElse(null));
 					}
 
 					@NonNull
@@ -552,8 +613,8 @@ public class AppModule extends AbstractModule {
 
 						return Optional.empty();
 					}
-				})
-				.requestBodyMarshaler(new RequestBodyMarshaler() {
+				};
+		RequestBodyMarshaler requestBodyMarshaler = new RequestBodyMarshaler() {
 					@NonNull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.RequestBodyMarshaler");
 
@@ -582,8 +643,9 @@ public class AppModule extends AbstractModule {
 							throw new IllegalRequestBodyException("Malformed JSON", e);
 						}
 					}
-				})
-				.responseMarshaler(ResponseMarshaler.withCharset(StandardCharsets.UTF_8)
+				};
+		ResponseMarshaler responseMarshaler = ResponseMarshaler
+				.withCharset(StandardCharsets.UTF_8)
 						.resourceMethodHandler((@NonNull Request request,
 																		@NonNull Response response,
 																		@NonNull ResourceMethod resourceMethod) -> {
@@ -710,22 +772,132 @@ public class AppModule extends AbstractModule {
 									.headers(headers)
 									.body(body)
 									.build();
-						}).build()
-				)
+						}).build();
+
+		return new ApplicationConfigComponents(mcpServerConfiguration,
+				lifecycleObserver, requestInterceptor, requestBodyMarshaler,
+				responseMarshaler,
 				// Permit CORS for only the specified origins
-				.corsAuthorizer(CorsAuthorizer.fromWhitelistedOrigins(configuration.getCorsWhitelistedOrigins()))
+				CorsAuthorizer.fromWhitelistedOrigins(
+						configuration.getCorsWhitelistedOrigins()),
 				// Use Google Guice when Soklet needs to vend instances
-				.instanceProvider(injector::getInstance)
-				.build();
+				injector::getInstance);
+	}
+
+	private record McpServerConfiguration(
+			@NonNull McpEndpointRegistry endpointRegistry,
+			@NonNull McpAdmissionController admissionController,
+			@NonNull Consumer<McpServer.Builder> builderConfigurer) {
+		private McpServerConfiguration {
+			requireNonNull(endpointRegistry);
+			requireNonNull(admissionController);
+			requireNonNull(builderConfigurer);
+		}
+
+		@NonNull
+		private McpServer createServer(@NonNull Integer port) {
+			McpServer.Builder builder = McpServer.withPort(port,
+					this.endpointRegistry, this.admissionController);
+			this.builderConfigurer.accept(builder);
+			return builder.build();
+		}
+	}
+
+	private record ApplicationConfigComponents(
+			@NonNull McpServerConfiguration mcpServerConfiguration,
+			@NonNull LifecycleObserver lifecycleObserver,
+			@NonNull RequestInterceptor requestInterceptor,
+			@NonNull RequestBodyMarshaler requestBodyMarshaler,
+			@NonNull ResponseMarshaler responseMarshaler,
+			@NonNull CorsAuthorizer corsAuthorizer,
+			com.soklet.@NonNull InstanceProvider instanceProvider) {
+		private ApplicationConfigComponents {
+			requireNonNull(mcpServerConfiguration);
+			requireNonNull(lifecycleObserver);
+			requireNonNull(requestInterceptor);
+			requireNonNull(requestBodyMarshaler);
+			requireNonNull(responseMarshaler);
+			requireNonNull(corsAuthorizer);
+			requireNonNull(instanceProvider);
+		}
+	}
+
+	@NonNull
+	private McpOperationResult withMcpToolSummary(
+			@NonNull McpOperationResult result) {
+		requireNonNull(result);
+		if (!(result instanceof McpCompleteResult completeResult)
+				|| !(completeResult.getPayload() instanceof McpToolOutput output)
+				|| !output.getContent().isEmpty())
+			return result;
+
+		var structuredContent = output.getStructuredContent().orElse(null);
+		if (!(structuredContent instanceof McpJsonObject object)
+				|| !(object.find("summary").orElse(null)
+				instanceof McpJsonString summary))
+			return result;
+
+		return McpCompleteResult.fromToolOutput(McpToolOutput.builder()
+				.addContent(McpTextContent.fromText(summary.getValue()))
+				.structuredContent(structuredContent)
+				.error(output.isError())
+				.build())
+				.withMetadata(completeResult.getMetadata());
+	}
+
+	@Nullable
+	private String resolveBearerToken(@NonNull Request request) {
+		requireNonNull(request);
+		return resolveBearerToken(
+				request.getHeader("Authorization").orElse(null));
+	}
+
+	@Nullable
+	private static String resolveBearerToken(
+			@Nullable String authorization) {
+		if (authorization == null)
+			return null;
+
+		String trimmed = authorization.trim();
+		if (trimmed.length() < 8
+				|| !trimmed.regionMatches(true, 0, "Bearer", 0, 6))
+			return null;
+
+		int tokenStart = 6;
+		while (tokenStart < trimmed.length()
+				&& trimmed.charAt(tokenStart) == ' ')
+			tokenStart++;
+		if (tokenStart == 6 || tokenStart == trimmed.length())
+			return null;
+
+		String token = trimmed.substring(tokenStart);
+		return token.chars().anyMatch(Character::isWhitespace)
+				? null
+				: token;
+	}
+
+	@NonNull
+	private String insufficientScopeChallenge(
+			@NonNull Set<@NonNull Scope> requiredScopes) {
+		requireNonNull(requiredScopes);
+		String scope = requiredScopes.stream()
+				.map(Scope::getWireValue)
+				.sorted()
+				.collect(Collectors.joining(" "));
+		return "Bearer error=\"insufficient_scope\", scope=\"%s\""
+				.formatted(scope);
 	}
 
 	// Explicitly provide this so it can be injected directly, e.g. to ToyService for broadcasting Server-Sent Events
 	@NonNull
 	@Provides
 	@Singleton
-	public SseServer provideSseServer(@NonNull SokletConfig sokletConfig) {
-		requireNonNull(sokletConfig);
-		return sokletConfig.getSseServer().get();
+	public SseServer provideSseServer() {
+		SseServer sseServer = this.configuredSseServer;
+		if (sseServer == null)
+			throw new IllegalStateException(
+					"Soklet configuration must be created before SseServer injection.");
+		return sseServer;
 	}
 
 	// What context is bound to the current execution scope?

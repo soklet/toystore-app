@@ -333,6 +333,10 @@ The Toy Store App also exposes a read-only MCP endpoint on port `8082` at `/mcp`
 
 Like SSE, MCP uses its own short-lived audience-specific token instead of the long-lived API token. First, ask the HTTP API to mint one:
 
+To reproduce the Brazilian Portuguese call below, first authenticate as
+`customer@soklet.com` with `customer-password` and use that API token here.
+Reusing the earlier administrator token produces English tool data.
+
 ```shell
 % curl -i -X POST 'http://localhost:8080/accounts/mcp-access-token' \
   -H "Authorization: Bearer eyJhbG...c76fxc"
@@ -344,47 +348,39 @@ Content-Type: application/json;charset=UTF-8
 }
 ```
 
-Next, initialize an MCP session with the MCP token:
+Soklet 4.0.0 MCP requests are stateless. There is no initialization handshake or
+`MCP-Session-Id`; send the MCP bearer token and protocol metadata on every
+request. For example, call `list_toys` using an MCP token minted for the
+Brazilian Portuguese customer account. Tool data follows the authenticated
+account's locale; `Accept-Language` controls localizable MCP catalog metadata:
 
 ```shell
-% curl -i -X POST 'http://localhost:8082/mcp' \
+% curl -X POST 'http://localhost:8082/mcp' \
   -H "Authorization: Bearer eyJ...mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json; charset=UTF-8" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "Accept-Language: pt-BR" \
+  -H "MCP-Protocol-Version: 2026-07-28" \
+  -H "MCP-Method: tools/call" \
+  -H "MCP-Name: list_toys" \
   -d '{
     "jsonrpc":"2.0",
     "id":"req-1",
-    "method":"initialize",
-    "params":{
-      "protocolVersion":"2025-11-25",
-      "capabilities":{},
-      "clientInfo":{"name":"curl","version":"1.0.0"}
-    }
-  }'
-```
-
-Copy the `MCP-Session-Id` response header, then finish initialization and call a tool:
-
-```shell
-% curl -X POST 'http://localhost:8082/mcp' \
-  -H "Content-Type: application/json" \
-  -H "MCP-Session-Id: s_abc123" \
-  -H "MCP-Protocol-Version: 2025-11-25" \
-  -d '{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}'
-
-% curl -X POST 'http://localhost:8082/mcp' \
-  -H "Content-Type: application/json" \
-  -H "MCP-Session-Id: s_abc123" \
-  -H "MCP-Protocol-Version: 2025-11-25" \
-  -d '{
-    "jsonrpc":"2.0",
-    "id":"req-2",
     "method":"tools/call",
     "params":{
+      "_meta":{
+        "io.modelcontextprotocol/protocolVersion":"2026-07-28",
+        "io.modelcontextprotocol/clientCapabilities":{}
+      },
       "name":"list_toys",
       "arguments":{}
     }
   }'
 ```
+
+Authentication and scope are re-evaluated independently for each request: a
+missing, malformed, expired, or wrong-audience credential returns `401`, while
+an authenticated token without `mcp:read` returns `403`.
 
 The first MCP surface is intentionally narrow:
 

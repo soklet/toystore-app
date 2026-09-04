@@ -11,6 +11,8 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <!-- Release validation overrides this without editing the checkout. -->
+        <soklet.version>4.0.0</soklet.version>
     </properties>
 
     <build>
@@ -47,7 +49,7 @@
         <dependency>
             <groupId>com.soklet</groupId>
             <artifactId>soklet</artifactId>
-            <version>3.5.1</version>
+            <version>${soklet.version}</version>
         </dependency>
 
         <!-- Guice for dependency injection -->
@@ -87,7 +89,7 @@
         <dependency>
             <groupId>com.lokalized</groupId>
             <artifactId>lokalized</artifactId>
-            <version>2.0.0</version>
+            <version>3.0.0</version>
         </dependency>
 
         <!-- Caffeine for in-memory caches -->

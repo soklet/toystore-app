@@ -20,8 +20,7 @@ import com.google.gson.Gson;
 import com.soklet.HttpMethod;
 import com.soklet.MarshaledResponse;
 import com.soklet.Request;
-import com.soklet.Soklet;
-import com.soklet.SokletConfig;
+import com.soklet.SokletSimulator;
 import com.soklet.toystore.App;
 import com.soklet.toystore.Configuration;
 import com.soklet.toystore.model.api.request.AccountAuthenticateRequest;
@@ -43,9 +42,8 @@ public class AccountResourceTests {
 	public void testAuthenticate() {
 		App app = new App(new Configuration("local"));
 		Gson gson = app.getInjector().getInstance(Gson.class);
-		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
 
-		Soklet.runSimulator(config, (simulator -> {
+		SokletSimulator.run(app.createSimulatorConfig(), (simulator -> {
 			// Correct email/password
 			String requestBodyJson = gson.toJson(new AccountAuthenticateRequest("admin@soklet.com", "administrator-password"));
 

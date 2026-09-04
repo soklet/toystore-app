@@ -22,7 +22,8 @@ import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import com.pyranid.Database;
 import com.soklet.ShutdownTrigger;
-import com.soklet.Soklet;
+import com.soklet.SimulatorConfig;
+import com.soklet.SokletApplication;
 import com.soklet.SokletConfig;
 import com.soklet.toystore.model.db.Role.RoleId;
 import com.soklet.toystore.util.PasswordManager;
@@ -61,6 +62,8 @@ public class App {
 	@NonNull
 	private final Configuration configuration;
 	@NonNull
+	private final AppModule appModule;
+	@NonNull
 	private final Injector injector;
 	@NonNull
 	private final Logger logger;
@@ -71,12 +74,14 @@ public class App {
 
 		// Use Guice modules for DI.
 		// Also permit overrides for testing, e.g. swap in a mock credit card processor
-		Module module = new AppModule(configuration);
+		AppModule appModule = new AppModule(configuration);
+		Module module = appModule;
 
 		if (testingModules != null)
 			module = Modules.override(module).with(testingModules);
 
 		this.configuration = configuration;
+		this.appModule = appModule;
 		this.injector = Guice.createInjector(module);
 		this.logger = LoggerFactory.getLogger(App.class);
 
@@ -87,16 +92,18 @@ public class App {
 	public void startServer() throws InterruptedException {
 		SokletConfig config = getInjector().getInstance(SokletConfig.class);
 
-		try (Soklet soklet = Soklet.fromConfig(config)) {
-			soklet.start();
-
-			if (getConfiguration().getStopOnKeypress()) {
-				getLogger().debug("Press [enter] to exit");
-				soklet.awaitShutdown(ShutdownTrigger.ENTER_KEY);
-			} else {
-				soklet.awaitShutdown();
-			}
+		if (getConfiguration().getStopOnKeypress()) {
+			getLogger().debug("Press [enter] to exit");
+			SokletApplication.run(config, ShutdownTrigger.ENTER_KEY);
+		} else {
+			SokletApplication.run(config);
 		}
+	}
+
+	@NonNull
+	public SimulatorConfig createSimulatorConfig() {
+		return this.appModule.provideSimulatorSokletConfig(getInjector(),
+				getConfiguration(), SimulatorConfig.builder());
 	}
 
 	// A real system would keep its table creates/DDL in files outside of Java code.

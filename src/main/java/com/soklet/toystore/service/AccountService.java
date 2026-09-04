@@ -53,6 +53,25 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class AccountService {
+	public sealed interface AccessTokenEvaluation {
+		record Authenticated(@NonNull Account account)
+				implements AccessTokenEvaluation {
+			public Authenticated {
+				requireNonNull(account);
+			}
+		}
+
+		record AuthenticationFailed() implements AccessTokenEvaluation {}
+
+		record InsufficientScope(
+				@NonNull Set<@NonNull Scope> requiredScopes)
+				implements AccessTokenEvaluation {
+			public InsufficientScope {
+				requiredScopes = Set.copyOf(requireNonNull(requiredScopes));
+			}
+		}
+	}
+
 	@NonNull
 	private final Configuration configuration;
 	@NonNull
@@ -166,13 +185,29 @@ public class AccountService {
 
 	@NonNull
 	public Optional<Account> findAccountByAccessToken(@Nullable String accessTokenAsString,
-																										@NonNull Audience expectedAudience,
-																										@NonNull Set<@NonNull Scope> requiredScopes) {
+																			@NonNull Audience expectedAudience,
+																			@NonNull Set<@NonNull Scope> requiredScopes) {
+		return switch (evaluateAccessToken(accessTokenAsString, expectedAudience,
+				requiredScopes)) {
+			case AccessTokenEvaluation.Authenticated authenticated ->
+					Optional.of(authenticated.account());
+			case AccessTokenEvaluation.AuthenticationFailed ignored ->
+					Optional.empty();
+			case AccessTokenEvaluation.InsufficientScope ignored ->
+					Optional.empty();
+		};
+	}
+
+	@NonNull
+	public AccessTokenEvaluation evaluateAccessToken(
+			@Nullable String accessTokenAsString,
+			@NonNull Audience expectedAudience,
+			@NonNull Set<@NonNull Scope> requiredScopes) {
 		requireNonNull(expectedAudience);
 		requireNonNull(requiredScopes);
 
 		if (accessTokenAsString == null)
-			return Optional.empty();
+			return new AccessTokenEvaluation.AuthenticationFailed();
 
 		AccessTokenResult accessTokenResult = AccessToken.fromStringRepresentation(accessTokenAsString, getConfiguration().getKeyPair().getPublic());
 
@@ -180,15 +215,24 @@ public class AccountService {
 			case AccessTokenResult.Succeeded(@NonNull AccessToken accessToken) -> {
 				if (!accessToken.audience().equals(expectedAudience)) {
 					getLogger().warn("{} Access Token audience is invalid: {}", expectedAudience.name(), accessToken.audience());
-					return Optional.empty();
+					return new AccessTokenEvaluation.AuthenticationFailed();
+				}
+
+				Account account = findAccountById(accessToken.accountId())
+						.orElse(null);
+				if (account == null) {
+					getLogger().debug("{} Access Token account ID {} was not found",
+							expectedAudience.name(), accessToken.accountId());
+					return new AccessTokenEvaluation.AuthenticationFailed();
 				}
 
 				if (!accessToken.scopes().containsAll(requiredScopes)) {
 					getLogger().warn("{} Access Token missing required scopes: {}", expectedAudience.name(), requiredScopes);
-					return Optional.empty();
+					return new AccessTokenEvaluation.InsufficientScope(
+							requiredScopes);
 				}
 
-				return findAccountById(accessToken.accountId());
+				return new AccessTokenEvaluation.Authenticated(account);
 			}
 
 			case AccessTokenResult.Expired(@NonNull AccessToken accessToken, @NonNull Instant expiredAt) ->
@@ -200,7 +244,7 @@ public class AccountService {
 			default -> getLogger().warn("{} Access Token is invalid: {}", expectedAudience.name(), accessTokenAsString);
 		}
 
-		return Optional.empty();
+		return new AccessTokenEvaluation.AuthenticationFailed();
 	}
 
 	@NonNull

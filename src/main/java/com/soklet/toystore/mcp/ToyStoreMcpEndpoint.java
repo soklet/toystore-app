@@ -17,55 +17,35 @@
 package com.soklet.toystore.mcp;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonPrimitive;
 import com.google.inject.Inject;
 import com.lokalized.Strings;
-import com.soklet.McpArray;
-import com.soklet.McpEndpoint;
-import com.soklet.McpBoolean;
-import com.soklet.McpInitializationContext;
 import com.soklet.McpJsonRpcError;
-import com.soklet.McpListResourcesResult;
-import com.soklet.McpListedResource;
-import com.soklet.McpNull;
-import com.soklet.McpNumber;
-import com.soklet.McpObject;
-import com.soklet.McpRequestContext;
-import com.soklet.McpResourceContents;
-import com.soklet.McpSessionContext;
-import com.soklet.McpString;
-import com.soklet.McpTextContent;
-import com.soklet.McpToolCallContext;
-import com.soklet.McpToolResult;
-import com.soklet.McpValue;
-import com.soklet.Request;
-import com.soklet.annotation.McpArgument;
-import com.soklet.annotation.McpListResources;
+import com.soklet.McpJsonRpcException;
+import com.soklet.McpResourceDescriptor;
+import com.soklet.McpResourceListContext;
+import com.soklet.McpResourceOutput;
+import com.soklet.McpResourcePage;
+import com.soklet.McpTextResourceContents;
+import com.soklet.annotation.McpResourceList;
 import com.soklet.annotation.McpResource;
+import com.soklet.annotation.McpResourceUriParameter;
 import com.soklet.annotation.McpServerEndpoint;
 import com.soklet.annotation.McpTool;
-import com.soklet.annotation.McpUriParameter;
-import com.soklet.toystore.exception.AuthenticationException;
+import com.soklet.annotation.McpToolArgument;
 import com.soklet.toystore.exception.NotFoundException;
 import com.soklet.toystore.model.api.response.ToyResponse;
 import com.soklet.toystore.model.api.response.ToyResponse.ToyResponseFactory;
 import com.soklet.toystore.model.api.response.ToyResponse.ToyResponseHolder;
-import com.soklet.toystore.model.api.response.ToyResponse.ToysResponseHolder;
-import com.soklet.toystore.model.auth.AccessToken.Audience;
-import com.soklet.toystore.model.auth.AccessToken.Scope;
-import com.soklet.toystore.model.db.Account;
 import com.soklet.toystore.model.db.Toy;
-import com.soklet.toystore.service.AccountService;
 import com.soklet.toystore.service.ToyService;
 import org.jspecify.annotations.NonNull;
 
 import javax.annotation.concurrent.ThreadSafe;
-import java.util.LinkedHashMap;
+import java.math.BigDecimal;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
@@ -84,9 +64,7 @@ import static java.util.Objects.requireNonNull;
 		description = "Read-only Toy Store catalog tools and resources.",
 		instructions = "Authenticate with a Toy Store MCP bearer token and use the catalog to inspect available toys."
 )
-public class ToyStoreMcpEndpoint implements McpEndpoint {
-	@NonNull
-	private final AccountService accountService;
+public final class ToyStoreMcpEndpoint {
 	@NonNull
 	private final ToyService toyService;
 	@NonNull
@@ -97,229 +75,160 @@ public class ToyStoreMcpEndpoint implements McpEndpoint {
 	private final Gson gson;
 
 	@Inject
-	public ToyStoreMcpEndpoint(@NonNull AccountService accountService,
-														 @NonNull ToyService toyService,
-														 @NonNull ToyResponseFactory toyResponseFactory,
-														 @NonNull Strings strings,
-														 @NonNull Gson gson) {
-		requireNonNull(accountService);
-		requireNonNull(toyService);
-		requireNonNull(toyResponseFactory);
-		requireNonNull(strings);
-		requireNonNull(gson);
-
-		this.accountService = accountService;
-		this.toyService = toyService;
-		this.toyResponseFactory = toyResponseFactory;
-		this.strings = strings;
-		this.gson = gson;
+	public ToyStoreMcpEndpoint(@NonNull ToyService toyService,
+												 @NonNull ToyResponseFactory toyResponseFactory,
+												 @NonNull Strings strings,
+												 @NonNull Gson gson) {
+		this.toyService = requireNonNull(toyService);
+		this.toyResponseFactory = requireNonNull(toyResponseFactory);
+		this.strings = requireNonNull(strings);
+		this.gson = requireNonNull(gson);
 	}
 
 	@NonNull
-	@Override
-	public McpSessionContext initialize(@NonNull McpInitializationContext context,
-																			@NonNull McpSessionContext session) {
-		requireNonNull(context);
-		requireNonNull(session);
-
-		Account account = getAccountService().findAccountByAccessToken(
-				resolveAccessTokenFromAuthorization(context.getRequest()),
-				Audience.MCP,
-				Set.of(Scope.MCP_READ)
-		).orElseThrow(AuthenticationException::new);
-
-		return session.with("accountId", account.accountId());
-	}
-
-	@NonNull
-	@Override
-	public McpToolResult handleToolError(@NonNull Throwable throwable,
-																			 @NonNull McpToolCallContext context) {
-		requireNonNull(throwable);
-		requireNonNull(context);
-
-		if (throwable instanceof NotFoundException)
-			return McpToolResult.fromErrorMessage(getStrings().get("Toy not found."));
-
-		if (throwable instanceof AuthenticationException)
-			return McpToolResult.fromErrorMessage(getStrings().get("Sorry, we could not authenticate you."));
-
-		return McpEndpoint.super.handleToolError(throwable, context);
-	}
-
-	@NonNull
-	@Override
-	public McpJsonRpcError handleError(@NonNull Throwable throwable,
-																		 @NonNull McpRequestContext context) {
-		requireNonNull(throwable);
-		requireNonNull(context);
-
-		if (throwable instanceof AuthenticationException)
-			return McpJsonRpcError.fromCodeAndMessage(-32001, getStrings().get("Sorry, we could not authenticate you."));
-
-		if (throwable instanceof NotFoundException)
-			return McpJsonRpcError.fromCodeAndMessage(-32004, getStrings().get("Toy not found."));
-
-		return McpEndpoint.super.handleError(throwable, context);
-	}
-
-	@NonNull
-	@McpTool(name = "list_toys", description = "Lists toys in the catalog. Optionally filter by a toy-name prefix.")
-	public McpToolResult listToys(@McpArgument(value = "query", optional = true) Optional<String> query) {
+	@McpTool(
+			name = "list_toys",
+			title = "List toys",
+			description = "Lists toys in the catalog. Optionally filter by a toy-name prefix.",
+			structuredContentMirroredAsText = false
+	)
+	public ToyListResult listToys(
+			@McpToolArgument(
+					name = "query",
+					title = "Toy name prefix",
+					description = "Optional toy-name prefix to match."
+			) @NonNull Optional<String> query) {
 		requireNonNull(query);
 
-		List<ToyResponse> toys = (query.isPresent()
-				? getToyService().searchToys(query.get())
+		List<ToyCatalogEntry> toys = (query.isPresent()
+				? getToyService().searchToys(query.orElseThrow())
 				: getToyService().findToys())
 				.stream()
 				.map(getToyResponseFactory()::create)
+				.map(this::toCatalogEntry)
 				.toList();
-
 		String summary = query.filter(value -> !value.isBlank())
-				.map(value -> "Found %d toy(s) matching \"%s\".".formatted(toys.size(), value))
-				.orElse("Found %d toy(s).".formatted(toys.size()));
+				.map(value -> getStrings().get(
+						"Found {{toyCount}} toy(s) matching \"{{query}}\".",
+						Map.of("toyCount", toys.size(), "query", value)))
+				.orElseGet(() -> getStrings().get(
+						"Found {{toyCount}} toy(s).",
+						Map.of("toyCount", toys.size())));
 
-		return McpToolResult.builder()
-				.content(McpTextContent.fromText(summary))
-				.structuredContent(toMcpObject(new ToysResponseHolder(toys)))
-				.build();
+		return new ToyListResult(summary, toys);
 	}
 
 	@NonNull
-	@McpTool(name = "get_toy", description = "Gets a toy by its ID.")
-	public McpToolResult getToy(@NonNull @McpArgument("toyId") UUID toyId) {
+	@McpTool(
+			name = "get_toy",
+			title = "Get toy",
+			description = "Gets a toy by its ID.",
+			structuredContentMirroredAsText = false
+	)
+	public ToyLookupResult getToy(
+			@McpToolArgument(
+					name = "toyId",
+					title = "Toy ID",
+					description = "The UUID of the toy to load."
+			) @NonNull String toyId) {
 		requireNonNull(toyId);
 
-		ToyResponse toy = getToyResponseFactory().create(findToyOrThrow(toyId));
+		ToyResponse toy = getToyResponseFactory().create(
+				findToyOrThrow(parseToyId(toyId)));
+		String summary = getStrings().get(
+				"Loaded toy \"{{toyName}}\".",
+				Map.of("toyName", toy.getName()));
 
-		return McpToolResult.builder()
-				.content(McpTextContent.fromText("Loaded toy \"%s\".".formatted(toy.getName())))
-				.structuredContent(toMcpObject(new ToyResponseHolder(toy)))
-				.build();
+		return new ToyLookupResult(summary, toCatalogEntry(toy));
 	}
 
 	@NonNull
-	@McpListResources
-	public McpListResourcesResult listToyResources() {
-		List<McpListedResource> resources = getToyService().findToys().stream()
-				.map(toy -> {
-					ToyResponse toyResponse = getToyResponseFactory().create(toy);
+	@McpResourceList
+	public McpResourcePage listToyResources(
+			@NonNull McpResourceListContext context) {
+		requireNonNull(context);
 
-					return McpListedResource.fromComponents(toyUri(toy.toyId()), "toy", "application/json")
-							.withTitle(toyResponse.getName())
-							.withDescription("%s | %s".formatted(toyResponse.getPriceDescription(), toyResponse.getCreatedAtDescription()));
+		List<McpResourceDescriptor> resources = getToyService().findToys().stream()
+				.map(toy -> {
+					ToyResponse response = getToyResponseFactory().create(toy);
+					return McpResourceDescriptor.withUriAndName(
+							toyUri(toy.toyId()), "toy")
+							.title(response.getName())
+							.description("%s | %s".formatted(
+									response.getPriceDescription(),
+									response.getCreatedAtDescription()))
+							.mimeType("application/json")
+							.build();
 				})
 				.toList();
 
-		return McpListResourcesResult.fromResources(resources);
+		return McpResourcePage.builder().addResources(resources).build();
 	}
 
 	@NonNull
 	@McpResource(
 			uri = "toystore://toys/{toyId}",
 			name = "toy",
+			title = "Toy catalog entry",
 			mimeType = "application/json",
 			description = "Localized Toy Store catalog entry."
 	)
-	public McpResourceContents toy(@NonNull @McpUriParameter("toyId") UUID toyId) {
+	public McpResourceOutput toy(
+			@McpResourceUriParameter(name = "toyId") @NonNull String toyId) {
 		requireNonNull(toyId);
+		UUID parsedToyId = parseToyId(toyId);
+		Toy toy;
 
-		ToyResponseHolder response = new ToyResponseHolder(getToyResponseFactory().create(findToyOrThrow(toyId)));
+		try {
+			toy = findToyOrThrow(parsedToyId);
+		} catch (NotFoundException exception) {
+			throw new McpJsonRpcException(McpJsonRpcError.fromApplication(
+					-31904, getStrings().get("Toy not found.")));
+		}
 
-		return McpResourceContents.fromText(
-				toyUri(toyId),
-				getGson().toJson(response),
-				"application/json"
-		);
+		ToyResponseHolder response = new ToyResponseHolder(
+				getToyResponseFactory().create(toy));
+		return McpResourceOutput.fromContent(
+				McpTextResourceContents.withUriAndText(
+						toyUri(parsedToyId), getGson().toJson(response))
+						.mimeType("application/json")
+						.build());
 	}
 
 	@NonNull
 	private Toy findToyOrThrow(@NonNull UUID toyId) {
-		requireNonNull(toyId);
-
-		return getToyService().findToyById(toyId)
-				.orElseThrow(() -> new NotFoundException(getStrings().get("Toy not found.")));
+		return getToyService().findToyById(requireNonNull(toyId))
+				.orElseThrow(NotFoundException::new);
 	}
 
 	@NonNull
-	private String toyUri(@NonNull UUID toyId) {
-		requireNonNull(toyId);
-		return "toystore://toys/%s".formatted(toyId);
-	}
-
-	@NonNull
-	private McpObject toMcpObject(@NonNull Object value) {
-		requireNonNull(value);
-
-		McpValue mcpValue = toMcpValue(getGson().toJsonTree(value));
-
-		if (!(mcpValue instanceof McpObject mcpObject))
-			throw new IllegalArgumentException("Expected object structured content.");
-
-		return mcpObject;
-	}
-
-	@NonNull
-	private McpValue toMcpValue(JsonElement jsonElement) {
-		requireNonNull(jsonElement);
-
-		if (jsonElement.isJsonNull())
-			return McpNull.INSTANCE;
-
-		if (jsonElement.isJsonObject()) {
-			Map<String, McpValue> values = new LinkedHashMap<>();
-
-			for (Map.Entry<String, JsonElement> entry : jsonElement.getAsJsonObject().entrySet())
-				values.put(entry.getKey(), toMcpValue(entry.getValue()));
-
-			return new McpObject(values);
+	private UUID parseToyId(@NonNull String toyId) {
+		try {
+			return UUID.fromString(requireNonNull(toyId));
+		} catch (IllegalArgumentException exception) {
+			throw new McpJsonRpcException(McpJsonRpcError.fromInvalidParameters(
+					getStrings().get("The toyId argument must be a UUID.")));
 		}
-
-		if (jsonElement.isJsonArray())
-		{
-			List<McpValue> values = new java.util.ArrayList<>();
-
-			for (JsonElement element : jsonElement.getAsJsonArray())
-				values.add(toMcpValue(element));
-
-			return new McpArray(values);
-		}
-
-		JsonPrimitive primitive = jsonElement.getAsJsonPrimitive();
-
-		if (primitive.isBoolean())
-			return new McpBoolean(primitive.getAsBoolean());
-
-		if (primitive.isNumber())
-			return new McpNumber(primitive.getAsBigDecimal());
-
-		if (primitive.isString())
-			return new McpString(primitive.getAsString());
-
-		throw new IllegalArgumentException("Unsupported JSON value: %s".formatted(jsonElement));
-	}
-
-	private String resolveAccessTokenFromAuthorization(@NonNull Request request) {
-		requireNonNull(request);
-
-		String authorizationHeader = request.getHeader("Authorization").orElse(null);
-
-		if (authorizationHeader == null)
-			return null;
-
-		String trimmed = authorizationHeader.trim();
-
-		if (trimmed.length() < 7 || !trimmed.regionMatches(true, 0, "Bearer", 0, 6))
-			return null;
-
-		String token = trimmed.substring(6).trim();
-
-		return token.isEmpty() ? null : token;
 	}
 
 	@NonNull
-	private AccountService getAccountService() {
-		return this.accountService;
+	private URI toyUri(@NonNull UUID toyId) {
+		return URI.create("toystore://toys/%s".formatted(requireNonNull(toyId)));
+	}
+
+	@NonNull
+	private ToyCatalogEntry toCatalogEntry(@NonNull ToyResponse toy) {
+		requireNonNull(toy);
+		return new ToyCatalogEntry(
+				toy.getToyId().toString(),
+				toy.getName(),
+				toy.getPrice(),
+				toy.getPriceDescription(),
+				toy.getCurrencyCode(),
+				toy.getCurrencySymbol(),
+				toy.getCurrencyDescription(),
+				toy.getCreatedAt().toString(),
+				toy.getCreatedAtDescription());
 	}
 
 	@NonNull
@@ -340,5 +249,49 @@ public class ToyStoreMcpEndpoint implements McpEndpoint {
 	@NonNull
 	private Gson getGson() {
 		return this.gson;
+	}
+
+	/** Typed MCP result for catalog searches. */
+	public record ToyListResult(
+			@NonNull String summary,
+			@NonNull List<@NonNull ToyCatalogEntry> toys) {
+		public ToyListResult {
+			requireNonNull(summary);
+			toys = List.copyOf(requireNonNull(toys));
+		}
+	}
+
+	/** Typed MCP result for one catalog lookup. */
+	public record ToyLookupResult(
+			@NonNull String summary,
+			@NonNull ToyCatalogEntry toy) {
+		public ToyLookupResult {
+			requireNonNull(summary);
+			requireNonNull(toy);
+		}
+	}
+
+	/** MCP-safe record representation of the existing HTTP toy response. */
+	public record ToyCatalogEntry(
+			@NonNull String toyId,
+			@NonNull String name,
+			@NonNull BigDecimal price,
+			@NonNull String priceDescription,
+			@NonNull String currencyCode,
+			@NonNull String currencySymbol,
+			@NonNull String currencyDescription,
+			@NonNull String createdAt,
+			@NonNull String createdAtDescription) {
+		public ToyCatalogEntry {
+			requireNonNull(toyId);
+			requireNonNull(name);
+			requireNonNull(price);
+			requireNonNull(priceDescription);
+			requireNonNull(currencyCode);
+			requireNonNull(currencySymbol);
+			requireNonNull(currencyDescription);
+			requireNonNull(createdAt);
+			requireNonNull(createdAtDescription);
+		}
 	}
 }

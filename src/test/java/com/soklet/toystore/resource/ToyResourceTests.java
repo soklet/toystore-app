@@ -24,8 +24,7 @@ import com.soklet.HttpMethod;
 import com.soklet.MarshaledResponse;
 import com.soklet.Request;
 import com.soklet.Simulator;
-import com.soklet.Soklet;
-import com.soklet.SokletConfig;
+import com.soklet.SokletSimulator;
 import com.soklet.SseEvent;
 import com.soklet.SseRequestResult;
 import com.soklet.SseRequestResult.HandshakeAccepted;
@@ -80,12 +79,22 @@ public class ToyResourceTests {
 	public void testCreateToy() {
 		App app = new App(new Configuration("local"));
 		Gson gson = app.getInjector().getInstance(Gson.class);
-		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
 
-		Soklet.runSimulator(config, (simulator -> {
+		SokletSimulator.run(app.createSimulatorConfig(), (simulator -> {
 			// Get an auth token so we can provide to API calls
 			AccessToken accessToken = acquireAccessToken(app, "admin@soklet.com", "administrator-password");
 			String accessTokenAsString = accessToken.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate());
+			Request malformedAuthorizationRequest = Request.withPath(
+					HttpMethod.GET, "/toys/export.ndjson")
+					.headers(Map.of("Authorization",
+							Set.of("Bearer" + accessTokenAsString)))
+					.build();
+			MarshaledResponse malformedAuthorizationResponse = simulator
+					.performHttpRequest(malformedAuthorizationRequest)
+					.getMarshaledResponse();
+			Assertions.assertEquals(401,
+					malformedAuthorizationResponse.getStatusCode(),
+					"A Bearer credential without the required separator was accepted");
 
 			// Create a toy by calling the API
 			String name = "Example Toy";
@@ -133,9 +142,8 @@ public class ToyResourceTests {
 	public void testExportToysStreamingNdjson() {
 		App app = new App(new Configuration("local"));
 		Gson gson = app.getInjector().getInstance(Gson.class);
-		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
 
-		Soklet.runSimulator(config, (simulator -> {
+		SokletSimulator.run(app.createSimulatorConfig(), (simulator -> {
 			AccessToken accessToken = acquireAccessToken(app, "admin@soklet.com", "administrator-password");
 			String accessTokenAsString = accessToken.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate());
 			String namePrefix = format("Streaming Export Toy %s", UUID.randomUUID());
@@ -174,9 +182,8 @@ public class ToyResourceTests {
 	public void testUpdateToyValidationAndUniqueness() {
 		App app = new App(new Configuration("local"));
 		Gson gson = app.getInjector().getInstance(Gson.class);
-		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
 
-		Soklet.runSimulator(config, (simulator -> {
+		SokletSimulator.run(app.createSimulatorConfig(), (simulator -> {
 			AccessToken accessToken = acquireAccessToken(app, "admin@soklet.com", "administrator-password");
 			String accessTokenAsString = accessToken.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate());
 
@@ -256,9 +263,8 @@ public class ToyResourceTests {
 		});
 
 		Gson gson = app.getInjector().getInstance(Gson.class);
-		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
 
-		Soklet.runSimulator(config, (simulator -> {
+		SokletSimulator.run(app.createSimulatorConfig(), (simulator -> {
 			// Get an auth token so we can provide to API calls
 			AccessToken accessToken = acquireAccessToken(app, "admin@soklet.com", "administrator-password");
 			String accessTokenAsString = accessToken.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate());
@@ -415,9 +421,8 @@ public class ToyResourceTests {
 	public void testLocalizationFromRequestHeaders() {
 		App app = new App(new Configuration("local"));
 		Gson gson = app.getInjector().getInstance(Gson.class);
-		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
 
-		Soklet.runSimulator(config, (simulator -> {
+		SokletSimulator.run(app.createSimulatorConfig(), (simulator -> {
 			AccessToken accessToken = acquireAccessToken(app, "admin@soklet.com", "administrator-password");
 			String accessTokenAsString = accessToken.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate());
 
@@ -470,12 +475,11 @@ public class ToyResourceTests {
 	public void testSseBroadcastLocalizationPerAccount() {
 		App app = new App(new Configuration("local"));
 		Gson gson = app.getInjector().getInstance(Gson.class);
-		SokletConfig config = app.getInjector().getInstance(SokletConfig.class);
 
 		List<SseEvent> adminEvents = new ArrayList<>();
 		List<SseEvent> employeeEvents = new ArrayList<>();
 
-		Soklet.runSimulator(config, (simulator -> {
+		SokletSimulator.run(app.createSimulatorConfig(), (simulator -> {
 			PrivateKey privateKey = app.getConfiguration().getKeyPair().getPrivate();
 			AccessToken adminAccessToken = acquireAccessToken(app, "admin@soklet.com", "administrator-password");
 			AccessToken employeeAccessToken = acquireAccessToken(app, "employee@soklet.com", "employee-password");

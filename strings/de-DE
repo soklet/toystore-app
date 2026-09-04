@@ -23,5 +23,22 @@
   "We were unable to charge {{amount}} to your credit card.": "Wir konnten {{amount}} nicht von Ihrer Kreditkarte abbuchen.",
   "Email address is required.": "E-Mail-Adresse ist erforderlich.",
   "Email address is invalid.": "E-Mail-Adresse ist ungültig.",
-  "Password is required.": "Passwort ist erforderlich."
+  "Password is required.": "Passwort ist erforderlich.",
+  "Toy Store MCP": "Spielzeugladen-MCP",
+  "Read-only Toy Store catalog tools and resources.": "Schreibgeschützte Werkzeuge und Ressourcen für den Spielzeugladen-Katalog.",
+  "Authenticate with a Toy Store MCP bearer token and use the catalog to inspect available toys.": "Authentifizieren Sie sich mit einem MCP-Bearer-Token des Spielzeugladens und verwenden Sie den Katalog, um verfügbare Spielzeuge anzusehen.",
+  "List toys": "Spielzeuge auflisten",
+  "Lists toys in the catalog. Optionally filter by a toy-name prefix.": "Listet Spielzeuge im Katalog auf. Optional kann nach einem Namenspräfix gefiltert werden.",
+  "Toy name prefix": "Spielzeug-Namenspräfix",
+  "Optional toy-name prefix to match.": "Optionales Namenspräfix für die Suche.",
+  "Get toy": "Spielzeug abrufen",
+  "Gets a toy by its ID.": "Ruft ein Spielzeug anhand seiner ID ab.",
+  "Toy ID": "Spielzeug-ID",
+  "The UUID of the toy to load.": "Die UUID des zu ladenden Spielzeugs.",
+  "Toy catalog entry": "Spielzeug-Katalogeintrag",
+  "Localized Toy Store catalog entry.": "Lokalisierter Katalogeintrag des Spielzeugladens.",
+  "Found {{toyCount}} toy(s).": "{{toyCount}} Spielzeug(e) gefunden.",
+  "Found {{toyCount}} toy(s) matching \"{{query}}\".": "{{toyCount}} Spielzeug(e) passend zu „{{query}}“ gefunden.",
+  "Loaded toy \"{{toyName}}\".": "Spielzeug „{{toyName}}“ geladen.",
+  "The toyId argument must be a UUID.": "Das Argument toyId muss eine UUID sein."
 }
