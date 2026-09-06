@@ -181,8 +181,12 @@ public class AppModule extends AbstractModule {
 		SseServer sseServer = SseServer.withPort(
 				configuration.getServerSentEventPort()).build();
 		this.configuredSseServer = sseServer;
-		McpServer mcpServer = components.mcpServerConfiguration()
-				.createServer(configuration.getMcpServerPort());
+		McpServer.Builder mcpServerBuilder = McpServer
+				.withPort(configuration.getMcpServerPort())
+				.endpointRegistry(components.mcpEndpointRegistry())
+				.admissionController(components.mcpAdmissionController());
+		configureMcpServerBuilder(mcpServerBuilder, strings);
+		McpServer mcpServer = mcpServerBuilder.build();
 
 		return SokletConfig.withHttpServer(httpServer)
 				.sseServer(sseServer)
@@ -204,21 +208,26 @@ public class AppModule extends AbstractModule {
 		requireNonNull(configuration);
 		requireNonNull(builder);
 
+		Strings strings = injector.getInstance(Strings.class);
 		ApplicationConfigComponents components = createApplicationConfigComponents(
 				injector, configuration,
 				injector.getInstance(Database.class),
 				injector.getInstance(AccountService.class),
 				injector.getInstance(SensitiveValueRedactor.class),
-				injector.getInstance(Strings.class),
+				strings,
 				injector.getInstance(Gson.class),
 				injector.getInstance(ErrorReporter.class));
 
 		return builder.httpServer()
 				.sseServer(sseServer -> this.configuredSseServer = sseServer)
-				.mcpServer(configuration.getMcpServerPort(),
-						components.mcpServerConfiguration().endpointRegistry(),
-						components.mcpServerConfiguration().admissionController(),
-						components.mcpServerConfiguration().builderConfigurer())
+				.configureMcpServer(mcpServerBuilder -> {
+					mcpServerBuilder
+							.port(configuration.getMcpServerPort())
+							.endpointRegistry(components.mcpEndpointRegistry())
+							.admissionController(
+									components.mcpAdmissionController());
+					configureMcpServerBuilder(mcpServerBuilder, strings);
+				})
 				.lifecycleObserver(components.lifecycleObserver())
 				.requestInterceptor(components.requestInterceptor())
 				.requestBodyMarshaler(components.requestBodyMarshaler())
@@ -284,59 +293,6 @@ public class AppModule extends AbstractModule {
 				}
 			};
 		};
-		Consumer<McpServer.Builder> mcpServerConfigurer =
-				mcpServerBuilder -> mcpServerBuilder
-						.handlerInterceptor((context, features, continuation) -> {
-							Account account = context.getAdmissionIdentity()
-									.getPrincipal()
-									.filter(Account.class::isInstance)
-									.map(Account.class::cast)
-									.orElseThrow(() -> new IllegalStateException(
-											"An admitted Toy Store account is required."));
-							CurrentContext currentContext = CurrentContext
-									.withRequest(context.getRequest())
-									.locale(account.locale())
-									.timeZone(account.timeZone())
-									.account(account)
-									.build();
-
-							try {
-								return currentContext.run(() -> {
-									try {
-										return withMcpToolSummary(
-												continuation.proceed());
-									} catch (NotFoundException exception) {
-										if ("tools/call".equals(
-												context.getJsonRpcMethod()))
-											return McpCompleteResult.fromToolErrorText(
-													strings.get("Toy not found."));
-										throw exception;
-									} catch (McpJsonRpcException exception) {
-										if ("tools/call".equals(
-												context.getJsonRpcMethod()))
-											return McpCompleteResult.fromToolErrorText(
-													exception.getError().getMessage());
-										throw exception;
-									} catch (RuntimeException exception) {
-										throw exception;
-									} catch (Exception exception) {
-										throw new CompletionException(exception);
-									}
-								});
-							} catch (CompletionException exception) {
-								if (exception.getCause() instanceof Exception cause)
-									throw cause;
-								throw exception;
-							}
-						})
-						.toolRateLimiter(McpRateLimiter.fromInMemoryDefaults())
-						.localizer(McpLocalizer.withFallbackLocale(Locale.US,
-								new ToyStoreMcpLocalizationContextProvider(strings))
-								.build());
-		McpServerConfiguration mcpServerConfiguration =
-				new McpServerConfiguration(mcpEndpointRegistry,
-						mcpAdmissionController, mcpServerConfigurer);
-
 		LifecycleObserver lifecycleObserver = new LifecycleObserver() {
 					@NonNull
 					private final Logger logger = LoggerFactory.getLogger("com.soklet.toystore.LifecycleObserver");
@@ -774,7 +730,8 @@ public class AppModule extends AbstractModule {
 									.build();
 						}).build();
 
-		return new ApplicationConfigComponents(mcpServerConfiguration,
+		return new ApplicationConfigComponents(mcpEndpointRegistry,
+				mcpAdmissionController,
 				lifecycleObserver, requestInterceptor, requestBodyMarshaler,
 				responseMarshaler,
 				// Permit CORS for only the specified origins
@@ -784,27 +741,65 @@ public class AppModule extends AbstractModule {
 				injector::getInstance);
 	}
 
-	private record McpServerConfiguration(
-			@NonNull McpEndpointRegistry endpointRegistry,
-			@NonNull McpAdmissionController admissionController,
-			@NonNull Consumer<McpServer.Builder> builderConfigurer) {
-		private McpServerConfiguration {
-			requireNonNull(endpointRegistry);
-			requireNonNull(admissionController);
-			requireNonNull(builderConfigurer);
-		}
+	private void configureMcpServerBuilder(
+			McpServer.@NonNull Builder mcpServerBuilder,
+			@NonNull Strings strings) {
+		requireNonNull(mcpServerBuilder);
+		requireNonNull(strings);
 
-		@NonNull
-		private McpServer createServer(@NonNull Integer port) {
-			McpServer.Builder builder = McpServer.withPort(port,
-					this.endpointRegistry, this.admissionController);
-			this.builderConfigurer.accept(builder);
-			return builder.build();
-		}
+		mcpServerBuilder
+				.handlerInterceptor((context, features, continuation) -> {
+					Account account = context.getAdmissionIdentity()
+							.getPrincipal()
+							.filter(Account.class::isInstance)
+							.map(Account.class::cast)
+							.orElseThrow(() -> new IllegalStateException(
+									"An admitted Toy Store account is required."));
+					CurrentContext currentContext = CurrentContext
+							.withRequest(context.getRequest())
+							.locale(account.locale())
+							.timeZone(account.timeZone())
+							.account(account)
+							.build();
+
+					try {
+						return currentContext.run(() -> {
+							try {
+								return withMcpToolSummary(
+										continuation.proceed());
+							} catch (NotFoundException exception) {
+								if ("tools/call".equals(
+										context.getJsonRpcMethod()))
+									return McpCompleteResult.fromToolErrorText(
+											strings.get("Toy not found."));
+								throw exception;
+							} catch (McpJsonRpcException exception) {
+								if ("tools/call".equals(
+										context.getJsonRpcMethod()))
+									return McpCompleteResult.fromToolErrorText(
+											exception.getError().getMessage());
+								throw exception;
+							} catch (RuntimeException exception) {
+								throw exception;
+							} catch (Exception exception) {
+								throw new CompletionException(exception);
+							}
+						});
+					} catch (CompletionException exception) {
+						if (exception.getCause() instanceof Exception cause)
+							throw cause;
+						throw exception;
+					}
+				})
+				.toolRateLimiter(McpRateLimiter.fromInMemoryDefaults())
+				.localizer(McpLocalizer.withFallbackLocale(Locale.US,
+						new ToyStoreMcpLocalizationContextProvider(strings))
+						.build());
 	}
 
 	private record ApplicationConfigComponents(
-			@NonNull McpServerConfiguration mcpServerConfiguration,
+			@NonNull McpEndpointRegistry mcpEndpointRegistry,
+			@NonNull McpAdmissionController mcpAdmissionController,
 			@NonNull LifecycleObserver lifecycleObserver,
 			@NonNull RequestInterceptor requestInterceptor,
 			@NonNull RequestBodyMarshaler requestBodyMarshaler,
@@ -812,7 +807,8 @@ public class AppModule extends AbstractModule {
 			@NonNull CorsAuthorizer corsAuthorizer,
 			com.soklet.@NonNull InstanceProvider instanceProvider) {
 		private ApplicationConfigComponents {
-			requireNonNull(mcpServerConfiguration);
+			requireNonNull(mcpEndpointRegistry);
+			requireNonNull(mcpAdmissionController);
 			requireNonNull(lifecycleObserver);
 			requireNonNull(requestInterceptor);
 			requireNonNull(requestBodyMarshaler);
