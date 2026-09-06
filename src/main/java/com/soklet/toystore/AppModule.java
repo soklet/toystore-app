@@ -51,6 +51,7 @@ import com.soklet.McpJsonRpcError;
 import com.soklet.McpJsonRpcException;
 import com.soklet.McpJsonString;
 import com.soklet.McpLocalizer;
+import com.soklet.McpOperationType;
 import com.soklet.McpOperationResult;
 import com.soklet.McpRateLimiter;
 import com.soklet.McpAdmissionRejection;
@@ -768,14 +769,14 @@ public class AppModule extends AbstractModule {
 								return withMcpToolSummary(
 										continuation.proceed());
 							} catch (NotFoundException exception) {
-								if ("tools/call".equals(
-										context.getJsonRpcMethod()))
+								if (context.getOperationType()
+										== McpOperationType.TOOLS_CALL)
 									return McpCompleteResult.fromToolErrorText(
 											strings.get("Toy not found."));
 								throw exception;
 							} catch (McpJsonRpcException exception) {
-								if ("tools/call".equals(
-										context.getJsonRpcMethod()))
+								if (context.getOperationType()
+										== McpOperationType.TOOLS_CALL)
 									return McpCompleteResult.fromToolErrorText(
 											exception.getError().getMessage());
 								throw exception;
