@@ -184,6 +184,8 @@ public class AppModule extends AbstractModule {
 		this.configuredSseServer = sseServer;
 		McpServer.Builder mcpServerBuilder = McpServer
 				.withPort(configuration.getMcpServerPort())
+				.host(configuration.getMcpServerHost())
+				.allowedHosts(configuration.getMcpServerAllowedHosts())
 				.endpointRegistry(components.mcpEndpointRegistry())
 				.admissionController(components.mcpAdmissionController());
 		configureMcpServerBuilder(mcpServerBuilder, strings);

@@ -13,6 +13,8 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <!-- Release validation overrides this without editing the checkout. -->
         <soklet.version>4.0.0</soklet.version>
+        <!-- The Docker smoke procedure overrides this with a fresh report directory. -->
+        <surefire.reportsDirectory>${project.build.directory}/surefire-reports</surefire.reportsDirectory>
     </properties>
 
     <build>
@@ -35,6 +37,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.4</version>
                 <configuration>
+                    <reportsDirectory>${surefire.reportsDirectory}</reportsDirectory>
                     <argLine>
                         --enable-native-access=ALL-UNNAMED
                         --sun-misc-unsafe-memory-access=allow

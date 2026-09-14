@@ -42,7 +42,9 @@ import java.security.spec.X509EncodedKeySpec;
 import java.time.Duration;
 import java.time.ZoneId;
 import java.util.Base64;
+import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 import static java.lang.String.format;
@@ -81,6 +83,10 @@ public class Configuration {
 	@NonNull
 	private final Integer mcpServerPort;
 	@NonNull
+	private final String mcpServerHost;
+	@NonNull
+	private final Set<@NonNull String> mcpServerAllowedHosts;
+	@NonNull
 	private final Duration accessTokenExpiration;
 	@NonNull
 	private final Duration sseAccessTokenExpiration;
@@ -95,16 +101,35 @@ public class Configuration {
 	private final Set<@NonNull String> corsWhitelistedOrigins;
 
 	public Configuration(@NonNull String environment) {
+		this(environment, System.getenv());
+	}
+
+	Configuration(@NonNull String environment,
+			@NonNull Map<@NonNull String, @NonNull String> environmentVariables) {
 		requireNonNull(environment);
+		requireNonNull(environmentVariables);
 
 		ConfigFile configFile = loadConfigFileForEnvironment(environment);
 
 		this.environment = environment;
-		this.runningInDocker = "true".equalsIgnoreCase(System.getenv("TOYSTORE_RUNNING_IN_DOCKER"));
+		this.runningInDocker = "true".equalsIgnoreCase(environmentVariables.get("TOYSTORE_RUNNING_IN_DOCKER"));
 		this.stopOnKeypress = !this.runningInDocker;
 		this.port = requireNonNull(configFile.port());
 		this.serverSentEventPort = requireNonNull(configFile.serverSentEventPort());
 		this.mcpServerPort = requireNonNull(configFile.mcpServerPort());
+		this.mcpServerHost = environmentVariables.getOrDefault("TOYSTORE_MCP_HOST",
+				this.runningInDocker ? "0.0.0.0" : "127.0.0.1").trim();
+		if (this.mcpServerHost.isEmpty())
+			throw new IllegalArgumentException("TOYSTORE_MCP_HOST must not be blank");
+		Set<String> allowedHosts = new LinkedHashSet<>();
+		for (String value : environmentVariables.getOrDefault("TOYSTORE_MCP_ALLOWED_HOSTS",
+				"localhost,127.0.0.1").split(",", -1)) {
+			String host = value.trim();
+			if (host.isEmpty())
+				throw new IllegalArgumentException("TOYSTORE_MCP_ALLOWED_HOSTS must contain nonempty hostnames or IP literals");
+			allowedHosts.add(host);
+		}
+		this.mcpServerAllowedHosts = Set.copyOf(allowedHosts);
 		this.accessTokenExpiration = Duration.ofSeconds(configFile.accessTokenExpirationInSeconds());
 		this.sseAccessTokenExpiration = Duration.ofSeconds(configFile.sseAccessTokenExpirationInSeconds());
 		this.mcpAccessTokenExpiration = Duration.ofSeconds(configFile.mcpAccessTokenExpirationInSeconds());
@@ -265,6 +290,24 @@ public class Configuration {
 	@NonNull
 	public Integer getMcpServerPort() {
 		return this.mcpServerPort;
+	}
+
+	/**
+	 * MCP listener bind address: loopback natively, all container interfaces in
+	 * Docker, unless explicitly overridden by {@code TOYSTORE_MCP_HOST}.
+	 */
+	@NonNull
+	public String getMcpServerHost() {
+		return this.mcpServerHost;
+	}
+
+	/**
+	 * Explicit MCP Host allowlist, without ports. The transport independently
+	 * requires the request authority's port to equal the bound MCP port.
+	 */
+	@NonNull
+	public Set<@NonNull String> getMcpServerAllowedHosts() {
+		return this.mcpServerAllowedHosts;
 	}
 
 	@NonNull
