@@ -98,6 +98,22 @@ allowed authorities, and checks rejected hostnames/ports plus missing credential
 % TOYSTORE_DOCKER_SMOKE=true mvn -Dtest=ToyStoreMcpDockerSmokeTests -Dsurefire.reportsDirectory="$docker_smoke_reports" test && java scripts/VerifyDockerSmokeReport.java "$docker_smoke_reports/TEST-com.soklet.toystore.mcp.ToyStoreMcpDockerSmokeTests.xml"
 ```
 
+If another local service already uses HTTP port `8080`, publish the container's
+HTTP port on a free loopback port and tell the smoke test which host port to use:
+
+```shell
+% docker run -e TOYSTORE_ENVIRONMENT="local" -p 127.0.0.1:18080:8080 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 soklet/toystore
+# In another terminal:
+% docker_smoke_reports=$(mktemp -d)
+% TOYSTORE_DOCKER_SMOKE=true TOYSTORE_DOCKER_SMOKE_HTTP_PORT=18080 mvn -Dtest=ToyStoreMcpDockerSmokeTests -Dsurefire.reportsDirectory="$docker_smoke_reports" test && java scripts/VerifyDockerSmokeReport.java "$docker_smoke_reports/TEST-com.soklet.toystore.mcp.ToyStoreMcpDockerSmokeTests.xml"
+```
+
+The optional `TOYSTORE_DOCKER_SMOKE_HTTP_PORT` changes only the test's HTTP
+authentication/token-minting port; the host remains `127.0.0.1`. It defaults to
+`8080` and accepts only decimal integers `1` through `65535`, without leading
+zeroes, signs, or whitespace. Keep MCP published on `8082`: its separate
+Host-authority port validation and the smoke's MCP checks are unchanged.
+
 Run this command on the Docker host with Java 25 and Maven. It uses only the
 local demo credentials, does not print tokens, and does not run during the
 ordinary unit suite unless explicitly enabled. The flag is exactly lowercase
@@ -398,7 +414,7 @@ Content-Type: application/json;charset=UTF-8
 }
 ```
 
-Soklet 4.0.0 MCP requests are stateless. There is no initialization handshake or
+MCP requests are stateless. There is no initialization handshake or
 `MCP-Session-Id`; send the MCP bearer token and protocol metadata on every
 request. For example, call `list_toys` using an MCP token minted for the
 Brazilian Portuguese customer account. Tool data follows the authenticated

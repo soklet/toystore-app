@@ -46,14 +46,15 @@ class ToyStoreMcpDockerSmokeTests {
 	@Test
 	void publishedMcpPortSupportsAuthenticatedDiscoveryAndInvocationWithHostValidation()
 			throws Exception {
+		int httpPort = resolveHttpPort(System.getenv("TOYSTORE_DOCKER_SMOKE_HTTP_PORT"));
 		try (HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()) {
 			HttpResponse<String> authentication = post(client,
-					"http://127.0.0.1:8080/accounts/authenticate", null, null, null,
+					"http://127.0.0.1:" + httpPort + "/accounts/authenticate", null, null, null,
 					"{\"emailAddress\":\"admin@soklet.com\",\"password\":\"administrator-password\"}");
 			Assertions.assertEquals(200, authentication.statusCode());
 			String apiToken = object(authentication).get("authenticationToken").getAsString();
 			HttpResponse<String> mint = post(client,
-					"http://127.0.0.1:8080/accounts/mcp-access-token", apiToken, null, null, "");
+					"http://127.0.0.1:" + httpPort + "/accounts/mcp-access-token", apiToken, null, null, "");
 			Assertions.assertEquals(200, mint.statusCode());
 			String mcpToken = object(mint).get("accessToken").getAsString();
 			for (String hostname : new String[]{"127.0.0.1", "localhost"}) {
@@ -75,6 +76,17 @@ class ToyStoreMcpDockerSmokeTests {
 		assertAuthorityRejected("untrusted.example:8082");
 		assertAuthorityRejected("localhost:8083");
 		assertAuthorityRejected("localhost");
+	}
+
+	static int resolveHttpPort(@Nullable String configuredPort) {
+		if (configuredPort == null)
+			return 8080;
+		if (!configuredPort.matches("[1-9][0-9]{0,4}"))
+			throw new IllegalArgumentException("TOYSTORE_DOCKER_SMOKE_HTTP_PORT must be a decimal port from 1 through 65535");
+		int port = Integer.parseInt(configuredPort);
+		if (port > 65535)
+			throw new IllegalArgumentException("TOYSTORE_DOCKER_SMOKE_HTTP_PORT must be a decimal port from 1 through 65535");
+		return port;
 	}
 
 	@NonNull
