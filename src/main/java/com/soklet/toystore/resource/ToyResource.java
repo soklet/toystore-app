@@ -125,7 +125,7 @@ public class ToyResource {
 						"Content-Type", Set.of("application/x-ndjson; charset=UTF-8"),
 						"Cache-Control", Set.of("no-transform")
 				))
-				.stream(StreamingResponseBody.fromWriter((output, context) -> {
+				.streamingResponseBody(StreamingResponseBody.fromWriter((output, context) -> {
 					for (ToyResponse toy : toys) {
 						context.throwIfCanceled();
 						output.write(compactJson(toy).getBytes(StandardCharsets.UTF_8));

@@ -56,6 +56,7 @@ import com.soklet.McpOperationResult;
 import com.soklet.McpRateLimiter;
 import com.soklet.McpAdmissionRejection;
 import com.soklet.McpServer;
+import com.soklet.McpSubscriptionAuthorizer;
 import com.soklet.McpTextContent;
 import com.soklet.McpToolOutput;
 import com.soklet.Request;
@@ -87,6 +88,7 @@ import com.soklet.toystore.mock.MockErrorReporter;
 import com.soklet.toystore.mock.MockSecretsManager;
 import com.soklet.toystore.mcp.ToyStoreMcpEndpoint;
 import com.soklet.toystore.mcp.ToyStoreMcpLocalizationContextProvider;
+import com.soklet.toystore.mcp.ToyStoreMcpSkills;
 import com.soklet.toystore.model.api.response.AccountResponse.AccountResponseFactory;
 import com.soklet.toystore.model.api.response.ErrorResponse;
 import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseFactory;
@@ -258,7 +260,9 @@ public class AppModule extends AbstractModule {
 		requireNonNull(errorReporter);
 
 		McpEndpointRegistry mcpEndpointRegistry = McpEndpointRegistry.fromClasses(
-				ToyStoreMcpEndpoint.class);
+				ToyStoreMcpEndpoint.class)
+				.withSkillGroups(ToyStoreMcpEndpoint.class,
+						List.of(ToyStoreMcpSkills.catalogGuideGroup()));
 		McpAdmissionController mcpAdmissionController = context -> {
 			AccessTokenEvaluation evaluation = accountService.evaluateAccessToken(
 							resolveBearerToken(context.getRequest()),
@@ -751,6 +755,9 @@ public class AppModule extends AbstractModule {
 		requireNonNull(strings);
 
 		mcpServerBuilder
+				// Catalog localization enables subscription support in Soklet, but
+				// this request/response example does not grant live MCP subscriptions.
+				.subscriptionAuthorizer(McpSubscriptionAuthorizer.denyAllInstance())
 				.handlerInterceptor((context, features, continuation) -> {
 					Account account = context.getAdmissionIdentity()
 							.getPrincipal()
@@ -795,6 +802,7 @@ public class AppModule extends AbstractModule {
 					}
 				})
 				.toolRateLimiter(McpRateLimiter.fromInMemoryDefaults())
+				.skillVariantSelector(ToyStoreMcpSkills.catalogGuideSelector(strings))
 				.localizer(McpLocalizer.withFallbackLocale(Locale.US,
 						new ToyStoreMcpLocalizationContextProvider(strings))
 						.build());
@@ -836,12 +844,11 @@ public class AppModule extends AbstractModule {
 				instanceof McpJsonString summary))
 			return result;
 
-		return McpCompleteResult.fromToolOutput(McpToolOutput.builder()
-				.addContent(McpTextContent.fromText(summary.getValue()))
-				.structuredContent(structuredContent)
-				.error(output.isError())
-				.build())
-				.withMetadata(completeResult.getMetadata());
+		return completeResult.toBuilder()
+				.payload(output.toBuilder()
+						.content(java.util.List.of(McpTextContent.fromText(summary.getValue())))
+						.build())
+				.build();
 	}
 
 	@Nullable

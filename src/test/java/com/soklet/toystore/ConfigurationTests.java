@@ -16,9 +16,13 @@
 
 package com.soklet.toystore;
 
+import com.soklet.McpServer;
+import com.soklet.McpSubscriptionAuthorizer;
 import com.soklet.SokletConfig;
+import com.soklet.SokletSimulator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Map;
 import java.util.Set;
@@ -43,6 +47,28 @@ class ConfigurationTests {
 		// for an explicit allowlist when binding a non-loopback address.
 		App app = new App(configuration);
 		Assertions.assertTrue(app.getInjector().getInstance(SokletConfig.class).getMcpServer().isPresent());
+	}
+
+	@Test
+	@Timeout(60)
+	void productionAndSimulatorExplicitlyDenyMcpSubscriptions() {
+		for (boolean runningInDocker : new boolean[]{false, true}) {
+			App app = new App(new Configuration("local", Map.of(
+					"TOYSTORE_RUNNING_IN_DOCKER", Boolean.toString(runningInDocker))));
+			McpServer productionServer = app.getInjector()
+					.getInstance(SokletConfig.class).getMcpServer().orElseThrow();
+			Assertions.assertSame(McpSubscriptionAuthorizer.denyAllInstance(),
+					productionServer.getSubscriptionAuthorizer());
+
+			SokletSimulator.run(app.createSimulatorConfig(), simulator -> {
+				McpServer simulatorServer = simulator.getMcpServer().orElseThrow();
+				Assertions.assertNotSame(productionServer, simulatorServer);
+				Assertions.assertSame(productionServer.getSubscriptionAuthorizer(),
+						simulatorServer.getSubscriptionAuthorizer());
+				Assertions.assertEquals(0,
+						simulatorServer.getDiagnostics().getActiveSubscriptions());
+			});
+		}
 	}
 
 	@Test

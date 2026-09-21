@@ -448,12 +448,193 @@ Authentication and scope are re-evaluated independently for each request: a
 missing, malformed, expired, or wrong-audience credential returns `401`, while
 an authenticated token without `mcp:read` returns `403`.
 
-The first MCP surface is intentionally narrow:
+The MCP surface is intentionally narrow:
 
 * `list_toys`
 * `get_toy`
+* `show_toy_catalog`, with a catalog App for compatible hosts and readable text fallback
 * `resources/list`
 * `resources/read` for `toystore://toys/{toyId}`
+* `resources/read` for the static App at `ui://toystore/catalog-v1`
+* `skills/list` and `skills/get` for the authored `toy-catalog-guide`
+* `resources/read` for the guide's `SKILL.md` and supporting field reference
+
+##### Read-only catalog App
+
+Call `show_toy_catalog` to browse the catalog in a compatible MCP Apps host. It
+accepts the same optional `query` toy-name prefix as `list_toys` and delegates to
+that existing business path. The ordinary result includes all matching toys in
+`structuredContent` and readable text containing a localized count, each toy's
+name, localized price, and currency code. Clients without Apps support keep this
+text and structured result; they do not need to render a UI.
+
+An Apps-capable client advertises this capability on **each** request:
+
+```json
+{
+  "io.modelcontextprotocol/clientCapabilities": {
+    "extensions": {
+      "io.modelcontextprotocol/ui": {
+        "mimeTypes": ["text/html;profile=mcp-app"]
+      }
+    }
+  }
+}
+```
+
+Place it beside `io.modelcontextprotocol/protocolVersion` in `params._meta`, as in
+the earlier tool-call example; use `show_toy_catalog` for both `MCP-Name` and
+`params.name`. Optional filtering uses `"arguments":{"query":"Catalog"}`.
+The tool's `tools/list` descriptor then carries
+`_meta.ui.resourceUri = "ui://toystore/catalog-v1"`. The custom `resources/list`
+handler includes that exact resource only for Apps-capable requests, alongside
+the existing live toy descriptors. Skills files remain in the separate Skills
+catalog. Capabilities select presentation, not authorization: an authenticated
+caller can still directly read the exact UI URI without first listing it.
+
+The host reads that resource as `text/html;profile=mcp-app` and renders its
+[packaged HTML](src/main/resources/mcp/apps/catalog.html) in its Apps sandbox.
+This is a logical MCP resource URI, not a public HTTP page. The HTML is static:
+no account, bearer token, or live catalog entry is interpolated into it. Catalog
+data arrives through tool results. Filtering and refresh call the existing
+read-only `list_toys` tool through the host bridge; the UI never calls the HTTP
+API directly, asks for credentials, or performs a purchase or mutation.
+
+Successful `list_toys` and `show_toy_catalog` results include `summary`, `toys`,
+and `locale`. The server selects `locale` from the authenticated account's
+preferences using the application's supported-language matcher: `en-US`,
+`de-DE`, or `pt-BR`. The App uses that value for its headings, controls, and
+status/error messages, while displaying prices and dates exactly as formatted
+by the server. Its initial waiting view is English; older results without
+`locale` and valid but unsupported locale tags also use English. A fresh
+authorized result can change the App's language. Neither browser/host language
+nor tool arguments choose the account's locale. The App's language is independent
+of HTTP `Accept-Language`, which separately negotiates localizable MCP catalog
+metadata. A host locale or time-zone
+change clears the view and requires reopening it.
+
+Every tool call and resource read independently requires the same MCP-audience,
+`mcp:read` token, including refresh after the initial view has opened. The host
+forwards its credentials; the UI does not own or receive them. Resource metadata
+requests no extra permissions and no external connection, resource, or frame
+origins, with same-origin-only base URIs and a preferred border. The host must
+enforce the sandbox and policy; these are not browser protections implemented by
+the Java server.
+
+The example requires a host supporting both this stateless `2026-07-28` endpoint
+and the MCP Apps bridge. Server simulator and local bridge tests do not qualify
+any specific real host; known host compatibility limitations still apply. See
+the [MCP Apps guide](https://www.soklet.com/docs/mcp-apps) for the integration
+contract and compatibility boundary.
+
+##### Catalog guidance Skill
+
+The [catalog guide](src/main/resources/mcp/skills/en-US/toy-catalog-guide/SKILL.md)
+explains how to browse and look up toys, interpret localized prices, and avoid
+claiming unsupported inventory or purchasing capabilities. Its
+[field reference](src/main/resources/mcp/skills/en-US/toy-catalog-guide/references/catalog-fields.md)
+documents the existing tool and resource payloads. Both files are explicitly
+authored in English (`en-US`), German (`de-DE`), and Brazilian Portuguese
+(`pt-BR`). They are guidance, not a snapshot of the live catalog; no translation
+occurs at request time.
+
+[AppModule](src/main/java/com/soklet/toystore/AppModule.java) attaches the group
+created by [ToyStoreMcpSkills](src/main/java/com/soklet/toystore/mcp/ToyStoreMcpSkills.java)
+to the existing annotated endpoint using `withSkillGroups(...)`. The
+generated tools, dynamic resource listing, dependency injection, and localization
+remain in place. The files are fixed classpath resources packaged in the app;
+no directories are scanned and no scripts are executed.
+
+`skills/list` selects the language matched from the authenticated account's
+locale using the application's existing string-locale matcher, with English
+fallback. Positive `Accept-Language` preferences do not override that account
+choice, but a zero-weight exclusion is respected: the most-specific matching
+range wins, with the earliest range breaking ties. If the account variant is
+excluded, eligible English is the fallback; if English is also excluded, the
+group is omitted. Catalog metadata localization remains separately negotiated.
+
+A Skills-aware client advertises the extension on each request. Using an MCP
+token minted above, list the available guide:
+
+```shell
+% curl -X POST 'http://localhost:8082/mcp' \
+  -H "Authorization: Bearer eyJ...mcp" \
+  -H "Content-Type: application/json; charset=UTF-8" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "MCP-Protocol-Version: 2026-07-28" \
+  -H "MCP-Method: skills/list" \
+  -d '{
+    "jsonrpc":"2.0",
+    "id":"skills-1",
+    "method":"skills/list",
+    "params":{"_meta":{
+      "io.modelcontextprotocol/protocolVersion":"2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities":{
+        "extensions":{"io.modelcontextprotocol/skills":{}}
+      }
+    }}
+  }'
+```
+
+The selected entry's root URI is
+`skill://toystore/v1/{locale}/toy-catalog-guide/SKILL.md`, where `{locale}` is
+`en-US`, `de-DE`, or `pt-BR`. It includes the complete YAML frontmatter and a
+manifest of both files with SHA-256 digests and raw byte sizes. To look up the
+English entry directly, use `skills/get` in both the method header and JSON
+method, and add `"uri":"skill://toystore/v1/en-US/toy-catalog-guide/SKILL.md"`
+beside `_meta` in `params`. Neither Skills method uses `MCP-Name`. The example's
+previous unversioned Skill URI is no longer registered.
+
+Read the actual Markdown through the ordinary resource-read operation:
+
+```shell
+% curl -X POST 'http://localhost:8082/mcp' \
+  -H "Authorization: Bearer eyJ...mcp" \
+  -H "Content-Type: application/json; charset=UTF-8" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "MCP-Protocol-Version: 2026-07-28" \
+  -H "MCP-Method: resources/read" \
+  -H "MCP-Name: skill://toystore/v1/en-US/toy-catalog-guide/SKILL.md" \
+  -d '{
+    "jsonrpc":"2.0",
+    "id":"skills-2",
+    "method":"resources/read",
+    "params":{
+      "_meta":{
+        "io.modelcontextprotocol/protocolVersion":"2026-07-28",
+        "io.modelcontextprotocol/clientCapabilities":{
+          "extensions":{"io.modelcontextprotocol/skills":{}}
+        }
+      },
+      "uri":"skill://toystore/v1/en-US/toy-catalog-guide/SKILL.md"
+    }
+  }'
+```
+
+For the supporting file, replace both the `MCP-Name` header and `uri` parameter
+with `skill://toystore/v1/en-US/toy-catalog-guide/references/catalog-fields.md`.
+Use `de-DE` or `pt-BR` instead of `en-US` to retrieve another authored variant.
+Each variant retains its original bytes and stable digests regardless of the
+request's account locale or language headers. These Skill files do not appear
+in `resources/list` or `resources/templates/list`;
+those catalogs describe the live toy resources, with the exact App resource
+also listed for Apps-capable requests.
+
+All variants are available by exact URI to every account admitted with a valid
+MCP-audience, `mcp:read` token, even when another language is selected for listing
+or a language exclusion hides the group. Selection is not authorization.
+Listing or reading a Skill never bypasses the per-request authentication and
+scope checks described above. Skill responses retain the
+default private, zero-TTL cache policy. Publishing and retrieving a guide does
+not activate it in an agent: whether to load and follow its guidance is a client
+decision.
+
+Live MCP subscriptions are intentionally not offered. The shared server and
+simulator configuration explicitly selects
+`McpSubscriptionAuthorizer.denyAllInstance()`: an authenticated `mcp:read`
+credential permits catalog requests, not a subscription grant. Catalog
+localization remains enabled. This policy is separate from the Toy Store's
+existing HTTP/SSE event sources.
 
 ### Learning More
 

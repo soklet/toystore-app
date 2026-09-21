@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en-US" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Toy Store catalog</title>
+  <style>
+    :root { color-scheme: light dark; font: 15px/1.5 system-ui, sans-serif; color: #192e36; background: #f4f7f5; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; }
+    main { max-width: 920px; margin: auto; }
+    .eyebrow { color: #476d61; font-size: .73rem; font-weight: 750; letter-spacing: .15em; text-transform: uppercase; margin: 0 0 4px; }
+    h1 { font-size: 1.8rem; letter-spacing: -.04em; margin: 0; }
+    .intro { color: #52676d; margin: 4px 0 24px; }
+    form { display: flex; align-items: flex-end; gap: 12px; margin: 0 0 20px; }
+    label { display: grid; gap: 5px; flex: 1; font-size: .82rem; font-weight: 650; }
+    input, button { min-height: 44px; border-radius: 9px; font: inherit; }
+    input { width: 100%; border: 1px solid #9aafa8; background: #fff; color: #192e36; padding: 9px 12px; }
+    button { border: 1px solid transparent; background: #1f6651; color: #fff; padding: 9px 19px; cursor: pointer; font-weight: 650; }
+    button:disabled, input:disabled { opacity: .6; cursor: default; }
+    :focus-visible { outline: 3px solid #d6961f; outline-offset: 3px; }
+    #catalog-status { padding: 20px; border: 1px dashed #9aafa8; border-radius: 12px; background: #fff; }
+    #catalog-summary { color: #52676d; margin: 0 0 12px; overflow-wrap: anywhere; white-space: pre-line; }
+    #catalog-items { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; padding: 0; margin: 0; }
+    .toy { background: #fff; border: 1px solid #d7e1dc; border-radius: 12px; padding: 18px; min-width: 0; }
+    .toy h2 { font-size: 1rem; line-height: 1.35; margin: 0 0 16px; overflow-wrap: anywhere; }
+    .price { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; margin: 0 0 12px; }
+    .amount { font-size: 1.35rem; font-weight: 750; overflow-wrap: anywhere; }
+    .currency { color: #52676d; font-size: .75rem; }
+    .created { color: #52676d; font-size: .8rem; margin: 0; overflow-wrap: anywhere; }
+    footer { color: #52676d; font-size: .75rem; margin-top: 24px; }
+    [hidden] { display: none !important; }
+    @media (max-width: 460px) { body { padding: 16px; } form { align-items: stretch; flex-direction: column; } }
+    @media (prefers-color-scheme: dark) {
+      :root { color: #e4efe9; background: #14221f; }
+      .eyebrow { color: #94cbb4; }
+      .intro, #catalog-summary, .currency, .created, footer { color: #b0c7be; }
+      input, #catalog-status, .toy { color: #e4efe9; background: #1c302a; border-color: #45665a; }
+      button { background: #88c9ac; color: #122a21; }
+    }
+  </style>
+</head>
+<body>
+  <main id="catalog-root" data-state="waiting" aria-busy="true">
+    <header><p id="catalog-eyebrow" class="eyebrow">Toy Store · Read-only</p><h1 id="catalog-heading">Browse the catalog</h1><p id="catalog-intro" class="intro">A little inspiration for the next playtime.</p></header>
+    <form id="catalog-filter">
+      <label for="catalog-query"><span id="catalog-query-label">Name starts with</span><input id="catalog-query" type="search" maxlength="256" autocomplete="off" placeholder="All toys" disabled></label>
+      <button id="catalog-refresh" type="button" disabled>Refresh</button>
+    </form>
+    <p id="catalog-status" role="status" aria-live="polite">Connecting to the catalog…</p>
+    <section id="catalog-view" aria-label="Toy catalog" hidden>
+      <p id="catalog-summary" role="status" aria-live="polite"></p>
+      <ul id="catalog-items"></ul>
+    </section>
+    <footer id="catalog-footer">Read-only view. Prices and dates are formatted by Toy Store. Refresh uses your current authorized connection.</footer>
+  </main>
+  <!-- TOYSTORE_APP_SCRIPT -->
+  <!-- TOYSTORE_APP_LICENSES -->
+</body>
+</html>

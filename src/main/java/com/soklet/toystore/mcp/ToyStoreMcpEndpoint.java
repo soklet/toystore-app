@@ -18,20 +18,25 @@ package com.soklet.toystore.mcp;
 
 import com.google.gson.Gson;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.lokalized.Strings;
+import com.soklet.McpAppResourceMetadata;
 import com.soklet.McpJsonRpcError;
 import com.soklet.McpJsonRpcException;
+import com.soklet.McpRequestContext;
 import com.soklet.McpResourceDescriptor;
 import com.soklet.McpResourceListContext;
 import com.soklet.McpResourceOutput;
 import com.soklet.McpResourcePage;
 import com.soklet.McpTextResourceContents;
+import com.soklet.annotation.McpAppTool;
 import com.soklet.annotation.McpResourceList;
 import com.soklet.annotation.McpResource;
 import com.soklet.annotation.McpResourceUriParameter;
 import com.soklet.annotation.McpServerEndpoint;
 import com.soklet.annotation.McpTool;
 import com.soklet.annotation.McpToolArgument;
+import com.soklet.toystore.CurrentContext;
 import com.soklet.toystore.exception.NotFoundException;
 import com.soklet.toystore.model.api.response.ToyResponse;
 import com.soklet.toystore.model.api.response.ToyResponse.ToyResponseFactory;
@@ -41,12 +46,18 @@ import com.soklet.toystore.service.ToyService;
 import org.jspecify.annotations.NonNull;
 
 import javax.annotation.concurrent.ThreadSafe;
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
@@ -65,6 +76,15 @@ import static java.util.Objects.requireNonNull;
 		instructions = "Authenticate with a Toy Store MCP bearer token and use the catalog to inspect available toys."
 )
 public final class ToyStoreMcpEndpoint {
+	private static final String CATALOG_APP_URI = "ui://toystore/catalog-v1";
+	private static final String CATALOG_APP_MIME_TYPE = "text/html;profile=mcp-app";
+	@NonNull
+	private static final String CATALOG_APP_HTML = catalogAppHtml();
+	@NonNull
+	private static final McpAppResourceMetadata CATALOG_APP_METADATA =
+			McpAppResourceMetadata.builder()
+					.contentSecurityPolicy(McpAppResourceMetadata.ContentSecurityPolicy.builder().build())
+					.permissions(Set.of()).prefersBorder(true).build();
 	@NonNull
 	private final ToyService toyService;
 	@NonNull
@@ -73,16 +93,20 @@ public final class ToyStoreMcpEndpoint {
 	private final Strings strings;
 	@NonNull
 	private final Gson gson;
+	@NonNull
+	private final Provider<CurrentContext> currentContextProvider;
 
 	@Inject
 	public ToyStoreMcpEndpoint(@NonNull ToyService toyService,
 												 @NonNull ToyResponseFactory toyResponseFactory,
 												 @NonNull Strings strings,
-												 @NonNull Gson gson) {
+												 @NonNull Gson gson,
+												 @NonNull Provider<CurrentContext> currentContextProvider) {
 		this.toyService = requireNonNull(toyService);
 		this.toyResponseFactory = requireNonNull(toyResponseFactory);
 		this.strings = requireNonNull(strings);
 		this.gson = requireNonNull(gson);
+		this.currentContextProvider = requireNonNull(currentContextProvider);
 	}
 
 	@NonNull
@@ -115,7 +139,34 @@ public final class ToyStoreMcpEndpoint {
 						"Found {{toyCount}} toy(s).",
 						Map.of("toyCount", toys.size())));
 
-		return new ToyListResult(summary, toys);
+		// Use the same account-scoped string catalog as the summary, not the
+		// request's independently negotiated MCP descriptor language.
+		String locale = getStrings().bestMatchFor(getCurrentContext().getLocale()).toLanguageTag();
+		return new ToyListResult(summary, toys, locale);
+	}
+
+	@NonNull
+	@McpTool(
+			name = "show_toy_catalog",
+			title = "Show toy catalog",
+			description = "Shows the read-only toy catalog with an optional toy-name prefix filter. Apps-capable clients can display an interactive catalog view.",
+			structuredContentMirroredAsText = false
+	)
+	@McpAppTool(resourceUri = CATALOG_APP_URI)
+	public ToyListResult showToyCatalog(
+			@McpToolArgument(
+					name = "query",
+					title = "Toy name prefix",
+					description = "Optional toy-name prefix to match."
+			) @NonNull Optional<String> query) {
+		ToyListResult result = listToys(requireNonNull(query));
+		// Keep the ordinary text result useful when a host cannot render Apps.
+		String entries = result.toys().stream()
+				.map(toy -> "%s — %s (%s)".formatted(
+						toy.name(), toy.priceDescription(), toy.currencyCode()))
+				.collect(Collectors.joining("\n"));
+		return new ToyListResult(entries.isEmpty() ? result.summary()
+				: result.summary() + "\n" + entries, result.toys(), result.locale());
 	}
 
 	@NonNull
@@ -145,10 +196,12 @@ public final class ToyStoreMcpEndpoint {
 	@NonNull
 	@McpResourceList
 	public McpResourcePage listToyResources(
+			@NonNull McpRequestContext requestContext,
 			@NonNull McpResourceListContext context) {
+		requireNonNull(requestContext);
 		requireNonNull(context);
 
-		List<McpResourceDescriptor> resources = getToyService().findToys().stream()
+		List<McpResourceDescriptor> resources = new ArrayList<>(getToyService().findToys().stream()
 				.map(toy -> {
 					ToyResponse response = getToyResponseFactory().create(toy);
 					return McpResourceDescriptor.withUriAndName(
@@ -160,9 +213,30 @@ public final class ToyStoreMcpEndpoint {
 							.mimeType("application/json")
 							.build();
 				})
-				.toList();
+				.toList());
+		// Registration descriptors are not authorization- or capability-filtered.
+		// Admission has already required an MCP-audience token with mcp:read.
+		if (requestContext.getClientCapabilities().supportsAppMimeType(CATALOG_APP_MIME_TYPE))
+			context.getRegisteredResourceDescriptors().stream()
+					.filter(resource -> URI.create(CATALOG_APP_URI).equals(resource.getUri()))
+					.forEach(resources::add);
 
-		return McpResourcePage.builder().addResources(resources).build();
+		return McpResourcePage.builder().resourceDescriptors(resources).build();
+	}
+
+	@NonNull
+	@McpResource(
+			uri = CATALOG_APP_URI,
+			name = "toy_catalog_view",
+			title = "Toy catalog view",
+			mimeType = CATALOG_APP_MIME_TYPE,
+			description = "Static read-only catalog interface. Catalog data arrives through authenticated tool results."
+	)
+	public McpResourceOutput catalogApp() {
+		return McpResourceOutput.fromContent(McpTextResourceContents
+				.withUriAndText(URI.create(CATALOG_APP_URI), CATALOG_APP_HTML)
+				.mimeType(CATALOG_APP_MIME_TYPE)
+				.appResourceMetadata(CATALOG_APP_METADATA).build());
 	}
 
 	@NonNull
@@ -193,6 +267,16 @@ public final class ToyStoreMcpEndpoint {
 						toyUri(parsedToyId), getGson().toJson(response))
 						.mimeType("application/json")
 						.build());
+	}
+
+	@NonNull
+	private static String catalogAppHtml() {
+		try (InputStream input = ToyStoreMcpEndpoint.class.getResourceAsStream("/mcp/apps/catalog.html")) {
+			return new String(requireNonNull(input, "Missing packaged catalog App").readAllBytes(),
+					StandardCharsets.UTF_8);
+		} catch (IOException exception) {
+			throw new IllegalStateException("Unable to read the packaged catalog App.", exception);
+		}
 	}
 
 	@NonNull
@@ -251,13 +335,20 @@ public final class ToyStoreMcpEndpoint {
 		return this.gson;
 	}
 
+	@NonNull
+	private CurrentContext getCurrentContext() {
+		return this.currentContextProvider.get();
+	}
+
 	/** Typed MCP result for catalog searches. */
 	public record ToyListResult(
 			@NonNull String summary,
-			@NonNull List<@NonNull ToyCatalogEntry> toys) {
+			@NonNull List<@NonNull ToyCatalogEntry> toys,
+			@NonNull String locale) {
 		public ToyListResult {
 			requireNonNull(summary);
 			toys = List.copyOf(requireNonNull(toys));
+			requireNonNull(locale);
 		}
 	}
 
