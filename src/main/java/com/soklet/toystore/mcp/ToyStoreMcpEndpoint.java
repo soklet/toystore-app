@@ -55,7 +55,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -84,7 +83,7 @@ public final class ToyStoreMcpEndpoint {
 	private static final McpAppResourceMetadata CATALOG_APP_METADATA =
 			McpAppResourceMetadata.builder()
 					.contentSecurityPolicy(McpAppResourceMetadata.ContentSecurityPolicy.builder().build())
-					.permissions(Set.of()).prefersBorder(true).build();
+					.prefersBorder(true).build();
 	@NonNull
 	private final ToyService toyService;
 	@NonNull

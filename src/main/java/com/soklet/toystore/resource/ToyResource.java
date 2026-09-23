@@ -22,7 +22,6 @@ import com.google.gson.JsonParser;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.soklet.MarshaledResponse;
-import com.soklet.StreamingResponseBody;
 import com.soklet.SseHandshakeResult;
 import com.soklet.annotation.DELETE;
 import com.soklet.annotation.GET;
@@ -125,14 +124,13 @@ public class ToyResource {
 						"Content-Type", Set.of("application/x-ndjson; charset=UTF-8"),
 						"Cache-Control", Set.of("no-transform")
 				))
-				.streamingResponseBody(StreamingResponseBody.fromWriter((output, context) -> {
+				.stream(responseStream -> {
 					for (ToyResponse toy : toys) {
-						context.throwIfCanceled();
-						output.write(compactJson(toy).getBytes(StandardCharsets.UTF_8));
-						output.write(new byte[]{'\n'});
-						output.flush();
+						responseStream.getCancelationToken().throwIfCanceled();
+						responseStream.write((compactJson(toy) + "\n").getBytes(StandardCharsets.UTF_8));
+						responseStream.flush();
 					}
-				}))
+				})
 				.build();
 	}
 
