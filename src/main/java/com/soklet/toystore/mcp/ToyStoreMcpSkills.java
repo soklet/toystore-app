@@ -16,6 +16,7 @@
 package com.soklet.toystore.mcp;
 
 import com.lokalized.Strings;
+import com.soklet.McpProtocolVersion;
 import com.soklet.McpSkillBundle;
 import com.soklet.McpSkillGroup;
 import com.soklet.McpSkillRegistration;
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 
@@ -111,7 +113,8 @@ public final class ToyStoreMcpSkills {
 		McpSkillBundle bundle = McpSkillBundle.fromFiles(Map.of(
 				"SKILL.md", requiredResource(guidePath),
 				"references/catalog-fields.md", requiredResource(referencePath)));
-		return McpSkillRegistration.withUriAndSkillBundle(URI.create(uri), bundle)
+		return McpSkillRegistration.withUriAndSkillBundle(URI.create(uri), bundle,
+				Set.of(McpProtocolVersion.V2026_07_28))
 				.locale(locale)
 				// Keep the default private, zero-TTL policy. Admission still runs on every request.
 				.build();

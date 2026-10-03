@@ -23,6 +23,7 @@ import com.lokalized.Strings;
 import com.soklet.McpAppResourceMetadata;
 import com.soklet.McpJsonRpcError;
 import com.soklet.McpJsonRpcException;
+import com.soklet.McpProtocolVersion;
 import com.soklet.McpRequestContext;
 import com.soklet.McpResourceDescriptor;
 import com.soklet.McpResourceListContext;
@@ -67,6 +68,8 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 @McpServerEndpoint(
+		protocolVersions = McpProtocolVersion.V2026_07_28,
+		subscriptionProtocolVersions = McpProtocolVersion.V2026_07_28,
 		path = "/mcp",
 		name = "toystore",
 		version = "1.0.0",
@@ -110,6 +113,7 @@ public final class ToyStoreMcpEndpoint {
 
 	@NonNull
 	@McpTool(
+			protocolVersions = McpProtocolVersion.V2026_07_28,
 			name = "list_toys",
 			title = "List toys",
 			description = "Lists toys in the catalog. Optionally filter by a toy-name prefix.",
@@ -146,12 +150,14 @@ public final class ToyStoreMcpEndpoint {
 
 	@NonNull
 	@McpTool(
+			protocolVersions = McpProtocolVersion.V2026_07_28,
 			name = "show_toy_catalog",
 			title = "Show toy catalog",
 			description = "Shows the read-only toy catalog with an optional toy-name prefix filter. Apps-capable clients can display an interactive catalog view.",
 			structuredContentMirroredAsText = false
 	)
-	@McpAppTool(resourceUri = CATALOG_APP_URI)
+	@McpAppTool(protocolVersions = McpProtocolVersion.V2026_07_28,
+			resourceUri = CATALOG_APP_URI)
 	public ToyListResult showToyCatalog(
 			@McpToolArgument(
 					name = "query",
@@ -170,6 +176,7 @@ public final class ToyStoreMcpEndpoint {
 
 	@NonNull
 	@McpTool(
+			protocolVersions = McpProtocolVersion.V2026_07_28,
 			name = "get_toy",
 			title = "Get toy",
 			description = "Gets a toy by its ID.",
@@ -193,12 +200,12 @@ public final class ToyStoreMcpEndpoint {
 	}
 
 	@NonNull
-	@McpResourceList
+	@McpResourceList(protocolVersions = McpProtocolVersion.V2026_07_28)
 	public McpResourcePage listToyResources(
 			@NonNull McpRequestContext requestContext,
-			@NonNull McpResourceListContext context) {
+			@NonNull McpResourceListContext resourceListContext) {
 		requireNonNull(requestContext);
-		requireNonNull(context);
+		requireNonNull(resourceListContext);
 
 		List<McpResourceDescriptor> resources = new ArrayList<>(getToyService().findToys().stream()
 				.map(toy -> {
@@ -216,7 +223,7 @@ public final class ToyStoreMcpEndpoint {
 		// Registration descriptors are not authorization- or capability-filtered.
 		// Admission has already required an MCP-audience token with mcp:read.
 		if (requestContext.getClientCapabilities().supportsAppMimeType(CATALOG_APP_MIME_TYPE))
-			context.getRegisteredResourceDescriptors().stream()
+			resourceListContext.getRegisteredResourceDescriptors().stream()
 					.filter(resource -> URI.create(CATALOG_APP_URI).equals(resource.getUri()))
 					.forEach(resources::add);
 
@@ -225,6 +232,7 @@ public final class ToyStoreMcpEndpoint {
 
 	@NonNull
 	@McpResource(
+			protocolVersions = McpProtocolVersion.V2026_07_28,
 			uri = CATALOG_APP_URI,
 			name = "toy_catalog_view",
 			title = "Toy catalog view",
@@ -240,6 +248,7 @@ public final class ToyStoreMcpEndpoint {
 
 	@NonNull
 	@McpResource(
+			protocolVersions = McpProtocolVersion.V2026_07_28,
 			uri = "toystore://toys/{toyId}",
 			name = "toy",
 			title = "Toy catalog entry",
