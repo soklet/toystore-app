@@ -617,8 +617,8 @@ public class AppModule extends AbstractModule {
 							byte[] body = bodyObject == null ? null : gson.toJson(bodyObject).getBytes(StandardCharsets.UTF_8);
 
 							// Ensure content type header is set
-							Map<String, Set<String>> headers = new HashMap<>(response.getHeaders());
-							headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
+							Map<String, List<String>> headers = new HashMap<>(response.getHeaders());
+							headers.put("Content-Type", List.of("application/json;charset=UTF-8"));
 
 							MarshaledResponse.Builder builder = MarshaledResponse.withStatusCode(response.getStatusCode())
 									.headers(headers)
@@ -633,8 +633,8 @@ public class AppModule extends AbstractModule {
 							ErrorResponse errorResponse = ErrorResponse.withSummary(strings.get("The resource you requested was not found.")).build();
 							byte[] body = gson.toJson(errorResponse).getBytes(StandardCharsets.UTF_8);
 
-							Map<String, Set<String>> headers = new HashMap<>();
-							headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
+							Map<String, List<String>> headers = new HashMap<>();
+							headers.put("Content-Type", List.of("application/json;charset=UTF-8"));
 
 							return MarshaledResponse.withStatusCode(404)
 									.headers(headers)
@@ -728,8 +728,8 @@ public class AppModule extends AbstractModule {
 							// Use Gson to turn the error response into JSON
 							byte[] body = gson.toJson(errorResponse).getBytes(StandardCharsets.UTF_8);
 
-							Map<String, Set<String>> headers = new HashMap<>();
-							headers.put("Content-Type", Set.of("application/json;charset=UTF-8"));
+							Map<String, List<String>> headers = new HashMap<>();
+							headers.put("Content-Type", List.of("application/json;charset=UTF-8"));
 
 							return MarshaledResponse.withStatusCode(statusCode)
 									.headers(headers)

@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.Set;
+import java.util.List;
 
 /**
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
@@ -37,8 +38,8 @@ public class IndexResourceTests {
 
 		MarshaledResponse cssResponse = indexResource.staticFile(Request.fromPath(HttpMethod.GET, "/static/css/demo.css"), "css/demo.css");
 		Assertions.assertEquals(200, cssResponse.getStatusCode());
-		Assertions.assertEquals(Set.of("text/css; charset=UTF-8"), cssResponse.getHeaders().get("Content-Type"));
-		Assertions.assertEquals(Set.of("bytes"), cssResponse.getHeaders().get("Accept-Ranges"));
+		Assertions.assertEquals(List.of("text/css; charset=UTF-8"), cssResponse.getHeaders().get("Content-Type"));
+		Assertions.assertEquals(List.of("bytes"), cssResponse.getHeaders().get("Accept-Ranges"));
 		Assertions.assertTrue(cssResponse.getHeaders().containsKey("ETag"));
 		Assertions.assertTrue(cssResponse.getHeaders().containsKey("Last-Modified"));
 		Assertions.assertTrue(cssResponse.getBody().orElseThrow() instanceof MarshaledResponseBody.File);

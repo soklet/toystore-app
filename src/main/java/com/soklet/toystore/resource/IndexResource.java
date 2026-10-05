@@ -28,6 +28,7 @@ import com.soklet.toystore.annotation.SuppressRequestLogging;
 import org.jspecify.annotations.NonNull;
 
 import javax.annotation.concurrent.ThreadSafe;
+import java.util.List;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -63,7 +64,7 @@ public class IndexResource {
 		// we are saying "I already know how to turn my response into bytes,
 		// so please don't perform extra processing on it (e.g. turn it into JSON)"
 		return MarshaledResponse.withStatusCode(200)
-				.headers(Map.of("Content-Type", Set.of("text/html;charset=UTF-8")))
+				.headers(Map.of("Content-Type", List.of("text/html;charset=UTF-8")))
 				.body(indexPageFileContents)
 				.build();
 	}
@@ -74,7 +75,7 @@ public class IndexResource {
 	public MarshaledResponse healthCheck() {
 		// Simple "OK" response
 		return MarshaledResponse.withStatusCode(200)
-				.headers(Map.of("Content-Type", Set.of("text/plain;charset=UTF-8")))
+				.headers(Map.of("Content-Type", List.of("text/plain;charset=UTF-8")))
 				.body("OK".getBytes(StandardCharsets.UTF_8))
 				.build();
 	}
@@ -89,7 +90,7 @@ public class IndexResource {
 			return MarshaledResponse.withStatusCode(204).build();
 
 		return MarshaledResponse.withStatusCode(200)
-				.headers(Map.of("Content-Type", Set.of("text/plain; charset=UTF-8")))
+				.headers(Map.of("Content-Type", List.of("text/plain; charset=UTF-8")))
 				.body(body.getBytes(StandardCharsets.UTF_8))
 				.build();
 	}

@@ -87,7 +87,7 @@ public class ToyResourceTests {
 			Request malformedAuthorizationRequest = Request.withPath(
 					HttpMethod.GET, "/toys/export.ndjson")
 					.headers(Map.of("Authorization",
-							Set.of("Bearer" + accessTokenAsString)))
+							List.of("Bearer" + accessTokenAsString)))
 					.build();
 			MarshaledResponse malformedAuthorizationResponse = simulator
 					.performHttpRequest(malformedAuthorizationRequest)
@@ -104,7 +104,7 @@ public class ToyResourceTests {
 			String requestBodyJson = gson.toJson(new ToyCreateRequest(name, price, currency));
 
 			Request request = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
+					.headers(Map.of("Authorization", List.of("Bearer " + accessTokenAsString)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -122,7 +122,7 @@ public class ToyResourceTests {
 
 			// Try to create the same toy again and verify that the backend prevents it
 			request = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
+					.headers(Map.of("Authorization", List.of("Bearer " + accessTokenAsString)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -154,14 +154,14 @@ public class ToyResourceTests {
 			createToy(simulator, gson, accessTokenAsString, secondToyName, BigDecimal.valueOf(56.78), Currency.getInstance("USD"));
 
 			Request request = Request.withPath(HttpMethod.GET, "/toys/export.ndjson")
-					.queryParameters(Map.of("query", Set.of(namePrefix)))
-					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
+					.queryParameters(Map.of("query", List.of(namePrefix)))
+					.headers(Map.of("Authorization", List.of("Bearer " + accessTokenAsString)))
 					.build();
 
 			MarshaledResponse marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
 
 			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Bad status code");
-			Assertions.assertEquals(Set.of("application/x-ndjson; charset=UTF-8"),
+			Assertions.assertEquals(List.of("application/x-ndjson; charset=UTF-8"),
 					marshaledResponse.getHeaders().get("Content-Type"), "Wrong content type");
 
 			String responseBody = responseBodyAsString(marshaledResponse);
@@ -196,7 +196,7 @@ public class ToyResourceTests {
 					Currency.getInstance("USD"));
 
 			Request updateRequest = Request.withPath(HttpMethod.PUT, format("/toys/%s", toyA.toy().getToyId()))
-					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
+					.headers(Map.of("Authorization", List.of("Bearer " + accessTokenAsString)))
 					.body(gson.toJson(duplicateUpdateRequest).getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -214,7 +214,7 @@ public class ToyResourceTests {
 					Currency.getInstance("USD"));
 
 			updateRequest = Request.withPath(HttpMethod.PUT, format("/toys/%s", toyA.toy().getToyId()))
-					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
+					.headers(Map.of("Authorization", List.of("Bearer " + accessTokenAsString)))
 					.body(gson.toJson(invalidUpdateRequest).getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -277,7 +277,7 @@ public class ToyResourceTests {
 			String requestBodyJson = gson.toJson(new ToyCreateRequest(name, price, currency));
 
 			Request request = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
+					.headers(Map.of("Authorization", List.of("Bearer " + accessTokenAsString)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -293,7 +293,7 @@ public class ToyResourceTests {
 
 			// Now, try to purchase the expensive toy and verify that the backend indicates a CC decline
 			request = Request.withPath(HttpMethod.POST, format("/toys/%s/purchase", expensiveToyId))
-					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
+					.headers(Map.of("Authorization", List.of("Bearer " + accessTokenAsString)))
 					.body(gson.toJson(Map.of(
 							"creditCardNumber", "4111111111111111",
 							"creditCardExpiration", "2030-01"
@@ -320,7 +320,7 @@ public class ToyResourceTests {
 			requestBodyJson = gson.toJson(new ToyCreateRequest(name, price, currency));
 
 			request = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
+					.headers(Map.of("Authorization", List.of("Bearer " + accessTokenAsString)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -336,7 +336,7 @@ public class ToyResourceTests {
 
 			// Now, try to purchase the cheap toy and verify that we don't get declined
 			request = Request.withPath(HttpMethod.POST, format("/toys/%s/purchase", cheapToyId))
-					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
+					.headers(Map.of("Authorization", List.of("Bearer " + accessTokenAsString)))
 					.body(gson.toJson(Map.of(
 							"creditCardNumber", "4111111111111111",
 							"creditCardExpiration", "2030-01"
@@ -401,7 +401,7 @@ public class ToyResourceTests {
 		String requestBodyJson = gson.toJson(new ToyCreateRequest(name, price, currency));
 
 		Request request = Request.withPath(HttpMethod.POST, "/toys")
-				.headers(Map.of("Authorization", Set.of("Bearer " + accessToken)))
+				.headers(Map.of("Authorization", List.of("Bearer " + accessToken)))
 				.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 				.build();
 
@@ -429,7 +429,7 @@ public class ToyResourceTests {
 			String requestBodyJson = gson.toJson(new ToyCreateRequest("Localized Toy", BigDecimal.valueOf(12.34), Currency.getInstance("USD")));
 
 			Request createRequest = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("Authorization", Set.of("Bearer " + accessTokenAsString)))
+					.headers(Map.of("Authorization", List.of("Bearer " + accessTokenAsString)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -437,8 +437,8 @@ public class ToyResourceTests {
 
 			Request usRequest = Request.withPath(HttpMethod.GET, "/toys")
 					.headers(Map.of(
-							"Accept-Language", Set.of("en-US"),
-							"Time-Zone", Set.of("America/New_York")
+							"Accept-Language", List.of("en-US"),
+							"Time-Zone", List.of("America/New_York")
 					))
 					.build();
 
@@ -452,8 +452,8 @@ public class ToyResourceTests {
 
 			Request deRequest = Request.withPath(HttpMethod.GET, "/toys")
 					.headers(Map.of(
-							"Accept-Language", Set.of("de-DE"),
-							"Time-Zone", Set.of("Europe/Berlin")
+							"Accept-Language", List.of("de-DE"),
+							"Time-Zone", List.of("Europe/Berlin")
 					))
 					.build();
 
@@ -492,14 +492,14 @@ public class ToyResourceTests {
 
 			HandshakeAccepted adminHandshake = performSseHandshake(simulator, adminSseAccessToken.toStringRepresentation(privateKey),
 					Map.of(
-							"Accept-Language", Set.of("de-DE"),
-							"Time-Zone", Set.of("Europe/Berlin")
+							"Accept-Language", List.of("de-DE"),
+							"Time-Zone", List.of("Europe/Berlin")
 					));
 
 			HandshakeAccepted employeeHandshake = performSseHandshake(simulator, employeeSseAccessToken.toStringRepresentation(privateKey),
 					Map.of(
-							"Accept-Language", Set.of("en-US"),
-							"Time-Zone", Set.of("America/New_York")
+							"Accept-Language", List.of("en-US"),
+							"Time-Zone", List.of("America/New_York")
 					));
 
 			adminHandshake.registerEventConsumer(adminEvents::add);
@@ -508,7 +508,7 @@ public class ToyResourceTests {
 			String requestBodyJson = gson.toJson(new ToyCreateRequest("Sse Toy", BigDecimal.valueOf(12.34), Currency.getInstance("USD")));
 
 			Request createRequest = Request.withPath(HttpMethod.POST, "/toys")
-					.headers(Map.of("Authorization", Set.of("Bearer " + adminAccessTokenAsString)))
+					.headers(Map.of("Authorization", List.of("Bearer " + adminAccessTokenAsString)))
 					.body(requestBodyJson.getBytes(StandardCharsets.UTF_8))
 					.build();
 
@@ -537,7 +537,7 @@ public class ToyResourceTests {
 		requireNonNull(accessToken);
 
 		Request request = Request.withPath(HttpMethod.POST, "/accounts/sse-access-token")
-				.headers(Map.of("Authorization", Set.of("Bearer " + accessToken)))
+				.headers(Map.of("Authorization", List.of("Bearer " + accessToken)))
 				.build();
 
 		MarshaledResponse marshaledResponse = simulator.performHttpRequest(request).getMarshaledResponse();
@@ -555,13 +555,13 @@ public class ToyResourceTests {
 	@NonNull
 	private HandshakeAccepted performSseHandshake(@NonNull Simulator simulator,
 																								@NonNull String sseAccessToken,
-																								@NonNull Map<String, Set<String>> headers) {
+																								@NonNull Map<String, List<String>> headers) {
 		requireNonNull(simulator);
 		requireNonNull(sseAccessToken);
 		requireNonNull(headers);
 
 		Request request = Request.withPath(HttpMethod.GET, "/toys/event-source")
-				.queryParameters(Map.of("sse-access-token", Set.of(sseAccessToken)))
+				.queryParameters(Map.of("sse-access-token", List.of(sseAccessToken)))
 				.headers(headers)
 				.build();
 

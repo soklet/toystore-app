@@ -52,6 +52,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import javax.annotation.concurrent.ThreadSafe;
+import java.util.List;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -572,7 +573,7 @@ public class ToyStoreMcpEndpointTests {
 
 			Request request = Request.withPath(HttpMethod.GET, "/toys")
 					.headers(Map.of("Authorization",
-							Set.of("Bearer " + employeeApiToken)))
+							List.of("Bearer " + employeeApiToken)))
 					.build();
 			MarshaledResponse httpResponse = simulator.performHttpRequest(request)
 					.getMarshaledResponse();
@@ -858,7 +859,7 @@ public class ToyStoreMcpEndpointTests {
 		Request request = Request.withPath(
 					HttpMethod.POST, "/accounts/mcp-access-token")
 				.headers(Map.of("Authorization",
-						Set.of("Bearer " + apiAccessToken)))
+						List.of("Bearer " + apiAccessToken)))
 				.build();
 		MarshaledResponse response = simulator.performHttpRequest(request)
 				.getMarshaledResponse();
@@ -984,7 +985,7 @@ public class ToyStoreMcpEndpointTests {
 		String body = gson.toJson(new ToyCreateRequest(name, price, currency));
 		Request request = Request.withPath(HttpMethod.POST, "/toys")
 				.headers(Map.of("Authorization",
-						Set.of("Bearer " + accessToken)))
+						List.of("Bearer " + accessToken)))
 				.body(body.getBytes(StandardCharsets.UTF_8))
 				.build();
 		MarshaledResponse response = simulator.performHttpRequest(request)
@@ -1047,19 +1048,19 @@ public class ToyStoreMcpEndpointTests {
 				""".formatted(UUID.randomUUID(), method, PROTOCOL_VERSION,
 				capabilities,
 				paramsSuffix);
-		Map<String, Set<String>> headers = new LinkedHashMap<>();
-		headers.put("Host", Set.of("127.0.0.1:" + mcpPort));
+		Map<String, List<String>> headers = new LinkedHashMap<>();
+		headers.put("Host", List.of("127.0.0.1:" + mcpPort));
 		if (authorizationHeader != null)
-			headers.put("Authorization", Set.of(authorizationHeader));
-		headers.put("Content-Type", Set.of("application/json; charset=UTF-8"));
+			headers.put("Authorization", List.of(authorizationHeader));
+		headers.put("Content-Type", List.of("application/json; charset=UTF-8"));
 		headers.put("Accept",
-				Set.of("application/json, text/event-stream"));
-		headers.put("MCP-Protocol-Version", Set.of(PROTOCOL_VERSION));
-		headers.put("Mcp-Method", Set.of(method));
+				List.of("application/json, text/event-stream"));
+		headers.put("MCP-Protocol-Version", List.of(PROTOCOL_VERSION));
+		headers.put("Mcp-Method", List.of(method));
 		if (operationName != null)
-			headers.put("Mcp-Name", Set.of(operationName));
+			headers.put("Mcp-Name", List.of(operationName));
 		if (acceptLanguage != null)
-			headers.put("Accept-Language", Set.of(acceptLanguage));
+			headers.put("Accept-Language", List.of(acceptLanguage));
 
 		Request request = Request.withPath(HttpMethod.POST, "/mcp")
 				.headers(headers)
@@ -1179,7 +1180,7 @@ public class ToyStoreMcpEndpointTests {
 
 	private void assertHeader(@NonNull McpSimulationResponse response,
 			@NonNull String name, @NonNull String expectedValue) {
-		Set<String> values = response.getHeaders().entrySet().stream()
+		List<String> values = response.getHeaders().entrySet().stream()
 				.filter(entry -> entry.getKey().equalsIgnoreCase(name))
 				.map(Map.Entry::getValue)
 				.findFirst()
@@ -1193,7 +1194,7 @@ public class ToyStoreMcpEndpointTests {
 
 	private void assertVaryAcceptLanguage(
 			@NonNull McpSimulationResponse response) {
-		Set<String> values = response.getHeaders().entrySet().stream()
+		List<String> values = response.getHeaders().entrySet().stream()
 				.filter(entry -> entry.getKey().equalsIgnoreCase("Vary"))
 				.map(Map.Entry::getValue)
 				.findFirst()

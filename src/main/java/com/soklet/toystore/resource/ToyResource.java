@@ -121,8 +121,8 @@ public class ToyResource {
 
 		return MarshaledResponse.withStatusCode(200)
 				.headers(Map.of(
-						"Content-Type", Set.of("application/x-ndjson; charset=UTF-8"),
-						"Cache-Control", Set.of("no-transform")
+						"Content-Type", List.of("application/x-ndjson; charset=UTF-8"),
+						"Cache-Control", List.of("no-transform")
 				))
 				.stream(responseStream -> {
 					for (ToyResponse toy : toys) {
