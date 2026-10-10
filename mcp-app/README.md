@@ -35,12 +35,12 @@ runtime require **no Node.js**; the checked-in HTML is portable.
 
 ## Optional regeneration
 
-Run these commands from the Toy Store repository root. The current reviewed
+Run these commands from the Toy Store repository root. The
 generator requires **Node.js 26.5.0 on macOS ARM64**, Apps SDK **2.0.0**, and
-Rolldown **1.2.9**. Supply the already-installed, reviewed dependency checkout
+Rolldown **1.2.9**. Supply an installed dependency directory
 containing `package.json`, `package-lock.json`, and `node_modules`. The builder
 verifies pinned manifest and complete package-file hashes, including the loaded
-native bundler. Other generation platforms need separately reviewed native
+native bundler. Other generation platforms need matching native
 binding pins; this restriction does not apply to serving the generated HTML.
 
 The pinned manifests are Soklet core's
@@ -48,14 +48,12 @@ The pinned manifests are Soklet core's
 and neighboring
 [`package-lock.json`](https://github.com/soklet/soklet/blob/main/verification/interoperability/inspector/package-lock.json).
 Copy those two files into a separate dependency directory and install with
-`npm ci --ignore-scripts --no-audit --no-fund`, using an isolated npm cache and
-configuration as described in the
-[dependency review](https://github.com/soklet/soklet/blob/main/verification/interoperability/inspector/dependency-review.md).
-The catalog generator reuses that locked toolchain; it does not launch Inspector.
+`npm ci --ignore-scripts --no-audit --no-fund`, using a fresh npm cache and explicit
+user/global npm configuration. The catalog generator reuses that locked toolchain.
 
 ```sh
-node mcp-app/build.mjs --dependencies /absolute/path/to/reviewed-dependencies
-node mcp-app/build.mjs --dependencies /absolute/path/to/reviewed-dependencies --check
+node mcp-app/build.mjs --dependencies /absolute/path/to/pinned-dependencies
+node mcp-app/build.mjs --dependencies /absolute/path/to/pinned-dependencies --check
 node --test mcp-app/catalog.test.mjs
 ```
 
@@ -72,16 +70,15 @@ browser/process helpers and choose an output directory that does not yet exist:
 
 ```sh
 node mcp-app/browser-test.mjs \
-  --dependencies /absolute/path/to/reviewed-dependencies \
+  --dependencies /absolute/path/to/pinned-dependencies \
   --core /absolute/path/to/soklet \
   --chrome /absolute/path/to/chrome-executable \
   --output /absolute/path/to/new-browser-check-output
 ```
 
 It checks desktop/mobile layout, refresh/filter requests, hostile-text rendering,
-language selection, and clearing stale results. It retains screenshots and a
-result receipt, uses a fresh temporary browser profile, and requires local
-loopback sockets. It does
-not use saved accounts or a running Toy Store instance. This same-origin,
-synthetic official-SDK test is **not released-host compatibility, production
-sandbox/CSP enforcement, authentication, or end-to-end deployment qualification**.
+language selection, and clearing stale results. It saves screenshots and test
+results, uses a fresh temporary browser profile, and requires local loopback
+sockets. It uses synthetic data instead of saved accounts or a running Toy Store
+instance. Test real host compatibility, sandbox/CSP enforcement, authentication,
+and deployment separately.

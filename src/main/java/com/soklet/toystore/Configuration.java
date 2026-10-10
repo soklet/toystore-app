@@ -302,8 +302,9 @@ public class Configuration {
 	}
 
 	/**
-	 * Explicit MCP Host allowlist, without ports. The transport independently
-	 * requires the request authority's port to equal the bound MCP port.
+	 * Explicit MCP Host allowlist, without ports. Request authorities whose host
+	 * is explicitly allowlisted may use any valid port or omit it. Automatically
+	 * allowed loopback aliases retain the transport's listener-port rule.
 	 */
 	@NonNull
 	public Set<@NonNull String> getMcpServerAllowedHosts() {

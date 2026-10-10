@@ -72,10 +72,15 @@ class ToyStoreMcpDockerSmokeTests {
 			HttpResponse<String> unauthenticated = post(client, "http://127.0.0.1:8082/mcp",
 					null, "tools/call", "list_toys", mcpBody("tools/call", ",\"name\":\"list_toys\",\"arguments\":{}"));
 			Assertions.assertEquals(401, unauthenticated.statusCode());
+			assertDiscoveryStatusForAuthority("untrusted.example:8082", mcpToken,
+					"HTTP/1.1 421 Misdirected Request");
+			assertDiscoveryStatusForAuthority("localhost.attacker.example:8082", mcpToken,
+					"HTTP/1.1 421 Misdirected Request");
+			// Toy Store explicitly allowlists localhost, so public proxy ports
+			// and an omitted port are accepted independently of the listener port.
+			assertDiscoveryStatusForAuthority("localhost:8083", mcpToken, "HTTP/1.1 200 OK");
+			assertDiscoveryStatusForAuthority("localhost", mcpToken, "HTTP/1.1 200 OK");
 		}
-		assertAuthorityRejected("untrusted.example:8082");
-		assertAuthorityRejected("localhost:8083");
-		assertAuthorityRejected("localhost");
 	}
 
 	static int resolveHttpPort(@Nullable String configuredPort) {
@@ -119,15 +124,22 @@ class ToyStoreMcpDockerSmokeTests {
 				+ "\"io.modelcontextprotocol/clientCapabilities\":{}}" + fields + "}}";
 	}
 
-	private static void assertAuthorityRejected(@NonNull String authority) throws Exception {
+	private static void assertDiscoveryStatusForAuthority(@NonNull String authority,
+			@NonNull String mcpToken, @NonNull String expectedStatus) throws Exception {
+		byte[] body = mcpBody("server/discover", "").getBytes(StandardCharsets.UTF_8);
 		try (Socket socket = new Socket()) {
 			socket.connect(new InetSocketAddress("127.0.0.1", 8082), 5_000);
 			socket.setSoTimeout(5_000);
 			socket.getOutputStream().write(("POST /mcp HTTP/1.1\r\nHost: " + authority
-					+ "\r\nConnection: close\r\nContent-Length: 0\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
+					+ "\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream"
+					+ "\r\nMcp-Method: server/discover\r\nMcp-Protocol-Version: 2026-07-28"
+					+ "\r\nAuthorization: Bearer " + mcpToken
+					+ "\r\nConnection: close\r\nContent-Length: " + body.length + "\r\n\r\n")
+					.getBytes(StandardCharsets.US_ASCII));
+			socket.getOutputStream().write(body);
 			String status = new BufferedReader(new InputStreamReader(socket.getInputStream(),
 					StandardCharsets.US_ASCII)).readLine();
-			Assertions.assertEquals("HTTP/1.1 421 Misdirected Request", status);
+			Assertions.assertEquals(expectedStatus, status);
 		}
 	}
 }

@@ -24,7 +24,6 @@ import com.pyranid.Database;
 import com.pyranid.DatabaseException;
 import com.pyranid.TransactionResult;
 import com.soklet.ResourcePath;
-import com.soklet.SseBroadcaster;
 import com.soklet.SseEvent;
 import com.soklet.SseServer;
 import com.soklet.toystore.CurrentContext;
@@ -444,7 +443,6 @@ public class ToyService {
 		getDatabase().currentTransaction().get().addPostTransactionOperation((TransactionResult transactionResult) -> {
 			if (transactionResult == TransactionResult.COMMITTED) {
 				ResourcePath resourcePath = ResourcePath.fromPath("/toys/event-source");
-				SseBroadcaster sseBroadcaster = getSseServer().acquireBroadcaster(resourcePath).get();
 
 				// Instead of broadcasting the same message to everyone via #broadcastEvent(SseEvent), we create separate broadcasts
 				// based on client-specific context.  For example, we should broadcast Brazilian Portuguese to clients who had pt-BR locale
@@ -468,7 +466,9 @@ public class ToyService {
 				};
 
 				// With those two methods, we can now efficiently broadcast the event to all locale/timezone combinations
-				sseBroadcaster.broadcastEvent(broadcastKeySelector, sseEventGenerator);
+				// The SSE transport can finish draining before this HTTP transaction.
+				getSseServer().acquireBroadcaster(resourcePath).ifPresent(sseBroadcaster ->
+						sseBroadcaster.broadcastEvent(broadcastKeySelector, sseEventGenerator));
 			}
 		});
 	}

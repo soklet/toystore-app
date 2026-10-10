@@ -75,10 +75,12 @@ without schemes, paths, ports, or wildcards; its default is `localhost,127.0.0.1
 Blank values and empty entries are rejected.
 
 For a deployment using a different external hostname, explicitly set e.g.
-`TOYSTORE_MCP_ALLOWED_HOSTS=mcp.example.com`. Host authority ports must still
-match the bound MCP port (`8082` in the local configuration). If a reverse
-proxy terminates a different public port, it must send an allowed upstream
-Host authority with port `8082`; allowing a hostname does not waive that check.
+`TOYSTORE_MCP_ALLOWED_HOSTS=mcp.example.com`. An explicitly allowlisted hostname
+accepts any valid port or an omitted port, including the default `localhost`
+and `127.0.0.1` entries. This lets a reverse proxy preserve its public Host
+authority even when that port differs from the MCP listener. Automatic loopback
+aliases retain the listener-port check; forwarded headers cannot authorize an
+unlisted hostname.
 Keep bearer authentication and the existing Origin policy in place, and use
 TLS and deployment-managed secrets before exposing the demo beyond localhost.
 Host validation checks the authority supplied in the HTTP request, not the
@@ -91,7 +93,8 @@ a same-L2 localhost-publication limitation in versions older than 28.0.0.
 
 With the documented container running, the opt-in host-to-container regression
 test authenticates, mints an MCP token, discovers and invokes through both
-allowed authorities, and checks rejected hostnames/ports plus missing credentials:
+allowed authorities, verifies explicitly allowed hosts with different or omitted
+ports, and checks rejected hostnames plus missing credentials:
 
 ```shell
 % docker_smoke_reports=$(mktemp -d)
@@ -111,19 +114,19 @@ HTTP port on a free loopback port and tell the smoke test which host port to use
 The optional `TOYSTORE_DOCKER_SMOKE_HTTP_PORT` changes only the test's HTTP
 authentication/token-minting port; the host remains `127.0.0.1`. It defaults to
 `8080` and accepts only decimal integers `1` through `65535`, without leading
-zeroes, signs, or whitespace. Keep MCP published on `8082`: its separate
-Host-authority port validation and the smoke's MCP checks are unchanged.
+zeroes, signs, or whitespace. Keep MCP published on `8082`, the smoke test's
+fixed MCP connection port; the override does not change its MCP requests or
+Host allowlist checks.
 
 Run this command on the Docker host with Java 25 and Maven. It uses only the
 local demo credentials, does not print tokens, and does not run during the
 ordinary unit suite unless explicitly enabled. The flag is exactly lowercase
 `true`. Use a fresh report directory for every attempt; never reuse an earlier
-successful report. Acceptance requires both Maven success and the verifier's
+successful report. The smoke check requires both Maven success and the verifier's
 `PASS`: exactly this class and method, one executed test, zero skips, failures,
 or errors. A skipped check is a failed smoke procedure, even if Maven exits zero.
 The verifier reads only the bounded local report and rejects external XML
-entities/DTDs. Retain the report directory with the tested artifact's identity;
-the report does not by itself establish release-candidate provenance.
+entities/DTDs.
 
 The verifier's synthetic positive/negative cases need no running container:
 
