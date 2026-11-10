@@ -7,7 +7,7 @@
 
 ### Soklet Toy Store App
 
-This app showcases how you might build a real production backend using [Soklet](https://www.soklet.com) (a virtual-threaded Java HTTP + SSE server with zero dependencies).
+This local demo illustrates features you might use in a production backend with [Soklet](https://www.soklet.com) (a virtual-threaded Java HTTP + SSE server with zero dependencies). It seeds public login credentials and includes an example private signing key, so it must not be deployed unchanged.
 
 Feature highlights include:
 
@@ -48,7 +48,7 @@ This is the easiest way to run the Toy Store App.  You don't need anything on yo
 
 [The Dockerfile is viewable here](https://github.com/soklet/toystore-app/blob/main/docker/Dockerfile) if you are curious about how it works.
 
-You likely will want to have your app run inside of a Docker Container using this approach in your real deployment environment.
+The multi-stage Dockerfile illustrates container packaging. Keep the documented loopback-only port publication for this demo; replace its credentials and signing key and provide TLS before adapting it for an external deployment.
 
 ##### **Build**
 
@@ -65,11 +65,16 @@ You likely will want to have your app run inside of a Docker Container using thi
 
 This starts the regular HTTP API on port `8080`, the SSE server on `8081`, and the MCP server on `8082`.
 The example publishes these demo services only to the host's loopback interface.
+The `/metrics` endpoint requires an administrator API bearer token, including
+for Prometheus scraping.
+Natively, all three demo listeners bind `127.0.0.1`. Inside Docker they bind
+`0.0.0.0` so the documented loopback-only port publication can reach them.
+`TOYSTORE_HTTP_HOST`, `TOYSTORE_SSE_HOST`, and `TOYSTORE_MCP_HOST` can override
+their respective bind addresses. Keep the published demo ports on loopback:
+the app seeds known login credentials and uses a checked-in example signing key.
 
-MCP binds `127.0.0.1` when run natively and `0.0.0.0` inside the Docker image
-(which sets `TOYSTORE_RUNNING_IN_DOCKER=true`). The container-wide bind makes
-its published MCP port reachable; it does not disable Host validation.
-`TOYSTORE_MCP_HOST` overrides the bind address in either mode.
+The Docker image sets `TOYSTORE_RUNNING_IN_DOCKER=true`. Its container-wide MCP
+bind makes the published MCP port reachable; it does not disable Host validation.
 `TOYSTORE_MCP_ALLOWED_HOSTS` supplies comma-separated hostnames/IP literals,
 without schemes, paths, ports, or wildcards; its default is `localhost,127.0.0.1`.
 Blank values and empty entries are rejected.
@@ -139,11 +144,11 @@ The verifier's synthetic positive/negative cases need no running container:
 ```shell
 % curl -i 'http://localhost:8080/'
 HTTP/1.1 200 OK
-Content-Length: 13
-Content-Type: text/plain; charset=UTF-8
-Date: Sun, 21 Mar 2024 16:19:01 GMT
+Content-Type: text/html; charset=UTF-8
+...
 
-Hello, world!
+<!DOCTYPE html>
+...
 ```
 
 #### Without Docker
@@ -161,6 +166,12 @@ The Toy Store App requires [Apache Maven](https://maven.apache.org/) (you can sk
 ```shell
 % TOYSTORE_ENVIRONMENT="local" MAVEN_OPTS="--sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED --add-opens java.base/java.time=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED" mvn -e exec:java -Dexec.mainClass="com.soklet.toystore.App"
 ```
+
+The application owns console interaction. Outside Docker, a native console
+allows Enter or end-of-input to finish a scoped `Soklet.run` and join shutdown.
+Without a native console, including redirected input or an IDE pane where
+`System.console()` is null, it waits for JVM shutdown. Soklet installs no input
+listener of its own.
 
 ### API Demonstration
 
@@ -293,7 +304,7 @@ Error messages are localized as well.  Here we supply a negative `price` and for
 
 ```shell
 % curl -i -X POST 'http://localhost:8080/toys' \
-  -d '{"name": "Bola de futebol", "price": "-50"}' \ 
+  -d '{"name": "Bola de futebol", "price": "-50"}' \
   -H "Authorization: Bearer eyJhbG...c76fxc"
 HTTP/1.1 422 Unprocessable Content
 Content-Length: 261
@@ -352,10 +363,10 @@ Date: Sun, 09 Jun 2024 13:44:26 GMT
 
 In-browser, you'd use a standard JS [`Event Source`](https://html.spec.whatwg.org/multipage/server-sent-events.html#eventsource) to subscribe to Server-Sent Events.
 
-Here, we use `netcat` to listen from the console:
+Here, we use `curl` to listen from the console without closing the request side of the connection:
 
 ```shell
-% echo -ne 'GET /toys/event-source?sse-access-token=eyJ...KDA HTTP/1.1\r\nHost: localhost\r\n\r\n' | netcat localhost 8081
+% curl -i -N 'http://localhost:8081/toys/event-source?sse-access-token=eyJ...KDA'
 
 HTTP/1.1 200 OK
 Content-Type: text/event-stream; charset=UTF-8

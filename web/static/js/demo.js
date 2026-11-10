@@ -11,8 +11,10 @@
         // ============================================================
         const state = {
             authToken: null,
+            authenticationGeneration: 0,
             account: null,
             eventSource: null,
+            sseConnectionGeneration: 0,
             browserLocale: null,
             browserTimeZone: null
         };
@@ -112,7 +114,6 @@
             }
 
             if (state.account) {
-                const email = escapeHtml(state.account.emailAddress || 'unknown');
                 const locale = escapeHtml(state.account.locale || 'unknown');
                 const timeZone = escapeHtml(state.account.timeZone || 'unknown');
                 elements.settingsNote.innerHTML = `Locale is <code>${locale}</code> and time zone is <code>${timeZone}</code>.`;
@@ -137,11 +138,15 @@
         function addEventLogEntry(type, message, eventClass = 'system') {
             const entry = document.createElement('div');
             entry.className = `event-entry ${eventClass}`;
-            entry.innerHTML = `
-                <span class="event-time">${formatTime()}</span>
-                <span class="event-type">${type}</span>
-                <span>${message}</span>
-            `;
+            const time = document.createElement('span');
+            time.className = 'event-time';
+            time.textContent = formatTime();
+            const eventType = document.createElement('span');
+            eventType.className = 'event-type';
+            eventType.textContent = type;
+            const eventMessage = document.createElement('span');
+            eventMessage.textContent = message;
+            entry.append(time, eventType, eventMessage);
             elements.eventsLog.insertBefore(entry, elements.eventsLog.firstChild);
         }
 
@@ -175,13 +180,13 @@
         function updateAuthUI() {
             if (state.authToken && state.account) {
                 elements.accountStatus.className = 'account-status signed-in';
-                elements.accountStatus.innerHTML = `
-                    ✓ Signed in as <strong>${state.account.name}</strong>
-                    <div class="account-info">
-                        Role: ${state.account.roleId}<br>
-                        Email: ${state.account.emailAddress}
-                    </div>
-                `;
+                const name = document.createElement('strong');
+                name.textContent = state.account.name;
+                const info = document.createElement('div');
+                info.className = 'account-info';
+                info.append('Role: ', state.account.roleId, document.createElement('br'),
+                    'Email: ', state.account.emailAddress);
+                elements.accountStatus.replaceChildren('✓ Signed in as ', name, info);
                 elements.authForm.classList.add('hidden');
                 elements.signOutBtn.classList.remove('hidden');
                 if (elements.presetSection) {
@@ -217,6 +222,7 @@
 
         async function signIn(e) {
             e.preventDefault();
+            const generation = ++state.authenticationGeneration;
 
             try {
                 elements.authResponse.classList.add('hidden');
@@ -230,6 +236,7 @@
                 });
 
                 const data = await response.json();
+                if (generation !== state.authenticationGeneration) return;
 
                 if (response.ok) {
                     state.authToken = data.authenticationToken;
@@ -245,15 +252,15 @@
                     showResponse(elements.authResponse, data, true);
                 }
             } catch (err) {
+                if (generation !== state.authenticationGeneration) return;
                 showResponse(elements.authResponse, `Network error: ${err.message}`, true);
             }
         }
 
         function signOut() {
+            ++state.authenticationGeneration;
             // Disconnect SSE if connected
-            if (state.eventSource) {
-                disconnectSSE();
-            }
+            disconnectSSE();
             state.authToken = null;
             state.account = null;
             updateAuthUI();
@@ -350,18 +357,19 @@
             }
 
             const selectedValue = elements.purchaseToyId.value;
-            const options = toys.map(toy => `
-                <option value="${escapeHtml(toy.toyId)}">
-                    ${escapeHtml(toy.name)} — ${escapeHtml(toy.priceDescription)}
-                </option>
-            `);
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Select toy';
+            const options = toys.map(toy => {
+                const option = document.createElement('option');
+                option.value = toy.toyId;
+                option.textContent = `${toy.name} — ${toy.priceDescription}`;
+                return option;
+            });
 
-            elements.purchaseToyId.innerHTML = [
-                '<option value="">Select toy</option>',
-                ...options
-            ].join('');
+            elements.purchaseToyId.replaceChildren(placeholder, ...options);
 
-            if (selectedValue) {
+            if (selectedValue && toys.some(toy => toy.toyId === selectedValue)) {
                 elements.purchaseToyId.value = selectedValue;
             }
         }
@@ -371,9 +379,7 @@
                 const result = await fetchToys();
                 renderPurchaseToyOptions(result.toys);
             } catch (err) {
-                if (elements.purchaseToyId) {
-                    elements.purchaseToyId.innerHTML = '<option value="">Select toy</option>';
-                }
+                renderPurchaseToyOptions([]);
             }
         }
 
@@ -468,6 +474,9 @@
                 return;
             }
 
+            const generation = ++state.sseConnectionGeneration;
+            const authToken = state.authToken;
+
             // Close existing connection if any
             if (state.eventSource) {
                 state.eventSource.close();
@@ -479,6 +488,8 @@
 
                 // Step 1: Acquire a short-lived SSE access token
                 const sseAccessToken = await acquireSseAccessToken();
+                if (generation !== state.sseConnectionGeneration || authToken !== state.authToken)
+                    return;
 
                 // Step 2: Build SSE URL with the access token as query parameter
                 // Fixed: Use correct endpoint (/toys/event-source) and port (8081)
@@ -488,25 +499,29 @@
 
                 const url = `${config.sseBaseUrl}/toys/event-source?${params.toString()}`;
 
-                addEventLogEntry('Info', `Connecting to ${url.substring(0, 60)}...`, 'system');
+                addEventLogEntry('Info', 'Connecting to /toys/event-source...', 'system');
 
-                state.eventSource = new EventSource(url);
+                const eventSource = new EventSource(url);
+                state.eventSource = eventSource;
 
-                state.eventSource.onopen = () => {
+                eventSource.onopen = () => {
+                    if (state.eventSource !== eventSource) return;
                     updateSSEStatus(true);
                     addEventLogEntry('Connected', 'Listening for toy events (create, update, delete, purchase)', 'system');
                 };
 
-                state.eventSource.onerror = (err) => {
+                eventSource.onerror = (err) => {
+                    if (state.eventSource !== eventSource) return;
                     updateSSEStatus(false);
                     addEventLogEntry('Error', 'Connection lost or failed to connect', 'system');
-                    state.eventSource.close();
+                    eventSource.close();
                     state.eventSource = null;
                 };
 
                 // Listen for specific event types (these match the backend's SSE event names)
                 ['toy-created', 'toy-updated', 'toy-deleted', 'toy-purchased'].forEach(eventType => {
-                    state.eventSource.addEventListener(eventType, (event) => {
+                    eventSource.addEventListener(eventType, (event) => {
+                        if (state.eventSource !== eventSource) return;
                         expandSseDrawer();
                         try {
                             const data = JSON.parse(event.data);
@@ -518,18 +533,21 @@
                 });
 
                 // Fallback for generic messages (including heartbeat comments)
-                state.eventSource.onmessage = (event) => {
+                eventSource.onmessage = (event) => {
+                    if (state.eventSource !== eventSource) return;
                     expandSseDrawer();
                     addEventLogEntry('Message', event.data, 'system');
                 };
 
             } catch (err) {
+                if (generation !== state.sseConnectionGeneration || authToken !== state.authToken) return;
                 addEventLogEntry('Error', `Failed to connect: ${err.message}`, 'system');
                 updateSSEStatus(false);
             }
         }
 
         function disconnectSSE() {
+            ++state.sseConnectionGeneration;
             if (state.eventSource) {
                 state.eventSource.close();
                 state.eventSource = null;
@@ -539,13 +557,8 @@
         }
 
         function clearEventLog() {
-            elements.eventsLog.innerHTML = `
-                <div class="event-entry system">
-                    <span class="event-time">${formatTime()}</span>
-                    <span class="event-type">System</span>
-                    <span>Log cleared</span>
-                </div>
-            `;
+            elements.eventsLog.replaceChildren();
+            addEventLogEntry('System', 'Log cleared', 'system');
         }
 
         // ============================================================

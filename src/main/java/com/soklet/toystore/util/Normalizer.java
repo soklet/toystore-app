@@ -22,7 +22,6 @@ import org.jspecify.annotations.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 /**
  * Utilities for normalizing user-supplied input.
@@ -31,16 +30,6 @@ import java.util.regex.Pattern;
  */
 @ThreadSafe
 public final class Normalizer {
-	@NonNull
-	private static final Pattern HEAD_WHITESPACE_PATTERN;
-	@NonNull
-	private static final Pattern TAIL_WHITESPACE_PATTERN;
-
-	static {
-		HEAD_WHITESPACE_PATTERN = Pattern.compile("^(\\p{Z})+");
-		TAIL_WHITESPACE_PATTERN = Pattern.compile("(\\p{Z})+$");
-	}
-
 	@NonNull
 	public static Optional<String> normalizeEmailAddress(@Nullable String emailAddress) {
 		emailAddress = trimAggressivelyToNull(emailAddress);
@@ -56,17 +45,8 @@ public final class Normalizer {
 	 */
 	@NonNull
 	public static Optional<String> trimAggressively(@Nullable String string) {
-		if (string == null)
-			return Optional.empty();
-
-		string = HEAD_WHITESPACE_PATTERN.matcher(string).replaceAll("");
-
-		if (string.length() == 0)
-			return Optional.of(string);
-
-		string = TAIL_WHITESPACE_PATTERN.matcher(string).replaceAll("");
-
-		return Optional.of(string);
+		return Optional.ofNullable(com.soklet.Utilities.trimAggressively(string))
+				.filter(value -> !value.isBlank());
 	}
 
 	@Nullable

@@ -17,6 +17,7 @@
 package com.soklet.toystore.service;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.lokalized.Strings;
 import com.pyranid.Database;
 import com.soklet.toystore.Configuration;
@@ -52,6 +53,7 @@ import static java.util.Objects.requireNonNull;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe
+@Singleton
 public class AccountService {
 	public sealed interface AccessTokenEvaluation {
 		record Authenticated(@NonNull Account account)
@@ -77,6 +79,8 @@ public class AccountService {
 	@NonNull
 	private final PasswordManager passwordManager;
 	@NonNull
+	private final String unknownAccountPasswordHash;
+	@NonNull
 	private final Database database;
 	@NonNull
 	private final Strings strings;
@@ -95,6 +99,7 @@ public class AccountService {
 
 		this.configuration = configuration;
 		this.passwordManager = passwordManager;
+		this.unknownAccountPasswordHash = passwordManager.hashPassword(UUID.randomUUID().toString());
 		this.database = database;
 		this.strings = strings;
 		this.logger = LoggerFactory.getLogger(getClass());
@@ -144,8 +149,11 @@ public class AccountService {
 				.fetchObject(Account.class)
 				.orElse(null);
 
-		// Reject if no account, or account's hashed password does not match
-		if (account == null || !getPasswordManager().verifyPassword(password, account.passwordHash()))
+		// Unknown accounts pay the same password-verification work as a wrong
+		// password for an existing account, instead of revealing existence by skipping it.
+		boolean passwordMatches = getPasswordManager().verifyPassword(password,
+				account == null ? this.unknownAccountPasswordHash : account.passwordHash());
+		if (account == null || !passwordMatches)
 			throw ApplicationException.withStatusCode(401)
 					.generalError(getStrings().get("Sorry, we could not authenticate you."))
 					.build();
@@ -239,9 +247,9 @@ public class AccountService {
 					getLogger().debug("{} Access Token for account ID {} expired at {}", expectedAudience.name(), accessToken.accountId(), expiredAt);
 
 			case AccessTokenResult.SignatureMismatch() ->
-					getLogger().warn("{} Access Token signature is invalid: {}", expectedAudience.name(), accessTokenAsString);
+					getLogger().warn("{} Access Token signature is invalid", expectedAudience.name());
 
-			default -> getLogger().warn("{} Access Token is invalid: {}", expectedAudience.name(), accessTokenAsString);
+			default -> getLogger().warn("{} Access Token is invalid", expectedAudience.name());
 		}
 
 		return new AccessTokenEvaluation.AuthenticationFailed();

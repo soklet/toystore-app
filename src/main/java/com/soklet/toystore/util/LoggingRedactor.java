@@ -45,7 +45,7 @@ public class LoggingRedactor extends MessageConverter {
 	static {
 		// Matches JWTs: header.payload.signature where header and payload are JSON objects (start with "eyJ")
 		// eyJ = base64url encoding of '{"' which all JWT headers/payloads begin with
-		JWT_PATTERN = Pattern.compile("eyJ[A-Za-z0-9_-]*\\.eyJ[A-Za-z0-9_-]*\\.[A-Za-z0-9_-]+");
+		JWT_PATTERN = Pattern.compile("(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]*+\\.eyJ[A-Za-z0-9_-]*+\\.[A-Za-z0-9_-]++");
 	}
 
 	@NonNull

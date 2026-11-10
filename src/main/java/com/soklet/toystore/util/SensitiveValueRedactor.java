@@ -38,7 +38,8 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Given a JSON string and a type to map it to, redact any of the type's fields marked
- * with the {@link SensitiveValue} annotation (useful for request body logging).
+ * with the {@link SensitiveValue} annotation. Unknown JSON fields are preserved;
+ * redaction follows the supplied type's annotations.
  *
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */

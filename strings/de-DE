@@ -44,5 +44,8 @@
   "Found {{toyCount}} toy(s).": "{{toyCount}} Spielzeug(e) gefunden.",
   "Found {{toyCount}} toy(s) matching \"{{query}}\".": "{{toyCount}} Spielzeug(e) passend zu „{{query}}“ gefunden.",
   "Loaded toy \"{{toyName}}\".": "Spielzeug „{{toyName}}“ geladen.",
-  "The toyId argument must be a UUID.": "Das Argument toyId muss eine UUID sein."
+  "The toyId argument must be a UUID.": "Das Argument toyId muss eine UUID sein.",
+  "Name cannot exceed 256 characters.": "Der Name darf höchstens 256 Zeichen enthalten.",
+  "Price cannot exceed 99999999.99.": "Der Preis darf 99999999.99 nicht überschreiten.",
+  "A purchased toy cannot be deleted.": "Ein gekauftes Spielzeug kann nicht gelöscht werden."
 }

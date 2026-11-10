@@ -16,6 +16,7 @@
 
 package com.soklet.toystore.resource;
 
+import com.google.inject.Singleton;
 import com.soklet.MarshaledResponse;
 import com.soklet.MetricsCollector;
 import com.soklet.MetricsCollector.MetricsFormat;
@@ -24,7 +25,9 @@ import com.soklet.Request;
 import com.soklet.StaticFiles;
 import com.soklet.annotation.GET;
 import com.soklet.annotation.PathParameter;
+import com.soklet.toystore.annotation.AuthorizationRequired;
 import com.soklet.toystore.annotation.SuppressRequestLogging;
+import com.soklet.toystore.model.db.Role.RoleId;
 import org.jspecify.annotations.NonNull;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -42,12 +45,15 @@ import static java.lang.String.format;
  * @author <a href="https://www.revetkn.com">Mark Allen</a>
  */
 @ThreadSafe
+@Singleton
 public class IndexResource {
 	@NonNull
 	private final StaticFiles staticFiles;
 
 	public IndexResource() {
-		this.staticFiles = StaticFiles.withRoot(Path.of("web/static")).build();
+		// Deployment assets are operator-owned and remain immutable while serving.
+		this.staticFiles = StaticFiles.withRoot(Path.of("web/static"))
+				.trustedImmutableRoot(true).build();
 	}
 
 	@NonNull
@@ -64,7 +70,10 @@ public class IndexResource {
 		// we are saying "I already know how to turn my response into bytes,
 		// so please don't perform extra processing on it (e.g. turn it into JSON)"
 		return MarshaledResponse.withStatusCode(200)
-				.headers(Map.of("Content-Type", List.of("text/html;charset=UTF-8")))
+				.headers(Map.of(
+						"Content-Type", List.of("text/html;charset=UTF-8"),
+						"Content-Security-Policy", List.of(
+								"script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")))
 				.body(indexPageFileContents)
 				.build();
 	}
@@ -81,6 +90,7 @@ public class IndexResource {
 	}
 
 	@NonNull
+	@AuthorizationRequired(RoleId.ADMINISTRATOR)
 	@GET("/metrics")
 	public MarshaledResponse getMetrics(@NonNull MetricsCollector metricsCollector) {
 		SnapshotTextOptions snapshotTextOptions = SnapshotTextOptions.withMetricsFormat(MetricsFormat.PROMETHEUS).build();

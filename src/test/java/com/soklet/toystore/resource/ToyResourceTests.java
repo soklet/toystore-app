@@ -19,6 +19,9 @@ package com.soklet.toystore.resource;
 import com.google.gson.Gson;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.Provider;
+import com.pyranid.Database;
+import com.pyranid.TransactionResult;
 import com.google.inject.Singleton;
 import com.soklet.HttpMethod;
 import com.soklet.MarshaledResponse;
@@ -37,7 +40,10 @@ import com.soklet.toystore.model.api.request.AccountAuthenticateRequest;
 import com.soklet.toystore.model.api.request.ToyCreateRequest;
 import com.soklet.toystore.model.api.request.ToyUpdateRequest;
 import com.soklet.toystore.model.api.response.ErrorResponse;
+import com.soklet.toystore.model.api.response.PurchaseResponse;
+import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseFactory;
 import com.soklet.toystore.model.api.response.PurchaseResponse.PurchaseResponseHolder;
+import com.soklet.toystore.model.db.Purchase;
 import com.soklet.toystore.model.api.response.ToyResponse;
 import com.soklet.toystore.model.api.response.ToyResponse.ToyResponseHolder;
 import com.soklet.toystore.model.api.response.ToyResponse.ToysResponseHolder;
@@ -45,11 +51,13 @@ import com.soklet.toystore.model.auth.AccessToken;
 import com.soklet.toystore.resource.AccountResource.SseAccessTokenResponseHolder;
 import com.soklet.toystore.service.AccountService;
 import com.soklet.toystore.service.ToyService;
+import com.soklet.toystore.util.Formatter;
 import com.soklet.toystore.util.CreditCardProcessor;
 import com.soklet.toystore.util.CreditCardProcessor.CreditCardPaymentFailureReason;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigDecimal;
@@ -65,6 +73,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.soklet.toystore.TestMarshaledResponses.responseBodyAsString;
 import static java.lang.String.format;
@@ -75,6 +85,91 @@ import static java.util.Objects.requireNonNull;
  */
 @ThreadSafe
 public class ToyResourceTests {
+	@Test
+	@Timeout(60)
+	public void failedResponseAfterPurchaseWriteRollsBackAndDoesNotBroadcast() {
+		AtomicBoolean failNextResponse = new AtomicBoolean(true);
+		AtomicInteger rowsSeenBeforeFailure = new AtomicInteger();
+		List<TransactionResult> transactionResults = new ArrayList<>();
+		App app = new App(new Configuration("local"), new AbstractModule() {
+			@Provides
+			@Singleton
+			PurchaseResponseFactory purchaseResponses(Database database,
+					Provider<CurrentContext> currentContext, Formatter formatter) {
+				return purchase -> {
+					if (failNextResponse.compareAndSet(true, false)) {
+						rowsSeenBeforeFailure.set(database.query("SELECT * FROM purchase")
+								.fetchList(Purchase.class).size());
+						database.currentTransaction().orElseThrow()
+								.addPostTransactionOperation(transactionResults::add);
+						throw new IllegalStateException("Test response failure after the purchase write");
+					}
+					return new PurchaseResponse(currentContext, formatter, purchase);
+				};
+			}
+		});
+		Gson gson = app.getInjector().getInstance(Gson.class);
+		Database database = app.getInjector().getInstance(Database.class);
+		List<SseEvent> events = new ArrayList<>();
+		SokletSimulator.run(app.createSimulatorConfig(), simulator -> {
+			PrivateKey privateKey = app.getConfiguration().getKeyPair().getPrivate();
+			AccessToken accessToken = acquireAccessToken(app, "admin@soklet.com", "administrator-password");
+			String token = accessToken.toStringRepresentation(privateKey);
+			AccessToken sseToken = acquireSseAccessToken(simulator, gson, token);
+			performSseHandshake(simulator, sseToken.toStringRepresentation(privateKey), Map.of())
+					.registerEventConsumer(events::add);
+			ToyResponseHolder toy = createToy(simulator, gson, token, "Rollback toy",
+					BigDecimal.ONE, Currency.getInstance("USD"));
+			events.clear(); // Ignore the successful toy-created transaction.
+			Request purchase = Request.withPath(HttpMethod.POST, "/toys/" + toy.toy().getToyId() + "/purchase")
+					.headers(Map.of("Authorization", List.of("Bearer " + token)))
+					.body("{\"creditCardNumber\":\"4111111111111111\",\"creditCardExpiration\":\"2099-12\"}"
+							.getBytes(StandardCharsets.UTF_8)).build();
+			MarshaledResponse failed = simulator.performHttpRequest(purchase).getMarshaledResponse();
+			Assertions.assertEquals(500, failed.getStatusCode());
+			Assertions.assertEquals(1, rowsSeenBeforeFailure.get(), "The failure must occur after a real purchase write");
+			Assertions.assertAll(
+					() -> Assertions.assertEquals(0, database.query("SELECT * FROM purchase").fetchList(Purchase.class).size()),
+					() -> Assertions.assertEquals(List.of(TransactionResult.ROLLED_BACK), transactionResults),
+					() -> Assertions.assertTrue(events.isEmpty(), "A rolled-back purchase must not emit its post-commit SSE event"));
+			MarshaledResponse succeeded = simulator.performHttpRequest(purchase).getMarshaledResponse();
+			Assertions.assertEquals(200, succeeded.getStatusCode());
+			Assertions.assertEquals(1, database.query("SELECT * FROM purchase").fetchList(Purchase.class).size());
+			Assertions.assertEquals(1, events.size());
+			Assertions.assertEquals("toy-purchased", events.getFirst().getEvent().orElseThrow());
+		});
+	}
+
+	@Test
+	public void invalidInputHasClientErrorResponses() {
+		App app = new App(new Configuration("local"));
+		Gson gson = app.getInjector().getInstance(Gson.class);
+		SokletSimulator.run(app.createSimulatorConfig(), simulator -> {
+			AccessToken token = acquireAccessToken(app, "admin@soklet.com", "administrator-password");
+			var headers = Map.of("Authorization", List.of("Bearer " + token.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate())));
+			for (ToyCreateRequest invalid : List.of(
+					new ToyCreateRequest(" \u00a0", BigDecimal.ONE, Currency.getInstance("USD")),
+					new ToyCreateRequest("x".repeat(257), BigDecimal.ONE, Currency.getInstance("USD")),
+					new ToyCreateRequest("Too expensive", new BigDecimal("100000000"), Currency.getInstance("USD")))) {
+				var response = simulator.performHttpRequest(Request.withPath(HttpMethod.POST, "/toys")
+						.headers(headers).body(gson.toJson(invalid).getBytes(StandardCharsets.UTF_8)).build()).getMarshaledResponse();
+				Assertions.assertEquals(422, response.getStatusCode());
+			}
+			var response = simulator.performHttpRequest(Request.withPath(HttpMethod.POST, "/toys/00000000-0000-0000-0000-000000000001/purchase")
+					.headers(headers).body("{\"creditCardExpiration\":\"invalid\"}".getBytes(StandardCharsets.UTF_8)).build()).getMarshaledResponse();
+			Assertions.assertEquals(400, response.getStatusCode());
+			var toy = createToy(simulator, gson, token.toStringRepresentation(app.getConfiguration().getKeyPair().getPrivate()),
+					"Purchased toy", BigDecimal.ONE, Currency.getInstance("USD")).toy();
+			String purchaseJson = "{\"creditCardNumber\":\"4111111111111111\",\"creditCardExpiration\":\"2099-12\"}";
+			var purchased = simulator.performHttpRequest(Request.withPath(HttpMethod.POST, "/toys/" + toy.getToyId() + "/purchase")
+					.headers(headers).body(purchaseJson.getBytes(StandardCharsets.UTF_8)).build()).getMarshaledResponse();
+			Assertions.assertEquals(200, purchased.getStatusCode());
+			var deleted = simulator.performHttpRequest(Request.withPath(HttpMethod.DELETE, "/toys/" + toy.getToyId())
+					.headers(headers).build()).getMarshaledResponse();
+			Assertions.assertEquals(409, deleted.getStatusCode());
+		});
+	}
+
 	@Test
 	public void testCreateToy() {
 		App app = new App(new Configuration("local"));

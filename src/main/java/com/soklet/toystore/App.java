@@ -21,9 +21,8 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import com.pyranid.Database;
-import com.soklet.ShutdownTrigger;
 import com.soklet.SimulatorConfig;
-import com.soklet.SokletApplication;
+import com.soklet.Soklet;
 import com.soklet.SokletConfig;
 import com.soklet.toystore.model.db.Role.RoleId;
 import com.soklet.toystore.util.PasswordManager;
@@ -33,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.concurrent.ThreadSafe;
+import java.io.Console;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
@@ -92,11 +92,23 @@ public class App {
 	public void startServer() throws InterruptedException {
 		SokletConfig config = getInjector().getInstance(SokletConfig.class);
 
-		if (getConfiguration().getStopOnKeypress()) {
-			getLogger().debug("Press [enter] to exit");
-			SokletApplication.run(config, ShutdownTrigger.ENTER_KEY);
-		} else {
-			SokletApplication.run(config);
+		Console console = System.console();
+		if (getConfiguration().getStopOnKeypress() && console != null) {
+			Soklet.run(config, () -> console.readLine("Press [enter] to exit%n"));
+			return;
+		}
+
+		Soklet soklet = Soklet.run(config);
+		try {
+			soklet.awaitShutdown();
+		} catch (InterruptedException interrupted) {
+			soklet.requestShutdown();
+			try {
+				soklet.awaitShutdownAsync().toCompletableFuture().join();
+			} finally {
+				Thread.currentThread().interrupt();
+			}
+			throw interrupted;
 		}
 	}
 

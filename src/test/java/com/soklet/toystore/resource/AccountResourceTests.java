@@ -59,6 +59,17 @@ public class AccountResourceTests {
 			Assertions.assertEquals(200, marshaledResponse.getStatusCode().intValue(), "Bad status code");
 			Assertions.assertEquals("admin@soklet.com", response.account().getEmailAddress().get(), "Email doesn't match");
 
+			Request blankPassword = Request.withPath(HttpMethod.POST, "/accounts/authenticate")
+					.body(gson.toJson(new AccountAuthenticateRequest("admin@soklet.com", " \u00a0"))
+							.getBytes(StandardCharsets.UTF_8)).build();
+			Assertions.assertEquals(422, simulator.performHttpRequest(blankPassword).getMarshaledResponse().getStatusCode());
+
+			// Existing account with an incorrect password has the same public rejection.
+			Request wrongPassword = Request.withPath(HttpMethod.POST, "/accounts/authenticate")
+					.body(gson.toJson(new AccountAuthenticateRequest("admin@soklet.com", "wrong-password"))
+							.getBytes(StandardCharsets.UTF_8)).build();
+			Assertions.assertEquals(401, simulator.performHttpRequest(wrongPassword).getMarshaledResponse().getStatusCode());
+
 			// Incorrect email/password
 			requestBodyJson = gson.toJson(new AccountAuthenticateRequest("fake@soklet.com", "fake"));
 

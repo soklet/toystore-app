@@ -170,9 +170,9 @@ public record AccessToken(
 		if (trimmed == null)
 			return new AccessTokenResult.InvalidStructure();
 
-		String[] components = trimmed.split("\\.");
+		String[] components = trimmed.split("\\.", -1);
 
-		if (components.length != 3)
+		if (components.length != 3 || components[0].isEmpty() || components[1].isEmpty() || components[2].isEmpty())
 			return new AccessTokenResult.InvalidStructure();
 
 		String encodedHeader = components[0];
@@ -200,6 +200,9 @@ public record AccessToken(
 		} catch (Exception e) {
 			return new AccessTokenResult.InvalidStructure();
 		}
+
+		if (header == null)
+			return new AccessTokenResult.InvalidStructure();
 
 		// Validate required headers
 		Set<String> missingHeaders = new LinkedHashSet<>();
@@ -240,6 +243,17 @@ public record AccessToken(
 			return new AccessTokenResult.InvalidStructure();
 		}
 
+		if (payload == null)
+			return new AccessTokenResult.InvalidStructure();
+
+		Set<String> invalidClaims = new LinkedHashSet<>();
+		if (payload.get("sub") != null && !(payload.get("sub") instanceof String)) invalidClaims.add("sub");
+		if (payload.get("iat") != null && !(payload.get("iat") instanceof Number)) invalidClaims.add("iat");
+		if (payload.get("exp") != null && !(payload.get("exp") instanceof Number)) invalidClaims.add("exp");
+		if (payload.get("aud") != null && !(payload.get("aud") instanceof String)) invalidClaims.add("aud");
+		if (!invalidClaims.isEmpty())
+			return new AccessTokenResult.InvalidClaims(invalidClaims);
+
 		String subAsString = (String) payload.get("sub");
 		Number iatAsNumber = (Number) payload.get("iat");
 		Number expAsNumber = (Number) payload.get("exp");
@@ -264,8 +278,18 @@ public record AccessToken(
 			return new AccessTokenResult.InvalidClaims(Set.of("sub"));
 		}
 
-		Instant issuedAt = Instant.ofEpochSecond(iatAsNumber.longValue());
-		Instant expiresAt = Instant.ofEpochSecond(expAsNumber.longValue());
+		Instant issuedAt;
+		Instant expiresAt;
+		try {
+			issuedAt = Instant.ofEpochSecond(new java.math.BigDecimal(iatAsNumber.toString()).longValueExact());
+		} catch (java.time.DateTimeException | ArithmeticException | NumberFormatException exception) {
+			return new AccessTokenResult.InvalidClaims(Set.of("iat"));
+		}
+		try {
+			expiresAt = Instant.ofEpochSecond(new java.math.BigDecimal(expAsNumber.toString()).longValueExact());
+		} catch (java.time.DateTimeException | ArithmeticException | NumberFormatException exception) {
+			return new AccessTokenResult.InvalidClaims(Set.of("exp"));
+		}
 
 		String audAsString = (String) payload.get("aud");
 		Object scopeAsObject = payload.get("scope"); // usually String

@@ -83,6 +83,10 @@ public class Configuration {
 	@NonNull
 	private final Integer mcpServerPort;
 	@NonNull
+	private final String httpServerHost;
+	@NonNull
+	private final String serverSentEventServerHost;
+	@NonNull
 	private final String mcpServerHost;
 	@NonNull
 	private final Set<@NonNull String> mcpServerAllowedHosts;
@@ -117,10 +121,10 @@ public class Configuration {
 		this.port = requireNonNull(configFile.port());
 		this.serverSentEventPort = requireNonNull(configFile.serverSentEventPort());
 		this.mcpServerPort = requireNonNull(configFile.mcpServerPort());
-		this.mcpServerHost = environmentVariables.getOrDefault("TOYSTORE_MCP_HOST",
-				this.runningInDocker ? "0.0.0.0" : "127.0.0.1").trim();
-		if (this.mcpServerHost.isEmpty())
-			throw new IllegalArgumentException("TOYSTORE_MCP_HOST must not be blank");
+		String defaultListenerHost = this.runningInDocker ? "0.0.0.0" : "127.0.0.1";
+		this.httpServerHost = listenerHost(environmentVariables, "TOYSTORE_HTTP_HOST", defaultListenerHost);
+		this.serverSentEventServerHost = listenerHost(environmentVariables, "TOYSTORE_SSE_HOST", defaultListenerHost);
+		this.mcpServerHost = listenerHost(environmentVariables, "TOYSTORE_MCP_HOST", defaultListenerHost);
 		Set<String> allowedHosts = new LinkedHashSet<>();
 		for (String value : environmentVariables.getOrDefault("TOYSTORE_MCP_ALLOWED_HOSTS",
 				"localhost,127.0.0.1").split(",", -1)) {
@@ -142,6 +146,15 @@ public class Configuration {
 		// Initialize Logback if not done already
 		if (System.getProperty("logback.configurationFile") == null)
 			System.setProperty("logback.configurationFile", format("config/%s/logback.xml", environment));
+	}
+
+	@NonNull
+	private static String listenerHost(@NonNull Map<@NonNull String, @NonNull String> environmentVariables,
+			@NonNull String variableName, @NonNull String defaultHost) {
+		String host = environmentVariables.getOrDefault(variableName, defaultHost).trim();
+		if (host.isEmpty())
+			throw new IllegalArgumentException(format("%s must not be blank", variableName));
+		return host;
 	}
 
 	@NonNull
@@ -290,6 +303,18 @@ public class Configuration {
 	@NonNull
 	public Integer getMcpServerPort() {
 		return this.mcpServerPort;
+	}
+
+	/** HTTP listener bind address; loopback natively, all container interfaces in Docker. */
+	@NonNull
+	public String getHttpServerHost() {
+		return this.httpServerHost;
+	}
+
+	/** SSE listener bind address; loopback natively, all container interfaces in Docker. */
+	@NonNull
+	public String getServerSentEventServerHost() {
+		return this.serverSentEventServerHost;
 	}
 
 	/**

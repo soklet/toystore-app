@@ -40,6 +40,7 @@ import com.soklet.CorsAuthorizer;
 import com.soklet.HttpMethod;
 import com.soklet.LifecycleObserver;
 import com.soklet.LogEvent;
+import com.soklet.LogEventType;
 import com.soklet.MarshaledResponse;
 import com.soklet.McpAdmissionController;
 import com.soklet.McpAdmissionDecision;
@@ -53,7 +54,6 @@ import com.soklet.McpJsonString;
 import com.soklet.McpLocalizer;
 import com.soklet.McpOperationType;
 import com.soklet.McpOperationResult;
-import com.soklet.McpRateLimiter;
 import com.soklet.McpAdmissionRejection;
 import com.soklet.McpServer;
 import com.soklet.McpSubscriptionAuthorizer;
@@ -69,7 +69,6 @@ import com.soklet.ServerType;
 import com.soklet.ShutdownResult;
 import com.soklet.SimulatorConfig;
 import com.soklet.HttpServer;
-import com.soklet.Soklet;
 import com.soklet.SokletConfig;
 import com.soklet.SseConnection;
 import com.soklet.SseServer;
@@ -180,9 +179,11 @@ public class AppModule extends AbstractModule {
 				injector, configuration, database,
 				accountService, sensitiveValueRedactor, strings, gson,
 				errorReporter);
-		HttpServer httpServer = HttpServer.withPort(configuration.getPort()).build();
+		HttpServer httpServer = HttpServer.withPort(configuration.getPort())
+				.host(configuration.getHttpServerHost()).build();
 		SseServer sseServer = SseServer.withPort(
-				configuration.getServerSentEventPort()).build();
+				configuration.getServerSentEventPort())
+				.host(configuration.getServerSentEventServerHost()).build();
 		this.configuredSseServer = sseServer;
 		McpServer.Builder mcpServerBuilder = McpServer
 				.withPort(configuration.getMcpServerPort())
@@ -309,7 +310,7 @@ public class AppModule extends AbstractModule {
 																							@NonNull Request request,
 																							@Nullable ResourceMethod resourceMethod) {
 						if (shouldPerformRequestLogging(request, resourceMethod))
-							logger.debug("Received {} {}", request.getHttpMethod(), request.getRawPathAndQuery());
+							logger.debug("Received {} {}", request.getHttpMethod(), request.getRawPath());
 					}
 
 					@Override
@@ -321,7 +322,7 @@ public class AppModule extends AbstractModule {
 																							 @NonNull List<Throwable> throwables) {
 						if (shouldPerformRequestLogging(request, resourceMethod))
 							logger.debug(format("Finished processing %s %s (HTTP %d) in %.2fms", request.getHttpMethod(),
-									request.getRawPathAndQuery(), marshaledResponse.getStatusCode(), processingDuration.toNanos() / 1000000.0));
+									request.getRawPath(), marshaledResponse.getStatusCode(), processingDuration.toNanos() / 1000000.0));
 					}
 
 					@NonNull
@@ -342,18 +343,17 @@ public class AppModule extends AbstractModule {
 					}
 
 					@Override
-					public void willStartSoklet(@NonNull Soklet soklet) {
+					public void willStartSoklet() {
 						logger.debug("Toystore app starting in {} environment...", configuration.getEnvironment());
 					}
 
 					@Override
-					public void willStopSoklet(@NonNull Soklet soklet) {
+					public void willStopSoklet() {
 						logger.debug("Toystore app stopping...");
 					}
 
 					@Override
-					public void didStopSoklet(@NonNull Soklet soklet,
-							@NonNull ShutdownResult result) {
+					public void didStopSoklet(@NonNull ShutdownResult result) {
 						logger.debug("Toystore app stopped.");
 					}
 
@@ -391,7 +391,17 @@ public class AppModule extends AbstractModule {
 					@Override
 					public void didReceiveLogEvent(@NonNull LogEvent logEvent) {
 						requireNonNull(logEvent);
-						logger.warn(logEvent.getMessage(), logEvent.getThrowable().orElse(null));
+						Throwable throwable = logEvent.getThrowable().orElse(null);
+						// Expected authentication denials already have a response status in the
+						// request log. Avoid a full stack trace for each rejected bearer token.
+						if (logEvent.getLogEventType() == LogEventType.REQUEST_INTERCEPTOR_INTERCEPT_REQUEST_FAILED
+								&& (throwable instanceof AuthenticationException
+								|| throwable instanceof AuthorizationException)) {
+							logger.debug("Request authorization denied (HTTP {})",
+									throwable instanceof AuthenticationException ? 401 : 403);
+							return;
+						}
+						logger.warn(logEvent.getMessage(), throwable);
 					}
 				};
 		RequestInterceptor requestInterceptor = new RequestInterceptor() {
@@ -481,8 +491,8 @@ public class AppModule extends AbstractModule {
 
 						currentContext.run(() -> {
 							// Wrap the resource method execution (not including the writing of bytes over the wire) in a database transaction.
-							// If an exception occurs during this process, the transaction will roll back.
-							// This is the behavior you normally want.
+							// The generator returns error responses instead of propagating handler failures.
+							// Our throwable handler marks the current transaction rollback-only.
 							MarshaledResponse marshaledResponse = database.transaction(() ->
 									Optional.of(responseGenerator.apply(request))
 							).get();
@@ -515,6 +525,7 @@ public class AppModule extends AbstractModule {
 						return switch (request.getHttpMethod()) {
 							case GET, HEAD, OPTIONS -> Set.of(Scope.API_READ);
 							case POST, PUT, PATCH, DELETE -> Set.of(Scope.API_WRITE);
+							default -> Set.of(Scope.API_WRITE);
 						};
 					}
 
@@ -595,14 +606,14 @@ public class AppModule extends AbstractModule {
 						if (requestBodyAsString == null)
 							return Optional.empty();
 
-						// Log out the request body, taking care to redact any fields marked with the @SensitiveValue annotation
-						if (logger.isDebugEnabled())
+						// Bound pre-validation logging work and never log a partial sensitive value.
+						if (logger.isDebugEnabled() && requestBodyAsString.length() <= 8_192)
 							logger.debug("Request body:\n{}", sensitiveValueRedactor.performRedactions(requestBodyAsString, parameter.getType()));
 
 						// Use Gson to turn the request body JSON into a Java type
 						try {
 							return Optional.ofNullable(gson.fromJson(requestBodyAsString, requestBodyType));
-						} catch (JsonParseException e) {
+						} catch (JsonParseException | java.time.DateTimeException e) {
 							throw new IllegalRequestBodyException("Malformed JSON", e);
 						}
 					}
@@ -644,6 +655,9 @@ public class AppModule extends AbstractModule {
 						.throwableHandler((@NonNull Request request,
 															 @NonNull Throwable throwable,
 															 @Nullable ResourceMethod resourceMethod) -> {
+							// A handled failure becomes a response, so mark the surrounding transaction explicitly.
+							database.currentTransaction().ifPresent(transaction -> transaction.setRollbackOnly(true));
+
 							// Collect error information for display to client
 							int statusCode;
 							List<String> generalErrors = new ArrayList<>();
@@ -699,7 +713,7 @@ public class AppModule extends AbstractModule {
 									statusCode = 500;
 									generalErrors.add(strings.get("An unexpected error occurred."));
 									errorReporter.reportError(format("Unexpected error handling %s %s (request ID %s)",
-											request.getHttpMethod(), request.getRawPathAndQuery(), request.getId()), throwable);
+											request.getHttpMethod(), request.getRawPath(), request.getId()), throwable);
 								}
 							}
 
@@ -755,6 +769,8 @@ public class AppModule extends AbstractModule {
 		requireNonNull(strings);
 
 		mcpServerBuilder
+				.corsAuthorizer(CorsAuthorizer.fromWhitelistedOrigins(
+						this.configuration.getCorsWhitelistedOrigins()))
 				// Catalog localization enables subscription support in Soklet, but
 				// this request/response example does not grant live MCP subscriptions.
 				.subscriptionAuthorizer(McpSubscriptionAuthorizer.denyAllInstance())
@@ -801,7 +817,6 @@ public class AppModule extends AbstractModule {
 						throw exception;
 					}
 				})
-				.toolRateLimiter(McpRateLimiter.fromInMemoryDefaults())
 				.skillVariantSelector(ToyStoreMcpSkills.catalogGuideSelector(strings))
 				.localizer(McpLocalizer.withFallbackLocale(Locale.US,
 						new ToyStoreMcpLocalizationContextProvider(strings))

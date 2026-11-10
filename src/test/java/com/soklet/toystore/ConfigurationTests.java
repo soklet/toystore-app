@@ -30,17 +30,21 @@ import java.util.Set;
 class ConfigurationTests {
 
 	@Test
-	void nativeMcpDefaultsRemainLoopback() {
+	void nativeDemoListenersDefaultToLoopback() {
 		Configuration configuration = new Configuration("local", Map.of());
 		Assertions.assertFalse(configuration.getRunningInDocker());
+		Assertions.assertEquals("127.0.0.1", configuration.getHttpServerHost());
+		Assertions.assertEquals("127.0.0.1", configuration.getServerSentEventServerHost());
 		Assertions.assertEquals("127.0.0.1", configuration.getMcpServerHost());
 		Assertions.assertEquals(Set.of("localhost", "127.0.0.1"), configuration.getMcpServerAllowedHosts());
 	}
 
 	@Test
-	void dockerMcpDefaultsBindAllInterfacesWithAnExplicitLocalAllowlist() {
+	void dockerListenersBindContainerInterfacesWithAnExplicitMcpAllowlist() {
 		Configuration configuration = new Configuration("local", Map.of("TOYSTORE_RUNNING_IN_DOCKER", "true"));
 		Assertions.assertTrue(configuration.getRunningInDocker());
+		Assertions.assertEquals("0.0.0.0", configuration.getHttpServerHost());
+		Assertions.assertEquals("0.0.0.0", configuration.getServerSentEventServerHost());
 		Assertions.assertEquals("0.0.0.0", configuration.getMcpServerHost());
 		Assertions.assertEquals(Set.of("localhost", "127.0.0.1"), configuration.getMcpServerAllowedHosts());
 		// Exercise the real Guice configuration, including the core's requirement
@@ -75,8 +79,12 @@ class ConfigurationTests {
 	void explicitBindAndAllowlistOverridesAreNormalizedAndImmutable() {
 		Configuration configuration = new Configuration("local", Map.of(
 				"TOYSTORE_RUNNING_IN_DOCKER", "true",
+				"TOYSTORE_HTTP_HOST", " 127.0.0.1 ",
+				"TOYSTORE_SSE_HOST", " 127.0.0.1 ",
 				"TOYSTORE_MCP_HOST", " 127.0.0.1 ",
 				"TOYSTORE_MCP_ALLOWED_HOSTS", " mcp.example.test,127.0.0.1,mcp.example.test "));
+		Assertions.assertEquals("127.0.0.1", configuration.getHttpServerHost());
+		Assertions.assertEquals("127.0.0.1", configuration.getServerSentEventServerHost());
 		Assertions.assertEquals("127.0.0.1", configuration.getMcpServerHost());
 		Assertions.assertEquals(Set.of("mcp.example.test", "127.0.0.1"), configuration.getMcpServerAllowedHosts());
 		Assertions.assertThrows(UnsupportedOperationException.class,
@@ -85,6 +93,10 @@ class ConfigurationTests {
 
 	@Test
 	void blankExplicitBindOrAllowlistFailsFast() {
+		Assertions.assertThrows(IllegalArgumentException.class,
+				() -> new Configuration("local", Map.of("TOYSTORE_HTTP_HOST", " \t")));
+		Assertions.assertThrows(IllegalArgumentException.class,
+				() -> new Configuration("local", Map.of("TOYSTORE_SSE_HOST", " \t")));
 		Assertions.assertThrows(IllegalArgumentException.class,
 				() -> new Configuration("local", Map.of("TOYSTORE_MCP_HOST", " \t")));
 		for (String value : new String[]{"", " ", ",", "localhost,", ",localhost", "localhost, ,127.0.0.1"})

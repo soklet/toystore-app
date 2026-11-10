@@ -170,11 +170,15 @@ public class ToyService {
 
 		if (name == null)
 			errorCollector.addFieldError("name", getStrings().get("Name is required."));
+		else if (name.length() > 256)
+			errorCollector.addFieldError("name", getStrings().get("Name cannot exceed 256 characters."));
 
 		if (price == null)
 			errorCollector.addFieldError("price", getStrings().get("Price is required."));
 		else if (price.compareTo(BigDecimal.ZERO) < 0)
 			errorCollector.addFieldError("price", getStrings().get("Price cannot be negative."));
+		else if (price.compareTo(new BigDecimal("99999999.99")) > 0)
+			errorCollector.addFieldError("price", getStrings().get("Price cannot exceed 99999999.99."));
 
 		if (currency == null)
 			errorCollector.addFieldError("currency", getStrings().get("Currency is required."));
@@ -241,11 +245,15 @@ public class ToyService {
 
 		if (name == null)
 			errorCollector.addFieldError("name", getStrings().get("Name is required."));
+		else if (name.length() > 256)
+			errorCollector.addFieldError("name", getStrings().get("Name cannot exceed 256 characters."));
 
 		if (price == null)
 			errorCollector.addFieldError("price", getStrings().get("Price is required."));
 		else if (price.compareTo(BigDecimal.ZERO) < 0)
 			errorCollector.addFieldError("price", getStrings().get("Price cannot be negative."));
+		else if (price.compareTo(new BigDecimal("99999999.99")) > 0)
+			errorCollector.addFieldError("price", getStrings().get("Price cannot exceed 99999999.99."));
 
 		if (currency == null)
 			errorCollector.addFieldError("currency", getStrings().get("Currency is required."));
@@ -310,9 +318,17 @@ public class ToyService {
 		if (toy == null)
 			return false;
 
-		boolean deleted = getDatabase().query("DELETE FROM toy WHERE toy_id=:toyId")
-				.bind("toyId", toyId)
-				.execute() > 0;
+		boolean deleted;
+		try {
+			deleted = getDatabase().query("DELETE FROM toy WHERE toy_id=:toyId")
+					.bind("toyId", toyId)
+					.execute() > 0;
+		} catch (DatabaseException exception) {
+			if (exception.isForeignKeyViolation())
+				throw ApplicationException.withStatusCodeAndGeneralError(409,
+						getStrings().get("A purchased toy cannot be deleted.")).build();
+			throw exception;
+		}
 
 		if (deleted) {
 			broadcastSseEvent((@NonNull BroadcastKey broadcastKey) -> {
